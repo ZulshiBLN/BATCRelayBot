@@ -67,8 +67,8 @@ Describe "BATCRelayBot Module" {
     }
 
     Context "Function Parameters" {
-        It "Install-BATCRelayBot should have ProjectPath parameter" {
-            (Get-Command Install-BATCRelayBot).Parameters.Keys | Should -Contain "ProjectPath"
+        It "Install-BATCRelayBot should have BotPath parameter" {
+            (Get-Command Install-BATCRelayBot).Parameters.Keys | Should -Contain "BotPath"
         }
 
         It "Start-BATCRelayBot should exist and be callable" {
