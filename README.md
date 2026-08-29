@@ -40,15 +40,15 @@ Before you start, you need:
 
 ### 2. Install the PowerShell module and run automated setup
 
-Open PowerShell **in this folder** (no admin needed) and run:
+Open PowerShell (no admin needed) and run:
 
 ```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
-Import-Module .\BATCRelayBot -Force
+Install-Module BATCRelayBot -Repository PSGallery
 Install-BATCRelayBot
 ```
 
 This will automatically:
+- Create bot directory in `$env:USERPROFILE\AppData\Local\BATCRelayBot`
 - Install Python 3.10+ (via winget)
 - Install ffmpeg (via winget)
 - Install VoiceMeeter (via winget)
@@ -116,7 +116,7 @@ Once the module is imported, these commands are available:
 | `Start-BATCRelayBot` | Starts the bot in the background |
 | `Stop-BATCRelayBot` | Stops the bot cleanly |
 | `Get-BATCRelayBotStatus` | Shows whether the bot is running and its uptime |
-| `Uninstall-BATCRelayBot` | Removes config and generated files, optionally uninstalls Python/ffmpeg |
+| `Uninstall-BATCRelayBot` | Removes config and generated files, optionally uninstalls Python/ffmpeg/VoiceMeeter |
 
 ---
 
@@ -160,9 +160,9 @@ This will:
 - Stop the bot (if running)
 - Securely delete `config.json` (which contains your Discord token)
 - Remove generated files (logs, bot.pid, stop.signal)
-- Optionally uninstall Python and/or ffmpeg (will ask for confirmation separately in case you use them for other projects)
+- Optionally uninstall Python, ffmpeg, and/or VoiceMeeter (will ask for confirmation separately in case you use them for other projects)
 
-Your project files remain in place.
+Bot files in `$env:USERPROFILE\AppData\Local\BATCRelayBot` remain in place.
 
 ---
 
