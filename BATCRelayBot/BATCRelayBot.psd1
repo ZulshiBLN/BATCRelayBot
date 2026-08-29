@@ -24,9 +24,9 @@
     PrivateData = @{
         PSData = @{
             Tags       = @('Discord', 'Bot', 'Audio', 'VoiceMeeter', 'BATC')
-            LicenseUri = 'https://github.com/BroscheMichel/ATC-Relay-Bot/blob/main/LICENSE'
-            ProjectUri = 'https://github.com/BroscheMichel/ATC-Relay-Bot'
-            ReleaseNotes = 'Initial release'
+            LicenseUri = 'https://github.com/ZulshiBLN/BATCRelayBot/blob/main/LICENSE'
+            ProjectUri = 'https://github.com/ZulshiBLN/BATCRelayBot'
+            ReleaseNotes = 'Initial release with automated VoiceMeeter setup and Discord voice channel streaming'
         }
     }
 }
