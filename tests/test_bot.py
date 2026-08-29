@@ -93,24 +93,27 @@ class TestConfigValidation:
 class TestAudioSource:
     """Tests for make_audio_source() function"""
 
-    def test_make_audio_source_returns_ffmpeg_audio(self):
-        """Should return FFmpegPCMAudio instance"""
-        source = bot.make_audio_source()
-        assert isinstance(source, discord.FFmpegPCMAudio)
+    @patch("discord.FFmpegPCMAudio")
+    def test_make_audio_source_returns_ffmpeg_audio(self, mock_ffmpeg):
+        """Should create FFmpegPCMAudio instance"""
+        bot.make_audio_source()
+        mock_ffmpeg.assert_called_once()
 
-    @patch("bot.make_audio_source")
-    def test_make_audio_source_correct_device(self, mock_make_audio):
+    @patch("discord.FFmpegPCMAudio")
+    def test_make_audio_source_correct_device(self, mock_ffmpeg):
         """Should use device name from config"""
-        mock_source = MagicMock(spec=discord.FFmpegPCMAudio)
-        mock_make_audio.return_value = mock_source
-        source = bot.make_audio_source()
-        assert source is not None
+        bot.make_audio_source()
+        # Verify it was called with correct device
+        call_kwargs = mock_ffmpeg.call_args[1]
+        assert call_kwargs["before_options"] == "-f dshow"
 
-    def test_make_audio_source_uses_dshow_format(self):
+    @patch("discord.FFmpegPCMAudio")
+    def test_make_audio_source_uses_dshow_format(self, mock_ffmpeg):
         """Should use Windows dshow format"""
-        source = bot.make_audio_source()
-        # Verify the source was created with correct parameters
-        assert source is not None
+        bot.make_audio_source()
+        call_kwargs = mock_ffmpeg.call_args[1]
+        assert call_kwargs["before_options"] == "-f dshow"
+        assert call_kwargs["options"] == "-vn"
 
 
 class TestBotIntents:
