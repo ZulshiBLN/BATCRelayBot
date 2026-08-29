@@ -76,16 +76,26 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create v${{ steps.get-version.outputs.VERSION }} \
-            --title "Release v${{ steps.get-version.outputs.VERSION }}" \
-            --notes "# BATC Relay Bot v${{ steps.get-version.outputs.VERSION }}
+          VERSION="${{ steps.get-version.outputs.VERSION }}"
+          RELEASE_TAG="v${VERSION}"
+
+          # Create release notes
+          RELEASE_NOTES=$(cat <<'NOTES'
+          # BATC Relay Bot v${{ steps.get-version.outputs.VERSION }}
 
           See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details.
 
           ## Installation
 
-          \`\`\`powershell
+          ```powershell
           Install-Module BATCRelayBot -Repository PSGallery
-          \`\`\`" \
+          ```
+          NOTES
+          )
+
+          # Try to create release, ignore if it already exists
+          gh release create "${RELEASE_TAG}" \
+            --title "Release v${VERSION}" \
+            --notes "${RELEASE_NOTES}" \
             --draft=false \
-            --prerelease=false
+            --prerelease=false || echo "Release ${RELEASE_TAG} already exists (OK)"
