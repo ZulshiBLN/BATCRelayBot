@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-08-30
+
+### Added
+- Bot installation now automatic in `$env:USERPROFILE\AppData\Local\BATCRelayBot`
+- `Install-BATCRelayBot` automatically copies bot.py and requirements.txt from module
+- VoiceMeeter uninstall support in `Uninstall-BATCRelayBot` (with user confirmation)
+
+### Changed
+- All functions now use `BotPath` parameter instead of `ProjectPath`
+- Default bot path changed from current directory to AppData\Local
+- Installation simplified: no need to navigate to project directory
+- Updated help documentation for all functions
+
+### Fixed
+- Installation now properly copies bot files to installation directory
+- Uninstall now handles all three prerequisites (Python, ffmpeg, VoiceMeeter)
+
 ## [1.0.0] - 2026-08-30
 
 ### Added
