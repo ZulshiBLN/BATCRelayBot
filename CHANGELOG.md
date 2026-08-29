@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-08-30
+
+### Added
+- Comprehensive Architecture Decision Records (ADRs) for design documentation
+  - ADR-001: VoiceMeeter selection rationale
+  - ADR-002: PowerShell module vs standalone script decision
+  - ADR-003: AppData\Local installation path justification
+  - ADR-004: Task-based polling vs event-driven architecture
+- Enhanced async function test coverage for bot lifecycle
+
+### Fixed
+- Improved test coverage for async functions (connect_and_stream, watchdog, shutdown_watcher)
+- Added comprehensive command registration tests
+- Cleaned up .gitignore duplicate entries (reduced from 81 to 60 lines)
+
+### Changed
+- Test suite now includes mock-based async testing patterns
+
 ## [1.1.0] - 2026-08-30
 
 ### Added
