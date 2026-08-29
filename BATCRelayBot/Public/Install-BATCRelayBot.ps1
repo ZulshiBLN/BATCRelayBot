@@ -103,6 +103,23 @@
         $env:Path = "$env:Path;$ffmpegDir"
     }
 
+    # Install VoiceMeeter
+    Write-Step "VoiceMeeter"
+    $voicemeeterInstalled = Get-ChildItem "C:\Program Files (x86)\VB\Voicemeeter\" -ErrorAction SilentlyContinue
+    if ($voicemeeterInstalled) {
+        Write-Host "VoiceMeeter already installed" -ForegroundColor Green
+    } else {
+        Write-Host "VoiceMeeter not found, installing via winget..." -ForegroundColor Cyan
+        winget install --id VB-Audio.VoiceMeeter -e --scope user --silent --accept-package-agreements --accept-source-agreements
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "WARNING: VoiceMeeter installation may have failed (exit code $LASTEXITCODE)." -ForegroundColor Yellow
+            Write-Host "VoiceMeeter requires restart. Please visit https://vb-audio.com/Voicemeeter/ to install manually if needed." -ForegroundColor Yellow
+        } else {
+            Write-Host "VoiceMeeter installed" -ForegroundColor Green
+            Write-Host "NOTE: VoiceMeeter requires system restart to fully activate." -ForegroundColor Cyan
+        }
+    }
+
     # Install pip requirements
     Write-Step "Python dependencies"
     & $pythonExe -m pip install --upgrade pip --quiet

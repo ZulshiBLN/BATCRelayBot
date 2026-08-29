@@ -56,11 +56,13 @@ Install-BATCRelayBot
 ```
 
 This will:
-- Install Python and ffmpeg (via winget) for your user only
+- Install Python, ffmpeg, and VoiceMeeter (via winget) for your user only
 - Install required Python packages
 - Auto-detect your VoiceMeeter device
-- Prompt you for bot token, server ID, channel ID, and paths to VoiceMeeter/BeyondATC
+- Prompt you for bot token, server ID, channel ID, and path to BeyondATC
 - Write everything to `config.json`
+
+**Note:** VoiceMeeter installation may require a system restart to fully activate.
 
 ### 4. Start the bot
 
