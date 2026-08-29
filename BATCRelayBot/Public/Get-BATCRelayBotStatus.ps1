@@ -6,24 +6,27 @@
     .DESCRIPTION
     Checks whether the bot process is running, and returns detailed status information.
 
-    .PARAMETER ProjectPath
-    Path to the project directory. Defaults to the current directory.
+    .PARAMETER BotPath
+    Path to the bot installation directory.
+    Defaults to $env:USERPROFILE\AppData\Local\BATCRelayBot
 
     .EXAMPLE
     Get-BATCRelayBotStatus
-    Get-BATCRelayBotStatus -ProjectPath "C:\MyProjects\ATC-Relay-Bot"
+
+    .EXAMPLE
+    Get-BATCRelayBotStatus -BotPath "D:\MyBot\BATCRelayBot"
 
     .OUTPUTS
     PSCustomObject with properties: IsRunning, ProcessId, PidFile, Uptime, LogFiles
     #>
 
     param(
-        [string]$ProjectPath = (Get-Location).Path
+        [string]$BotPath = "$env:USERPROFILE\AppData\Local\BATCRelayBot"
     )
 
-    $pidFile = Join-Path $ProjectPath "bot.pid"
-    $logFile = Join-Path $ProjectPath "logs\bot_output.log"
-    $errorLogFile = Join-Path $ProjectPath "logs\bot_error.log"
+    $pidFile = Join-Path $BotPath "bot.pid"
+    $logFile = Join-Path $BotPath "logs\bot_output.log"
+    $errorLogFile = Join-Path $BotPath "logs\bot_error.log"
 
     $status = [PSCustomObject]@{
         IsRunning    = $false

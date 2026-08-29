@@ -7,24 +7,27 @@
     Signals the bot to leave the voice channel gracefully and exit.
     Falls back to force-kill if graceful shutdown times out.
 
-    .PARAMETER ProjectPath
-    Path to the project directory. Defaults to the current directory.
+    .PARAMETER BotPath
+    Path to the bot installation directory.
+    Defaults to $env:USERPROFILE\AppData\Local\BATCRelayBot
 
     .PARAMETER Timeout
     Seconds to wait for graceful shutdown before force-killing (default: 15).
 
     .EXAMPLE
     Stop-BATCRelayBot
-    Stop-BATCRelayBot -ProjectPath "C:\MyProjects\ATC-Relay-Bot" -Timeout 20
+
+    .EXAMPLE
+    Stop-BATCRelayBot -BotPath "D:\MyBot\BATCRelayBot" -Timeout 20
     #>
 
     param(
-        [string]$ProjectPath = (Get-Location).Path,
+        [string]$BotPath = "$env:USERPROFILE\AppData\Local\BATCRelayBot",
         [int]$Timeout = 15
     )
 
-    $pidFile = Join-Path $ProjectPath "bot.pid"
-    $stopSignalFile = Join-Path $ProjectPath "stop.signal"
+    $pidFile = Join-Path $BotPath "bot.pid"
+    $stopSignalFile = Join-Path $BotPath "stop.signal"
 
     if (-not (Test-Path $pidFile)) {
         Write-Host "No bot.pid found - bot is not running or was not started with Start-BATCRelayBot." -ForegroundColor Yellow

@@ -6,22 +6,31 @@
     .DESCRIPTION
     Stops the bot (if running), securely deletes config.json (which contains
     your bot token), and removes generated files (logs, bot.pid, stop.signal).
-    Optionally uninstalls Python and ffmpeg (with separate confirmation).
+    Optionally uninstalls Python, ffmpeg, and VoiceMeeter (with separate confirmation).
 
-    Project files (bot.py, requirements.txt) are NOT deleted.
+    Bot files (bot.py, requirements.txt) remain in place.
 
-    .PARAMETER ProjectPath
-    Path to the project directory. Defaults to the current directory.
+    .PARAMETER BotPath
+    Path to the bot installation directory.
+    Defaults to $env:USERPROFILE\AppData\Local\BATCRelayBot
 
     .EXAMPLE
-    UnInstall-BATCRelayBot -ProjectPath "C:\MyProjects\ATC-Relay-Bot"
+    Uninstall-BATCRelayBot
+
+    .EXAMPLE
+    Uninstall-BATCRelayBot -BotPath "D:\MyBot\BATCRelayBot"
     #>
 
     param(
-        [string]$ProjectPath = (Get-Location).Path
+        [string]$BotPath = "$env:USERPROFILE\AppData\Local\BATCRelayBot"
     )
 
-    Set-Location $ProjectPath
+    if (-not (Test-Path $BotPath)) {
+        Write-Host "Bot directory not found: $BotPath" -ForegroundColor Red
+        exit 1
+    }
+
+    Set-Location $BotPath
 
     Write-Host "This will remove config.json (with your bot token), logs, and generated files." -ForegroundColor Cyan
     Write-Host "Project files (bot.py, requirements.txt) will NOT be deleted." -ForegroundColor Cyan
@@ -39,8 +48,8 @@
 
     # Stop the bot
     Write-Step "Stopping bot (if running)"
-    $pidFile = Join-Path $ProjectPath "bot.pid"
-    $stopSignalFile = Join-Path $ProjectPath "stop.signal"
+    $pidFile = Join-Path $BotPath "bot.pid"
+    $stopSignalFile = Join-Path $BotPath "stop.signal"
 
     if (Test-Path $pidFile) {
         $botPid = Get-Content $pidFile -ErrorAction SilentlyContinue
@@ -65,7 +74,7 @@
 
     # Securely delete config.json
     Write-Step "Removing configuration and generated files"
-    $configPath = Join-Path $ProjectPath "config.json"
+    $configPath = Join-Path $BotPath "config.json"
     if (Test-Path $configPath) {
         Write-Host "Securely deleting config.json..." -ForegroundColor Cyan
         try {
@@ -92,7 +101,7 @@
         }
     }
 
-    $logsDir = Join-Path $ProjectPath "logs"
+    $logsDir = Join-Path $BotPath "logs"
     if (Test-Path $logsDir) {
         Remove-Item $logsDir -Recurse -Force -ErrorAction SilentlyContinue
         Write-Host "logs\ folder removed." -ForegroundColor Green
@@ -139,6 +148,17 @@
                     }
                 }
                 Write-Host "ffmpeg uninstalled." -ForegroundColor Green
+            }
+        }
+
+        # Optionally uninstall VoiceMeeter
+        Write-Step "VoiceMeeter"
+        if ($listOutput -match "VB-Audio.VoiceMeeter") {
+            Write-Host "Found VB-Audio.VoiceMeeter package." -ForegroundColor Cyan
+            Write-Host "NOTE: This removes VoiceMeeter from your system entirely." -ForegroundColor Yellow
+            if (Confirm-Action "Uninstall VoiceMeeter?") {
+                winget uninstall --id VB-Audio.VoiceMeeter --scope user --silent
+                Write-Host "VoiceMeeter uninstalled." -ForegroundColor Green
             }
         }
     }

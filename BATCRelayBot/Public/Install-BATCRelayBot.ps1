@@ -4,24 +4,53 @@
     Installs all prerequisites and generates config.json for the BATC Relay Bot.
 
     .DESCRIPTION
-    Installs Python and ffmpeg (via winget), pip dependencies, detects VoiceMeeter
+    Installs Python, ffmpeg, and VoiceMeeter (via winget), pip dependencies, detects VoiceMeeter
     device, and interactively prompts for Discord configuration.
-    Installs for the current user only - no admin rights required.
+    Installs bot files to AppData\Local\BATCRelayBot. No admin rights required.
 
-    .PARAMETER ProjectPath
-    Path to the project directory containing bot.py and requirements.txt.
-    Defaults to the current directory.
+    .PARAMETER BotPath
+    Installation path for bot files and configuration.
+    Defaults to $env:USERPROFILE\AppData\Local\BATCRelayBot
 
     .EXAMPLE
-    Install-BATCRelayBot -ProjectPath "C:\MyProjects\ATC-Relay-Bot"
+    Install-BATCRelayBot
+
+    .EXAMPLE
+    Install-BATCRelayBot -BotPath "D:\MyBot\BATCRelayBot"
     #>
 
     param(
-        [string]$ProjectPath = (Get-Location).Path
+        [string]$BotPath = "$env:USERPROFILE\AppData\Local\BATCRelayBot"
     )
 
     $ErrorActionPreference = "Stop"
-    Set-Location $ProjectPath
+
+    if (-not (Test-Path $BotPath)) {
+        New-Item -ItemType Directory -Path $BotPath -Force | Out-Null
+        Write-Host "Created bot directory: $BotPath" -ForegroundColor Green
+    }
+
+    Set-Location $BotPath
+
+    # Copy bot files if they don't exist
+    Write-Step "Preparing bot files"
+    $moduleDir = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
+    $sourceBot = Join-Path $moduleDir "bot.py"
+    $sourceReqs = Join-Path $moduleDir "requirements.txt"
+    $sourceConfig = Join-Path $moduleDir "config.example.json"
+
+    if (Test-Path $sourceBot) {
+        Copy-Item $sourceBot $BotPath -Force -ErrorAction SilentlyContinue
+        Write-Host "bot.py copied to $BotPath" -ForegroundColor Green
+    }
+    if (Test-Path $sourceReqs) {
+        Copy-Item $sourceReqs $BotPath -Force -ErrorAction SilentlyContinue
+        Write-Host "requirements.txt copied to $BotPath" -ForegroundColor Green
+    }
+    if (Test-Path $sourceConfig) {
+        Copy-Item $sourceConfig $BotPath -Force -ErrorAction SilentlyContinue
+        Write-Host "config.example.json copied to $BotPath" -ForegroundColor Green
+    }
 
     # Check winget
     Write-Step "Checking prerequisites"
@@ -123,7 +152,7 @@
     # Install pip requirements
     Write-Step "Python dependencies"
     & $pythonExe -m pip install --upgrade pip --quiet
-    & $pythonExe -m pip install -r (Join-Path $ProjectPath "requirements.txt")
+    & $pythonExe -m pip install -r (Join-Path $BotPath "requirements.txt")
     if ($LASTEXITCODE -ne 0) {
         Write-Host "ERROR: pip install failed." -ForegroundColor Red
         exit 1
@@ -163,7 +192,7 @@
 
     # Ask for Discord config
     Write-Step "Discord bot configuration"
-    $configPath = Join-Path $ProjectPath "config.json"
+    $configPath = Join-Path $BotPath "config.json"
     $writeConfig = $true
     if (Test-Path $configPath) {
         $answer = Read-Host "config.json exists. Overwrite? (y/N)"

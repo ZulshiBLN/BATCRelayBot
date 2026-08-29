@@ -8,21 +8,25 @@
     waits for them to initialize, then starts bot.py in the background.
     Logs output to logs\bot_output.log and logs\bot_error.log.
 
-    .PARAMETER ProjectPath
-    Path to the project directory. Defaults to the current directory.
+    .PARAMETER BotPath
+    Path to the bot installation directory.
+    Defaults to $env:USERPROFILE\AppData\Local\BATCRelayBot
 
     .EXAMPLE
-    Start-BATCRelayBot -ProjectPath "C:\MyProjects\ATC-Relay-Bot"
+    Start-BATCRelayBot
+
+    .EXAMPLE
+    Start-BATCRelayBot -BotPath "D:\MyBot\BATCRelayBot"
     #>
 
     param(
-        [string]$ProjectPath = (Get-Location).Path
+        [string]$BotPath = "$env:USERPROFILE\AppData\Local\BATCRelayBot"
     )
 
     $ErrorActionPreference = "Stop"
-    Set-Location $ProjectPath
+    Set-Location $BotPath
 
-    $configPath = Join-Path $ProjectPath "config.json"
+    $configPath = Join-Path $BotPath "config.json"
     if (-not (Test-Path $configPath)) {
         Write-Host "ERROR: config.json not found at $configPath" -ForegroundColor Red
         Write-Host "Run Install-BATCRelayBot first or copy config.example.json to config.json" -ForegroundColor Red
@@ -98,14 +102,14 @@
         $pythonw = $config.python_path
     }
 
-    $logsDir = Join-Path $ProjectPath "logs"
+    $logsDir = Join-Path $BotPath "logs"
     if (-not (Test-Path $logsDir)) {
         New-Item -Path $logsDir -ItemType Directory | Out-Null
     }
 
     $logFile = Join-Path $logsDir "bot_output.log"
     $errorLogFile = Join-Path $logsDir "bot_error.log"
-    $pidFile = Join-Path $ProjectPath "bot.pid"
+    $pidFile = Join-Path $BotPath "bot.pid"
 
     if (Test-Path $pidFile) {
         $oldPid = Get-Content $pidFile -ErrorAction SilentlyContinue
@@ -118,7 +122,7 @@
     $process = Start-Process `
         -FilePath $pythonw `
         -ArgumentList "bot.py" `
-        -WorkingDirectory $ProjectPath `
+        -WorkingDirectory $BotPath `
         -WindowStyle Hidden `
         -RedirectStandardOutput $logFile `
         -RedirectStandardError $errorLogFile `
