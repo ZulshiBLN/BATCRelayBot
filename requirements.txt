@@ -1,0 +1,5 @@
+# IMPORTANT: this file is required by setup.ps1 (pip install -r requirements.txt).
+# Please do NOT delete it, even after the packages have already been installed -
+# without this file, setup.ps1 will fail the next time it runs (e.g. on a
+# different PC or after a fresh install).
+discord.py[voice]>=2.3.2

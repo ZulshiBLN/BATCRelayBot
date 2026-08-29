@@ -1,0 +1,13 @@
+{
+  "bot_token": "YOUR_BOT_TOKEN_HERE",
+  "guild_id": 123456789012345678,
+  "voice_channel_id": 123456789012345678,
+  "audio_device_name": "VoiceMeeter Output (VB-Audio Voicemeeter VAIO)",
+  "python_path": "C:\\Path\\To\\Python\\python.exe",
+  "voicemeeter_path": "C:\\Program Files (x86)\\VB\\Voicemeeter\\voicemeeter_x64.exe",
+  "voicemeeter_process_name": "voicemeeter_x64",
+  "voicemeeter_wait_seconds": 6,
+  "batc_path": "C:\\Path\\To\\BeyondATC\\BeyondATC.exe",
+  "batc_process_name": "BeyondATC",
+  "batc_wait_seconds": 8
+}
