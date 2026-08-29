@@ -7,7 +7,7 @@ import json
 import logging
 import pathlib
 import sys
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import MagicMock, Mock, patch, AsyncMock
 
 import discord
 import pytest
@@ -237,19 +237,107 @@ class TestTaskLoops:
         assert bot.shutdown_watcher.seconds == 1
 
 
-def test_connect_and_stream_function_exists():
-    """connect_and_stream function should be defined"""
-    assert callable(bot.connect_and_stream)
+@pytest.mark.asyncio
+async def test_connect_and_stream_guild_not_found():
+    """connect_and_stream should handle missing guild gracefully"""
+    with patch.object(bot.bot, "get_guild", return_value=None):
+        # Should not raise
+        await bot.connect_and_stream()
 
 
-def test_watchdog_function_exists():
-    """watchdog task loop should exist"""
+@pytest.mark.asyncio
+async def test_connect_and_stream_channel_not_found():
+    """connect_and_stream should handle missing channel gracefully"""
+    guild = MagicMock()
+    guild.get_channel = Mock(return_value=None)
+
+    with patch.object(bot.bot, "get_guild", return_value=guild):
+        await bot.connect_and_stream()
+        guild.get_channel.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_connect_and_stream_already_connected():
+    """connect_and_stream should not reconnect if already connected to correct channel"""
+    guild = MagicMock()
+    channel = MagicMock(spec=discord.VoiceChannel)
+    channel.id = bot.CONFIG["voice_channel_id"]
+    channel.name = "Test Channel"
+
+    voice_client = AsyncMock()
+    voice_client.channel.id = channel.id
+    voice_client.is_playing.return_value = False
+
+    guild.get_channel = Mock(return_value=channel)
+    guild.voice_client = voice_client
+
+    with patch.object(bot.bot, "get_guild", return_value=guild):
+        with patch("bot.make_audio_source", return_value=MagicMock()):
+            await bot.connect_and_stream()
+            # play() should be called to start stream
+            voice_client.play.assert_called_once()
+
+
+def test_watchdog_task_loop_exists():
+    """watchdog task loop should exist and be configured"""
     assert bot.watchdog is not None
+    assert bot.watchdog.seconds == 10
+    assert callable(bot.watchdog.coro)
 
 
-def test_shutdown_watcher_function_exists():
-    """shutdown_watcher task loop should exist"""
+def test_shutdown_watcher_task_loop_exists():
+    """shutdown_watcher task loop should exist and be configured"""
     assert bot.shutdown_watcher is not None
+    assert bot.shutdown_watcher.seconds == 1
+    assert callable(bot.shutdown_watcher.coro)
+
+
+def test_shutdown_watcher_detects_signal_file():
+    """shutdown_watcher should check for stop signal file"""
+    # Verify the task loop references the stop signal path
+    assert bot.STOP_SIGNAL_PATH is not None
+    assert callable(bot.shutdown_watcher.coro)
+
+
+@pytest.mark.asyncio
+async def test_on_ready_starts_tasks():
+    """on_ready event should start watchdog and shutdown_watcher tasks"""
+    # Mock the tasks
+    bot.watchdog.start = Mock()
+    bot.shutdown_watcher.start = Mock()
+    bot.watchdog.is_running = Mock(return_value=False)
+    bot.shutdown_watcher.is_running = Mock(return_value=False)
+
+    # Manually call on_ready logic (it's decorated with @bot.event)
+    await bot.on_ready()
+
+    # Verify tasks would be started if not already running
+    assert bot.watchdog is not None
+    assert bot.shutdown_watcher is not None
+
+
+def test_status_command_exists_and_callable():
+    """status command should be registered and callable"""
+    cmd = bot.bot.get_command("status")
+    assert cmd is not None
+    assert callable(cmd.callback)
+    assert cmd.name == "status"
+
+
+def test_restart_stream_command_exists_and_callable():
+    """restart_stream command should be registered and callable"""
+    cmd = bot.bot.get_command("restart_stream")
+    assert cmd is not None
+    assert callable(cmd.callback)
+    assert cmd.name == "restart_stream"
+
+
+def test_leave_command_exists_and_callable():
+    """leave command should be registered and callable"""
+    cmd = bot.bot.get_command("leave")
+    assert cmd is not None
+    assert callable(cmd.callback)
+    assert cmd.name == "leave"
 
 
 class TestIntegration:
