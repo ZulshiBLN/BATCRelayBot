@@ -71,22 +71,21 @@ jobs:
           Publish-Module -Path $modulePath -NuGetApiKey $apiKey -Force
           Write-Host "Successfully published version ${{ steps.get-version.outputs.VERSION }} to PSGallery" -ForegroundColor Green
 
-      - name: Create Release Notes
-        uses: actions/create-release@v1
+      - name: Create GitHub Release
+        shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ steps.get-version.outputs.VERSION }}
-          body: |
-            # BATC Relay Bot v${{ steps.get-version.outputs.VERSION }}
+        run: |
+          gh release create v${{ steps.get-version.outputs.VERSION }} \
+            --title "Release v${{ steps.get-version.outputs.VERSION }}" \
+            --notes "# BATC Relay Bot v${{ steps.get-version.outputs.VERSION }}
 
-            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details.
+          See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details.
 
-            ## Installation
+          ## Installation
 
-            ```powershell
-            Install-Module BATCRelayBot -Repository PSGallery
-            ```
-          draft: false
-          prerelease: false
+          \`\`\`powershell
+          Install-Module BATCRelayBot -Repository PSGallery
+          \`\`\`" \
+            --draft=false \
+            --prerelease=false
