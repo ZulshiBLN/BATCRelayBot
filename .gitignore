@@ -37,26 +37,9 @@ pip-delete-this-directory.txt
 .coverage
 .pytest_cache/
 htmlcov/
+coverage.xml
 
 # IDEs
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-.DS_Store
-
-# Project-specific (Runtime files with secrets)
-config.json
-bot.pid
-stop.signal
-
-# Generated files
-logs/
-bot_output.log
-bot_error.log
-
-# IDE/Editor
 .vscode/
 .idea/
 *.swp
@@ -72,9 +55,15 @@ Thumbs.db
 .env.local
 .env.*.local
 
-# PowerShell
-*.log
+# Project-specific (Runtime files with secrets)
+config.json
+bot.pid
+stop.signal
 
-# Test coverage
-htmlcov/
-.coverage
+# Generated files
+logs/
+bot_output.log
+bot_error.log
+
+# PowerShell logs
+*.log
