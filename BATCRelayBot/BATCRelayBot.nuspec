@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>BATCRelayBot</id>
+    <version>1.3.6</version>
+    <authors>Michel Brosche</authors>
+    <description>Discord bot that live-streams audio from a Windows recording device into a Discord voice channel, with automation for VoiceMeeter and BeyondATC.</description>
+    <projectUrl>https://github.com/ZulshiBLN/BATCRelayBot</projectUrl>
+    <licenseUrl>https://github.com/ZulshiBLN/BATCRelayBot/blob/main/LICENSE</licenseUrl>
+    <copyright>(c) 2026 Michel Brosche. All rights reserved.</copyright>
+    <tags>Discord Bot Audio VoiceMeeter BATC</tags>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+  </metadata>
+  <files>
+    <!-- PowerShell Module Files -->
+    <file src="BATCRelayBot.psd1" target="BATCRelayBot\" />
+    <file src="BATCRelayBot.psm1" target="BATCRelayBot\" />
+
+    <!-- Public Functions -->
+    <file src="Public\*.ps1" target="BATCRelayBot\Public\" />
+
+    <!-- Private Functions -->
+    <file src="Private\*.ps1" target="BATCRelayBot\Private\" />
+
+    <!-- Bot Files -->
+    <file src="..\bot.py" target="BATCRelayBot\" />
+    <file src="..\requirements.txt" target="BATCRelayBot\" />
+    <file src="..\config.example.json" target="BATCRelayBot\" />
+  </files>
+</package>
