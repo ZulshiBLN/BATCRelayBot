@@ -53,20 +53,24 @@ function Start-Installation {
         if (-not $Prerequisites.FFmpeg.Found) {
             Write-Host "      Installing FFmpeg..." -ForegroundColor Gray
             winget install Gyan.FFmpeg --silent 2>$null
-            # Re-detect FFmpeg after installation
-            $ffmpegCheck = & {
+
+            # Refresh PowerShell PATH from system registry (winget updates system PATH only)
+            $env:PATH = [System.Environment]::GetEnvironmentVariable('PATH','Machine') + ';' + [System.Environment]::GetEnvironmentVariable('PATH','User')
+
+            # Check common winget installation path first (faster than Get-Command)
+            $ffmpegCommonPath = "C:\Program Files\FFmpeg\bin\ffmpeg.exe"
+            if (Test-Path $ffmpegCommonPath) {
+                $Prerequisites.FFmpeg = @{Found = $true; Path = $ffmpegCommonPath}
+                Log-Message "FFmpeg installed and detected: $ffmpegCommonPath" -LogPath $logPath
+            } else {
+                # Fallback to Get-Command if not in common path
                 try {
                     $ffmpegExe = (Get-Command ffmpeg.exe -ErrorAction Stop).Source
-                    return @{Found = $true; Path = $ffmpegExe}
+                    $Prerequisites.FFmpeg = @{Found = $true; Path = $ffmpegExe}
+                    Log-Message "FFmpeg found at: $ffmpegExe" -LogPath $logPath
                 } catch {
-                    return @{Found = $false; Path = $null}
+                    Log-Message "WARNING: FFmpeg install attempted but not detected in PATH" -LogPath $logPath
                 }
-            }
-            if ($ffmpegCheck.Found) {
-                $Prerequisites.FFmpeg = @{Found = $true; Path = $ffmpegCheck.Path}
-                Log-Message "FFmpeg installed and detected: $($ffmpegCheck.Path)" -LogPath $logPath
-            } else {
-                Log-Message "WARNING: FFmpeg install attempted but not detected in PATH yet" -LogPath $logPath
             }
         }
 

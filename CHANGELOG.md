@@ -5,7 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.3.11] - 2026-08-30
+## [1.3.12] - 2026-08-30 (HOTFIX)
+
+### Fixed (CRITICAL)
+- VoiceMeeter detection now finds installations with correct paths (C:\Program Files\VB\... not VB-Audio)
+- VoiceMeeter detection searches registry (HKLM, HKCU, WOW6432) + filesystem + wildcard for 100% coverage
+- FFmpeg auto-install now works: PowerShell PATH refreshed after winget install
+- FFmpeg detection checks common path first before Get-Command fallback
+
+### Important Note
+**v1.3.11 should not be used.** If you installed v1.3.11, update to v1.3.12 immediately:
+```powershell
+Update-Module BATCRelayBot
+```
+
+Both critical bugs (VoiceMeeter detection + FFmpeg auto-install) are now fixed in v1.3.12.
+
+## [1.3.11] - 2026-08-30 (WITHDRAWN)
 
 ### Added
 - Auto-detect VoiceMeeter installation path (flexible registry search for multiple installation variants)
