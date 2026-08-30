@@ -86,6 +86,7 @@ jobs:
           echo "✓ Version check passed - $NEW_VERSION is newer than PSGallery version $LATEST"
 
       - name: Publish module to PSGallery
+        if: success()
         shell: powershell
         run: |
           $modulePath = "BATCRelayBot"
@@ -100,6 +101,7 @@ jobs:
           Write-Host "Successfully published version ${{ steps.get-version.outputs.VERSION }} to PSGallery" -ForegroundColor Green
 
       - name: Create GitHub Release
+        if: success()
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
