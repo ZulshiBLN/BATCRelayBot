@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.13] - 2026-08-30 (HOTFIX)
+
+### Fixed (CRITICAL)
+- Correct winget installation path detection for Python and FFmpeg (AppData, not Program Files)
+  - Fixes auto-install detection when using `winget install`
+  - Handles nested version directories (e.g., ffmpeg-9.0.1-full_build\bin\)
+- Fix PowerShell environment variable syntax in VoiceMeeter detection
+  - Changed from `$env:PROGRAMFILES(x86)` to `${env:ProgramFiles(x86)}` (braces required for parentheses)
+  - Corrected path casing (ProgramFiles, not PROGRAMFILES)
+- Add AppData LocalLow path for BeyondATC detection (official config location)
+  - Improved detection of optional BeyondATC installations
+- Replace UTF8NoBOM with UTF8 encoding for PowerShell 5.1 compatibility
+  - UTF8NoBOM only supported in PowerShell 6.0+ (Core)
+  - Fix enables install.log creation on Windows PowerShell 5.1 systems
+  - Affects both installation and removal logging
+- Add defensive parameters to Discord token validation (suppress prompts)
+
+### Technical Details
+- Verified against PowerShell 5.1 and user-tested installation paths
+- All logging now functional on PowerShell 5.1+
+- Path detection priority: AppData (winget) → Program Files → Registry → PATH
+
 ## [1.3.12] - 2026-08-30 (HOTFIX)
 
 ### Fixed (CRITICAL)

@@ -42,9 +42,9 @@ function Invoke-SecureUninstall {
     $errors = @()
 
     # Create removal log (saved to AppData so it survives directory deletion)
-    "=== BATCRelayBot Removal Log ===" | Out-File $logPath -Force -Encoding UTF8NoBOM
-    "Started: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Add-Content $logPath -Encoding UTF8NoBOM
-    ""  | Add-Content $logPath -Encoding UTF8NoBOM
+    "=== BATCRelayBot Removal Log ===" | Out-File $logPath -Force -Encoding UTF8
+    "Started: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Add-Content $logPath -Encoding UTF8
+    ""  | Add-Content $logPath -Encoding UTF8
 
     Write-Host ""
     Write-Host "Starting installation removal..." -ForegroundColor Green
@@ -57,14 +57,14 @@ function Invoke-SecureUninstall {
                       Where-Object { $_.CommandLine -match "bot\.py" }
         if ($botProcess) {
             Stop-Process $botProcess -Force -ErrorAction Stop
-            "[OK] Bot process stopped" | Add-Content $logPath -Encoding UTF8NoBOM
+            "[OK] Bot process stopped" | Add-Content $logPath -Encoding UTF8
             Write-Host "      DONE" -ForegroundColor Green
         } else {
             Write-Host "      (Not running)" -ForegroundColor Gray
         }
     } catch {
         $msg = "Warning: Could not stop bot process: $_"
-        $msg | Add-Content $logPath -Encoding UTF8NoBOM
+        $msg | Add-Content $logPath -Encoding UTF8
         Write-Host "      WARNING: $_" -ForegroundColor Yellow
     }
     Write-Host ""
@@ -78,7 +78,7 @@ function Invoke-SecureUninstall {
             $sdeleteExe = Join-Path $PSScriptRoot "..\..\tools\sdelete64.exe"
             if (Test-Path $sdeleteExe) {
                 & $sdeleteExe -p 3 $configPath 2>$null
-                "[OK] config.json securely deleted (3-pass SDelete)" | Add-Content $logPath -Encoding UTF8NoBOM
+                "[OK] config.json securely deleted (3-pass SDelete)" | Add-Content $logPath -Encoding UTF8
                 Write-Host "      DONE (SDelete)" -ForegroundColor Green
             } else {
                 # Fallback: Multi-pass PowerShell overwrite
@@ -89,13 +89,13 @@ function Invoke-SecureUninstall {
                     [System.IO.File]::WriteAllBytes($configPath, $bytes)
                 }
                 Remove-Item $configPath -Force
-                "[OK] config.json deleted (multi-pass overwrite)" | Add-Content $logPath -Encoding UTF8NoBOM
+                "[OK] config.json deleted (multi-pass overwrite)" | Add-Content $logPath -Encoding UTF8
                 Write-Host "      DONE (Multi-pass)" -ForegroundColor Green
             }
             $deletedFiles += "config.json"
         } catch {
             $msg = "ERROR: Failed to delete config.json: $_"
-            $msg | Add-Content $logPath -Encoding UTF8NoBOM
+            $msg | Add-Content $logPath -Encoding UTF8
             $errors += $msg
             Write-Host "      FAILED: $_" -ForegroundColor Red
         }
@@ -117,12 +117,12 @@ function Invoke-SecureUninstall {
                     $errors += "Could not delete $($file.Name): $_"
                 }
             }
-            "[OK] Deleted $count files from $BotPath" | Add-Content $logPath -Encoding UTF8NoBOM
+            "[OK] Deleted $count files from $BotPath" | Add-Content $logPath -Encoding UTF8
             Write-Host "      DONE ($count files)" -ForegroundColor Green
         }
     } catch {
         $msg = "ERROR: Failed to delete files: $_"
-        $msg | Add-Content $logPath -Encoding UTF8NoBOM
+        $msg | Add-Content $logPath -Encoding UTF8
         $errors += $msg
         Write-Host "      FAILED: $_" -ForegroundColor Red
     }
@@ -134,7 +134,7 @@ function Invoke-SecureUninstall {
         $appDataPath = "$env:APPDATA\BATCRelayBot"
         if (Test-Path $appDataPath) {
             Remove-Item $appDataPath -Recurse -Force -ErrorAction SilentlyContinue
-            "[OK] Cleaned AppData\BATCRelayBot" | Add-Content $logPath -Encoding UTF8NoBOM
+            "[OK] Cleaned AppData\BATCRelayBot" | Add-Content $logPath -Encoding UTF8
             Write-Host "      DONE" -ForegroundColor Green
         } else {
             Write-Host "      (No AppData folder)" -ForegroundColor Gray
@@ -143,7 +143,7 @@ function Invoke-SecureUninstall {
         $pipCache = "$env:APPDATA\pip\cache"
         if ((Test-Path $pipCache) -and $DependencyChoices.RemovePython) {
             Get-ChildItem -Path $pipCache -Recurse -ErrorAction SilentlyContinue | Remove-Item -Force -Recurse -ErrorAction SilentlyContinue
-            "[OK] Cleaned pip cache" | Add-Content $logPath -Encoding UTF8NoBOM
+            "[OK] Cleaned pip cache" | Add-Content $logPath -Encoding UTF8
         }
     } catch {
         Write-Host "      WARNING: $_" -ForegroundColor Yellow
@@ -158,7 +158,7 @@ function Invoke-SecureUninstall {
         try {
             Write-Host "      Uninstalling Python..." -ForegroundColor Gray
             winget uninstall "Python.Python" --silent 2>$null
-            "[OK] Python uninstalled" | Add-Content $logPath -Encoding UTF8NoBOM
+            "[OK] Python uninstalled" | Add-Content $logPath -Encoding UTF8
             $depsRemoved++
         } catch {
             Write-Host "      WARNING: Python uninstall failed" -ForegroundColor Yellow
@@ -169,7 +169,7 @@ function Invoke-SecureUninstall {
         try {
             Write-Host "      Uninstalling FFmpeg..." -ForegroundColor Gray
             winget uninstall "Gyan.FFmpeg" --silent 2>$null
-            "[OK] FFmpeg uninstalled" | Add-Content $logPath -Encoding UTF8NoBOM
+            "[OK] FFmpeg uninstalled" | Add-Content $logPath -Encoding UTF8
             $depsRemoved++
         } catch {
             Write-Host "      WARNING: FFmpeg uninstall failed" -ForegroundColor Yellow
@@ -180,7 +180,7 @@ function Invoke-SecureUninstall {
         try {
             Write-Host "      Uninstalling PowerShell module..." -ForegroundColor Gray
             Uninstall-Module BATCRelayBot -Force -ErrorAction Stop
-            "[OK] PowerShell module uninstalled" | Add-Content $logPath -Encoding UTF8NoBOM
+            "[OK] PowerShell module uninstalled" | Add-Content $logPath -Encoding UTF8
             $depsRemoved++
         } catch {
             Write-Host "      WARNING: Module uninstall failed" -ForegroundColor Yellow
@@ -197,7 +197,7 @@ function Invoke-SecureUninstall {
     # Write final verification BEFORE deleting directory (log is inside it)
     $success = -not (Test-Path $BotPath)
     if (-not $success) {
-        "[OK] Pre-deletion verification: Installation directory exists, proceeding with removal" | Add-Content $logPath -Encoding UTF8NoBOM
+        "[OK] Pre-deletion verification: Installation directory exists, proceeding with removal" | Add-Content $logPath -Encoding UTF8
     }
 
     # Step 6: Delete installation directory

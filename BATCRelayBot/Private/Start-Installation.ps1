@@ -35,8 +35,28 @@ function Start-Installation {
         if (-not $Prerequisites.Python.Found) {
             Write-Host "      Installing Python..." -ForegroundColor Gray
             winget install Python.Python --silent 2>$null
+
             # Re-detect Python after installation
             $pythonCheck = & {
+                # Level 1: Check winget default location (AppData)
+                try {
+                    $pythonDir = Get-ChildItem -Path "$env:LOCALAPPDATA\Programs\Python\*\python.exe" -ErrorAction SilentlyContinue |
+                                 Select-Object -First 1
+                    if ($pythonDir) {
+                        return @{Found = $true; Path = $pythonDir.FullName}
+                    }
+                } catch {}
+
+                # Level 2: Check Program Files (for machine-scope or manual installs)
+                try {
+                    $pythonDir = Get-ChildItem -Path "C:\Program Files\Python*\python.exe" -ErrorAction SilentlyContinue |
+                                 Select-Object -First 1
+                    if ($pythonDir) {
+                        return @{Found = $true; Path = $pythonDir.FullName}
+                    }
+                } catch {}
+
+                # Level 3: Fallback to Get-Command (if PATH was updated)
                 try {
                     $pythonExe = (Get-Command python.exe -ErrorAction Stop).Source
                     return @{Found = $true; Path = $pythonExe}
@@ -57,20 +77,39 @@ function Start-Installation {
             # Refresh PowerShell PATH from system registry (winget updates system PATH only)
             $env:PATH = [System.Environment]::GetEnvironmentVariable('PATH','Machine') + ';' + [System.Environment]::GetEnvironmentVariable('PATH','User')
 
-            # Check common winget installation path first (faster than Get-Command)
-            $ffmpegCommonPath = "C:\Program Files\FFmpeg\bin\ffmpeg.exe"
-            if (Test-Path $ffmpegCommonPath) {
-                $Prerequisites.FFmpeg = @{Found = $true; Path = $ffmpegCommonPath}
-                Log-Message "FFmpeg installed and detected: $ffmpegCommonPath" -LogPath $logPath
-            } else {
-                # Fallback to Get-Command if not in common path
+            # Re-detect FFmpeg after installation
+            $ffmpegCheck = & {
+                # Level 1: Check winget default location (AppData) - has nested version directory
+                try {
+                    $ffmpegExe = Get-ChildItem -Path "$env:LOCALAPPDATA\Microsoft\WinGet\Packages\Gyan.FFmpeg*\*\bin\ffmpeg.exe" -ErrorAction SilentlyContinue |
+                                 Select-Object -First 1
+                    if ($ffmpegExe) {
+                        return @{Found = $true; Path = $ffmpegExe.FullName}
+                    }
+                } catch {}
+
+                # Level 2: Check Program Files (for machine-scope installs)
+                try {
+                    $ffmpegExe = Get-ChildItem -Path "C:\Program Files\WinGet\Packages\Gyan.FFmpeg*\*\bin\ffmpeg.exe" -ErrorAction SilentlyContinue |
+                                 Select-Object -First 1
+                    if ($ffmpegExe) {
+                        return @{Found = $true; Path = $ffmpegExe.FullName}
+                    }
+                } catch {}
+
+                # Level 3: Fallback to Get-Command (if PATH was updated)
                 try {
                     $ffmpegExe = (Get-Command ffmpeg.exe -ErrorAction Stop).Source
-                    $Prerequisites.FFmpeg = @{Found = $true; Path = $ffmpegExe}
-                    Log-Message "FFmpeg found at: $ffmpegExe" -LogPath $logPath
+                    return @{Found = $true; Path = $ffmpegExe}
                 } catch {
-                    Log-Message "WARNING: FFmpeg install attempted but not detected in PATH" -LogPath $logPath
+                    return @{Found = $false; Path = $null}
                 }
+            }
+            if ($ffmpegCheck.Found) {
+                $Prerequisites.FFmpeg = @{Found = $true; Path = $ffmpegCheck.Path}
+                Log-Message "FFmpeg installed and detected: $($ffmpegCheck.Path)" -LogPath $logPath
+            } else {
+                Log-Message "WARNING: FFmpeg install attempted but not detected" -LogPath $logPath
             }
         }
 
@@ -118,7 +157,7 @@ function Start-Installation {
         }
 
         $configJson = $configContent | ConvertTo-Json
-        $configJson | Set-Content -Path $configPath -Force -Encoding UTF8NoBOM
+        $configJson | Set-Content -Path $configPath -Force -Encoding UTF8
         Log-Message "Configuration file created: $configPath" -LogPath $logPath
         Write-Host "      DONE" -ForegroundColor Green
     } catch {
@@ -189,7 +228,7 @@ function Log-Message {
     $logEntry = "[$timestamp] $Message"
 
     try {
-        Add-Content -Path $LogPath -Value $logEntry -Encoding UTF8NoBOM -ErrorAction SilentlyContinue
+        Add-Content -Path $LogPath -Value $logEntry -Encoding UTF8 -ErrorAction SilentlyContinue
     } catch {
         # Silently fail if log write fails
     }
