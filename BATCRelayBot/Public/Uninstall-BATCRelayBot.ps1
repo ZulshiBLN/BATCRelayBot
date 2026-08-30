@@ -40,15 +40,15 @@ function Uninstall-BATCRelayBot {
 
     # Phase 1: Pre-checks
     Write-Host "Phase 1: Checking prerequisites..." -ForegroundColor Cyan
-    $prerequisites = Confirm-UninstallPrerequisites -InstallPath $InstallPath
+    $prerequisites = Confirm-UninstallPrerequisites -BotPath $InstallPath
 
     if (-not $prerequisites.Valid) {
         Write-Host ""
         Write-Host "Uninstallation aborted." -ForegroundColor Yellow
         Write-Host ""
         if ($prerequisites.Errors -and $prerequisites.Errors.Count -gt 0) {
-            foreach ($error in $prerequisites.Errors) {
-                Write-Host "  * $error" -ForegroundColor Yellow
+            foreach ($err in $prerequisites.Errors) {
+                Write-Host "  * $err" -ForegroundColor Yellow
             }
         }
         return
@@ -59,7 +59,7 @@ function Uninstall-BATCRelayBot {
 
     # Phase 2: Show removal summary
     Write-Host "Phase 2: Removal Summary" -ForegroundColor Cyan
-    $removalSummary = Show-RemovalSummary -InstallPath $prerequisites.InstallPath
+    $removalSummary = Show-RemovalSummary -BotPath $prerequisites.InstallPath
 
     if (-not $removalSummary.Ready) {
         Write-Host ""

@@ -84,6 +84,7 @@ function Confirm-UninstallPrerequisites {
         Valid = $valid
         InstallFound = $installFound
         BotRunning = $botRunning
+        InstallPath = $BotPath
         ConfigPath = $configPath
         LogPath = $logPath
         Errors = $errors

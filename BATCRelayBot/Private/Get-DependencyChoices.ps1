@@ -59,7 +59,8 @@ function Get-DependencyChoices {
 
     if ($pythonList) {
         # Extract version info
-        if ($pythonList -match "Python\.Python\.(\d+\.\d+)") {
+        $pythonString = $pythonList | Out-String
+        if ($pythonString -match "Python\.Python\.(\d+\.\d+)") {
             $pythonVersion = $matches[1]
             Write-Host "   Found: Python $pythonVersion (installed via WinGet)" -ForegroundColor Gray
         } else {
