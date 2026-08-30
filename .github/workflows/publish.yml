@@ -66,24 +66,36 @@ jobs:
           echo "Checking PSGallery for existing version..."
           echo "Local version: $NEW_VERSION"
 
-          # Query PSGallery for current version
-          LATEST=$(curl -s "https://www.powershellgallery.com/api/v2/FindPackagesById()?id='BATCRelayBot'" | grep -oP '"Version":"?\K[^"]+' | head -1)
+          # Query PSGallery API for current version
+          RESPONSE=$(curl -s "https://www.powershellgallery.com/api/v2/FindPackagesById()?id='BATCRelayBot'")
+          echo "API Response: $RESPONSE" >&2
+
+          # Extract version using different methods for reliability
+          LATEST=$(echo "$RESPONSE" | grep -oP '"Version":"\K[^"]+' | head -1)
 
           if [ -z "$LATEST" ]; then
-            echo "✓ No existing version found on PSGallery (first publish)"
+            # Try alternative extraction
+            LATEST=$(echo "$RESPONSE" | grep -oP 'd:Version>\K[^<]+' | head -1)
+          fi
+
+          if [ -z "$LATEST" ]; then
+            echo "⚠️  Could not determine latest version from PSGallery API (might be first publish)"
+            echo "Proceeding with publish..."
             exit 0
           fi
 
           echo "Latest PSGallery version: $LATEST"
+          echo "Local version: $NEW_VERSION"
 
-          # Compare versions (simple string comparison works for semantic versioning)
-          if [[ "$LATEST" == "$NEW_VERSION" || "$LATEST" > "$NEW_VERSION" ]]; then
-            echo "❌ Version $NEW_VERSION already exists on PSGallery or is older than $LATEST"
+          # Proper version comparison using sort
+          if [ "$(printf '%s\n' "$LATEST" "$NEW_VERSION" | sort -V | head -n1)" = "$NEW_VERSION" ] && [ "$LATEST" != "$NEW_VERSION" ]; then
+            echo "✓ Version check passed - $NEW_VERSION is newer than PSGallery version $LATEST"
+            exit 0
+          else
+            echo "❌ Version $NEW_VERSION is not newer than PSGallery version $LATEST"
             echo "Please bump the version in BATCRelayBot.psd1"
             exit 1
           fi
-
-          echo "✓ Version check passed - $NEW_VERSION is newer than PSGallery version $LATEST"
 
       - name: Publish module to PSGallery
         if: success()
