@@ -47,10 +47,10 @@ coverage.xml
 *~
 
 # OS
-Thumbs.db
 .DS_Store
+Thumbs.db
 
-# Environment
+# Environment (secrets - NEVER commit)
 .env
 .env.local
 .env.*.local
@@ -64,6 +64,7 @@ stop.signal
 logs/
 bot_output.log
 bot_error.log
+install.log
 
 # PowerShell logs
 *.log
