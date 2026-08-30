@@ -14,7 +14,8 @@
         'Start-BATCRelayBot',
         'Stop-BATCRelayBot',
         'Uninstall-BATCRelayBot',
-        'Get-BATCRelayBotStatus'
+        'Get-BATCRelayBotStatus',
+        'Edit-BATCRelayBotConfig'
     )
 
     CmdletsToExport       = @()
