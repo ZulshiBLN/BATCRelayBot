@@ -13,8 +13,7 @@ function Write-ConfigFile {
 
     try {
         [System.IO.File]::WriteAllText($tempPath, $JsonContent, [System.Text.Encoding]::UTF8)
-        Copy-Item -Path $tempPath -Destination $ConfigPath -Force
-        Remove-Item $tempPath -Force
+        [System.IO.File]::Replace($tempPath, $ConfigPath, $null, $true)
         return $true
     }
     catch {
