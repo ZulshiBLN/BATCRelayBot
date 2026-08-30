@@ -60,24 +60,29 @@ jobs:
       - name: Check PSGallery for existing version
         id: check-version
         shell: powershell
+        env:
+          NEW_VERSION: ${{ steps.get-version.outputs.VERSION }}
         run: |
-          $localVersion = [version]"${{ steps.get-version.outputs.VERSION }}"
+          $localVersion = [version]$env:NEW_VERSION
           Write-Host "Local version: $localVersion"
 
           # Query PSGallery for current version
           $psGalleryUrl = "https://www.powershellgallery.com/api/v2/FindPackagesById()?id='BATCRelayBot'"
           try {
             $response = Invoke-RestMethod -Uri $psGalleryUrl -ErrorAction Stop
-            $latestVersion = $response.entry[0].properties.Version | Sort-Object -Version -Descending | Select-Object -First 1
-            Write-Host "Latest PSGallery version: $latestVersion"
+            if ($response.entry) {
+              $latestVersion = $response.entry[0].properties.Version | Sort-Object -Version -Descending | Select-Object -First 1
+              Write-Host "Latest PSGallery version: $latestVersion"
 
-            if ([version]$latestVersion -ge $localVersion) {
-              Write-Error "Version $localVersion already exists on PSGallery or is older than $latestVersion. Please bump the version in BATCRelayBot.psd1"
-              exit 1
+              if ([version]$latestVersion -ge $localVersion) {
+                Write-Error "Version $localVersion already exists on PSGallery or is older than $latestVersion. Please bump the version in BATCRelayBot.psd1"
+                exit 1
+              }
+              Write-Host "✓ Version check passed - $localVersion is newer than PSGallery version $latestVersion" -ForegroundColor Green
+            } else {
+              Write-Host "No existing version found on PSGallery (first publish)" -ForegroundColor Green
             }
-            Write-Host "✓ Version check passed - $localVersion is newer than PSGallery version $latestVersion" -ForegroundColor Green
           } catch {
-            # If query fails, assume no version exists (first publish)
             Write-Host "⚠️  Could not query PSGallery (might be first publish): $_" -ForegroundColor Yellow
           }
 
