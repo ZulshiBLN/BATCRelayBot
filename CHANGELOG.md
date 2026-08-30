@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.5] - 2026-08-30
+
+### Added
+- Install logging to file (install.log in bot directory)
+- Better pip install error detection and reporting
+- Log file path shown in error messages
+
+### Improved
+- More detailed pip install progress messages
+- Check if requirements.txt exists before trying to install
+- Improved error messages with actionable information
+
 ## [1.3.4] - 2026-08-30
 
 ### Improved

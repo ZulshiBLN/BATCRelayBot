@@ -25,6 +25,16 @@
 
     $ErrorActionPreference = "Stop"
 
+    # Create log file for troubleshooting
+    $logFile = Join-Path $BotPath "install.log"
+    $null = New-Item -ItemType Directory -Path $BotPath -Force -ErrorAction SilentlyContinue
+
+    # Start logging
+    "=== BATCRelayBot Installation Log ===" | Out-File -FilePath $logFile -Force
+    "Started: $(Get-Date)" | Add-Content -Path $logFile
+    "PowerShell Version: $($PSVersionTable.PSVersion)" | Add-Content -Path $logFile
+    "" | Add-Content -Path $logFile
+
     try {
         if (-not (Test-Path $BotPath)) {
         New-Item -ItemType Directory -Path $BotPath -Force | Out-Null
@@ -179,13 +189,35 @@
 
     # Install pip requirements
     Write-Step "Python dependencies"
-    & $pythonExe -m pip install --upgrade pip --quiet
-    & $pythonExe -m pip install -r (Join-Path $BotPath "requirements.txt")
+    "Installing Python dependencies..." | Add-Content -Path $logFile
+
+    Write-Host "Upgrading pip..." -ForegroundColor Cyan
+    & $pythonExe -m pip install --upgrade pip --quiet 2>&1 | Add-Content -Path $logFile
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "ERROR: pip install failed." -ForegroundColor Red
+        $errMsg = "ERROR: pip upgrade failed (exit code $LASTEXITCODE)"
+        Write-Host $errMsg -ForegroundColor Red
+        $errMsg | Add-Content -Path $logFile
+        exit 1
+    }
+
+    $reqFile = Join-Path $BotPath "requirements.txt"
+    if (-not (Test-Path $reqFile)) {
+        $errMsg = "ERROR: requirements.txt not found at $reqFile"
+        Write-Host $errMsg -ForegroundColor Red
+        $errMsg | Add-Content -Path $logFile
+        exit 1
+    }
+
+    Write-Host "Installing required packages (this may take a minute)..." -ForegroundColor Cyan
+    & $pythonExe -m pip install -r $reqFile 2>&1 | Add-Content -Path $logFile
+    if ($LASTEXITCODE -ne 0) {
+        $errMsg = "ERROR: pip install failed (exit code $LASTEXITCODE). Check $logFile for details."
+        Write-Host $errMsg -ForegroundColor Red
+        $errMsg | Add-Content -Path $logFile
         exit 1
     }
     Write-Host "Python dependencies installed." -ForegroundColor Green
+    "Python dependencies installed successfully" | Add-Content -Path $logFile
 
     # Detect VoiceMeeter
     Write-Step "Detecting VoiceMeeter device"
@@ -294,12 +326,20 @@
         Write-Host ""
         Write-Host "Then start the bot with: Start-BATCRelayBot" -ForegroundColor Green
     } catch {
+        $errorMsg = $_.Exception.Message
+        "" | Add-Content -Path $logFile
+        "ERROR: $_" | Add-Content -Path $logFile
+        "Exception: $errorMsg" | Add-Content -Path $logFile
+
         Write-Host ""
         Write-Host "❌ INSTALLATION ERROR:" -ForegroundColor Red
-        Write-Host $_.Exception.Message -ForegroundColor Red
+        Write-Host $errorMsg -ForegroundColor Red
         Write-Host ""
-        Write-Host "Error details:" -ForegroundColor Yellow
+        Write-Host "Full error details:" -ForegroundColor Yellow
         Write-Host $_ -ForegroundColor Yellow
+        Write-Host ""
+        Write-Host "📝 Log file saved at:" -ForegroundColor Cyan
+        Write-Host "   $logFile" -ForegroundColor White
         Write-Host ""
         Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Gray
         Write-Host "Press ENTER to close this window..." -ForegroundColor Cyan
