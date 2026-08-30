@@ -59,32 +59,31 @@ jobs:
 
       - name: Check PSGallery for existing version
         id: check-version
-        shell: powershell
+        shell: bash
         env:
           NEW_VERSION: ${{ steps.get-version.outputs.VERSION }}
         run: |
-          $localVersion = [version]$env:NEW_VERSION
-          Write-Host "Local version: $localVersion"
+          echo "Checking PSGallery for existing version..."
+          echo "Local version: $NEW_VERSION"
 
           # Query PSGallery for current version
-          $psGalleryUrl = "https://www.powershellgallery.com/api/v2/FindPackagesById()?id='BATCRelayBot'"
-          try {
-            $response = Invoke-RestMethod -Uri $psGalleryUrl -ErrorAction Stop
-            if ($response.entry) {
-              $latestVersion = $response.entry[0].properties.Version | Sort-Object -Version -Descending | Select-Object -First 1
-              Write-Host "Latest PSGallery version: $latestVersion"
+          LATEST=$(curl -s "https://www.powershellgallery.com/api/v2/FindPackagesById()?id='BATCRelayBot'" | grep -oP '"Version":"?\K[^"]+' | head -1)
 
-              if ([version]$latestVersion -ge $localVersion) {
-                Write-Error "Version $localVersion already exists on PSGallery or is older than $latestVersion. Please bump the version in BATCRelayBot.psd1"
-                exit 1
-              }
-              Write-Host "✓ Version check passed - $localVersion is newer than PSGallery version $latestVersion" -ForegroundColor Green
-            } else {
-              Write-Host "No existing version found on PSGallery (first publish)" -ForegroundColor Green
-            }
-          } catch {
-            Write-Host "⚠️  Could not query PSGallery (might be first publish): $_" -ForegroundColor Yellow
-          }
+          if [ -z "$LATEST" ]; then
+            echo "✓ No existing version found on PSGallery (first publish)"
+            exit 0
+          fi
+
+          echo "Latest PSGallery version: $LATEST"
+
+          # Compare versions (simple string comparison works for semantic versioning)
+          if [[ "$LATEST" == "$NEW_VERSION" || "$LATEST" > "$NEW_VERSION" ]]; then
+            echo "❌ Version $NEW_VERSION already exists on PSGallery or is older than $LATEST"
+            echo "Please bump the version in BATCRelayBot.psd1"
+            exit 1
+          fi
+
+          echo "✓ Version check passed - $NEW_VERSION is newer than PSGallery version $LATEST"
 
       - name: Publish module to PSGallery
         shell: powershell
