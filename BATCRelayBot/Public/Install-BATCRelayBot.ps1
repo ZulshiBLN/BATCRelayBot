@@ -1,22 +1,30 @@
-﻿function Install-BATCRelayBot {
+#Requires -Version 5.1
+
+function Install-BATCRelayBot {
     <#
     .SYNOPSIS
-    Installs all prerequisites and generates config.json for the BATC Relay Bot.
+    Installs BATCRelayBot with 6-phase industry-standard installer flow.
 
     .DESCRIPTION
-    Installs Python, ffmpeg, and VoiceMeeter (via winget), pip dependencies, detects VoiceMeeter
-    device, and interactively prompts for Discord configuration.
-    Installs bot files to AppData\Local\BATCRelayBot. No admin rights required.
+    Guides user through complete installation with:
+    - Phase 1: Silently detect all prerequisites
+    - Phase 2: Display prerequisite status
+    - Phase 3: Collect Discord configuration
+    - Phase 4: Review selections before install
+    - Phase 5: Execute installation
+    - Phase 6: Display success and next steps
+
+    No admin rights required.
 
     .PARAMETER BotPath
-    Installation path for bot files and configuration.
+    Installation path for bot files.
     Defaults to $env:USERPROFILE\AppData\Local\BATCRelayBot
 
     .EXAMPLE
     Install-BATCRelayBot
 
     .EXAMPLE
-    Install-BATCRelayBot -BotPath "D:\MyBot\BATCRelayBot"
+    Install-BATCRelayBot -BotPath "D:\MyBot"
     #>
 
     param(
@@ -25,377 +33,94 @@
 
     $ErrorActionPreference = "Stop"
 
-    # Create log file for troubleshooting
-    $logFile = Join-Path $BotPath "install.log"
-    $null = New-Item -ItemType Directory -Path $BotPath -Force -ErrorAction SilentlyContinue
-
-    # Start logging
-    "=== BATCRelayBot Installation Log ===" | Out-File -FilePath $logFile -Force
-    "Started: $(Get-Date)" | Add-Content -Path $logFile
-    "PowerShell Version: $($PSVersionTable.PSVersion)" | Add-Content -Path $logFile
-    "" | Add-Content -Path $logFile
+    Write-Host ""
+    Write-Host "========================================" -ForegroundColor Cyan
+    Write-Host "   BATCRelayBot Installation (v1.3.11)" -ForegroundColor Cyan
+    Write-Host "========================================" -ForegroundColor Cyan
+    Write-Host ""
 
     try {
-        if (-not (Test-Path $BotPath)) {
-        New-Item -ItemType Directory -Path $BotPath -Force | Out-Null
-        Write-Host "Created bot directory: $BotPath" -ForegroundColor Green
-    }
-
-    Set-Location $BotPath
-
-    # Prepare bot files
-    Write-Step "Preparing bot files"
-    $moduleDir = Split-Path -Parent $PSScriptRoot
-    $sourceBot = Join-Path $moduleDir "bot.py"
-    $sourceReqs = Join-Path $moduleDir "requirements.txt"
-    $sourceConfig = Join-Path $moduleDir "config.example.json"
-
-    $gitHubRawUrl = "https://raw.githubusercontent.com/ZulshiBLN/BATCRelayBot/main"
-    $botDestination = Join-Path $BotPath "bot.py"
-    $reqsDestination = Join-Path $BotPath "requirements.txt"
-    $configDestination = Join-Path $BotPath "config.example.json"
-
-    "Preparing bot files from: $moduleDir" | Add-Content -Path $logFile
-
-    # Try to copy bot.py from module directory, fallback to GitHub
-    if (Test-Path $sourceBot) {
-        Copy-Item $sourceBot $botDestination -Force -ErrorAction SilentlyContinue
-        Write-Host "bot.py copied from module directory" -ForegroundColor Green
-        "✓ bot.py copied from module" | Add-Content -Path $logFile
-    } else {
-        Write-Host "bot.py not in module directory, downloading from GitHub..." -ForegroundColor Cyan
-        try {
-            Invoke-WebRequest -Uri "$gitHubRawUrl/bot.py" -OutFile $botDestination -ErrorAction Stop
-            Write-Host "bot.py downloaded from GitHub" -ForegroundColor Green
-            "✓ bot.py downloaded from GitHub" | Add-Content -Path $logFile
-        } catch {
-            $errMsg = "ERROR: Could not download bot.py from GitHub: $_"
-            Write-Host $errMsg -ForegroundColor Red
-            $errMsg | Add-Content -Path $logFile
-            exit 1
+        # PHASE 1: Silent prerequisites detection
+        Write-Host "[Phase 1] Detecting prerequisites..." -ForegroundColor Gray
+        $prerequisites = @{
+            Python = Find-Python
+            FFmpeg = Find-FFmpeg
+            VoiceMeeter = Find-VoiceMeeter
+            BeyondATC = Find-BeyondATC
         }
-    }
-
-    # Try to copy requirements.txt from module directory, fallback to GitHub
-    if (Test-Path $sourceReqs) {
-        Copy-Item $sourceReqs $reqsDestination -Force -ErrorAction SilentlyContinue
-        Write-Host "requirements.txt copied from module directory" -ForegroundColor Green
-        "✓ requirements.txt copied from module" | Add-Content -Path $logFile
-    } else {
-        Write-Host "requirements.txt not in module directory, downloading from GitHub..." -ForegroundColor Cyan
-        try {
-            Invoke-WebRequest -Uri "$gitHubRawUrl/requirements.txt" -OutFile $reqsDestination -ErrorAction Stop
-            Write-Host "requirements.txt downloaded from GitHub" -ForegroundColor Green
-            "✓ requirements.txt downloaded from GitHub" | Add-Content -Path $logFile
-        } catch {
-            $errMsg = "ERROR: Could not download requirements.txt from GitHub: $_"
-            Write-Host $errMsg -ForegroundColor Red
-            $errMsg | Add-Content -Path $logFile
-            exit 1
-        }
-    }
-
-    # Try to copy config.example.json from module directory, fallback to GitHub
-    if (Test-Path $sourceConfig) {
-        Copy-Item $sourceConfig $configDestination -Force -ErrorAction SilentlyContinue
-        Write-Host "config.example.json copied from module directory" -ForegroundColor Green
-        "✓ config.example.json copied from module" | Add-Content -Path $logFile
-    } else {
-        Write-Host "config.example.json not in module directory, downloading from GitHub..." -ForegroundColor Cyan
-        try {
-            Invoke-WebRequest -Uri "$gitHubRawUrl/config.example.json" -OutFile $configDestination -ErrorAction Stop
-            Write-Host "config.example.json downloaded from GitHub" -ForegroundColor Green
-            "✓ config.example.json downloaded from GitHub" | Add-Content -Path $logFile
-        } catch {
-            $errMsg = "ERROR: Could not download config.example.json from GitHub: $_"
-            Write-Host $errMsg -ForegroundColor Red
-            $errMsg | Add-Content -Path $logFile
-            exit 1
-        }
-    }
-
-    # Check winget
-    Write-Step "Checking prerequisites"
-    if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
-        Write-Host "ERROR: winget (Windows Package Manager) not found." -ForegroundColor Red
-        Write-Host "Install 'App Installer' from the Microsoft Store:" -ForegroundColor Red
-        Write-Host "https://apps.microsoft.com/detail/9nblggh4nns1" -ForegroundColor Red
-        exit 1
-    }
-    Write-Host "winget found." -ForegroundColor Green
-
-    # Install Python
-    Write-Step "Python"
-    $pythonExe = Find-PerUserPython
-    if ($pythonExe) {
-        Write-Host "Python already installed: $pythonExe" -ForegroundColor Green
-    } else {
-        Write-Host "Python not found, installing latest via winget..." -ForegroundColor Cyan
-        $searchOutput = winget search "Python.Python.3." --source winget --accept-source-agreements 2>$null
-        $matches = [regex]::Matches(($searchOutput -join "`n"), 'Python\.Python\.3\.(\d+)')
-        $latestId = $null
-        $latestMinor = -1
-        foreach ($m in $matches) {
-            $minor = [int]$m.Groups[1].Value
-            if ($minor -gt $latestMinor) {
-                $latestMinor = $minor
-                $latestId = $m.Value
-            }
-        }
-        if (-not $latestId) {
-            Write-Host "ERROR: Could not find Python via winget. Install manually from python.org" -ForegroundColor Red
-            exit 1
-        }
-        Write-Host "Installing $latestId (current user only)..." -ForegroundColor Cyan
-        winget install --id $latestId -e --scope user --silent --accept-package-agreements --accept-source-agreements
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "ERROR: Python installation failed (exit code $LASTEXITCODE)." -ForegroundColor Red
-            exit 1
-        }
-        $pythonExe = Find-PerUserPython
-        if (-not $pythonExe) {
-            Write-Host "ERROR: Python was installed but could not be located. Restart the terminal and try again." -ForegroundColor Red
-            exit 1
-        }
-        Write-Host "Python installed: $pythonExe" -ForegroundColor Green
-    }
-
-    # Install ffmpeg
-    Write-Step "ffmpeg"
-    $ffmpegExe = Find-FfmpegExe
-    if ($ffmpegExe) {
-        Write-Host "ffmpeg already installed: $ffmpegExe" -ForegroundColor Green
-    } else {
-        Write-Host "ffmpeg not found, installing via winget..." -ForegroundColor Cyan
-        winget install --id Gyan.FFmpeg -e --scope user --silent --accept-package-agreements --accept-source-agreements
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "ERROR: ffmpeg installation failed (exit code $LASTEXITCODE)." -ForegroundColor Red
-            exit 1
-        }
-        $ffmpegExe = Find-FfmpegExe
-        if (-not $ffmpegExe) {
-            Write-Host "ERROR: ffmpeg was installed but could not be located." -ForegroundColor Red
-            exit 1
-        }
-        Write-Host "ffmpeg installed: $ffmpegExe" -ForegroundColor Green
-    }
-
-    $ffmpegDir = Split-Path -Parent $ffmpegExe
-    $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
-    if ($userPath -notlike "*$ffmpegDir*") {
-        Write-Host "Adding ffmpeg to user PATH: $ffmpegDir" -ForegroundColor Cyan
-        $newUserPath = if ($userPath) { "$userPath;$ffmpegDir" } else { $ffmpegDir }
-        [Environment]::SetEnvironmentVariable("Path", $newUserPath, "User")
-    } else {
-        Write-Host "ffmpeg is already on PATH." -ForegroundColor Green
-    }
-
-    if ($env:Path -notlike "*$ffmpegDir*") {
-        $env:Path = "$env:Path;$ffmpegDir"
-    }
-
-    # Install VoiceMeeter
-    Write-Step "VoiceMeeter"
-    $voicemeeterInstalled = Get-ChildItem "C:\Program Files (x86)\VB\Voicemeeter\" -ErrorAction SilentlyContinue
-    if ($voicemeeterInstalled) {
-        Write-Host "VoiceMeeter already installed" -ForegroundColor Green
-    } else {
-        Write-Host "VoiceMeeter not found, attempting installation via winget..." -ForegroundColor Cyan
-
-        # Try main version first, then Potato if it fails
-        $voicemeeterInstalled = $false
-        foreach ($pkgId in @("VB-Audio.Voicemeeter", "VB-Audio.Voicemeeter.Potato")) {
-            Write-Host "Trying package: $pkgId" -ForegroundColor Cyan
-            winget install --id $pkgId -e --scope user --silent --accept-package-agreements --accept-source-agreements 2>$null
-            if ($LASTEXITCODE -eq 0) {
-                $voicemeeterInstalled = $true
-                Write-Host "VoiceMeeter installed successfully" -ForegroundColor Green
-                break
-            }
-        }
-
-        if (-not $voicemeeterInstalled) {
-            Write-Host ""
-            Write-Host "⚠️  VoiceMeeter installation via winget failed." -ForegroundColor Yellow
-            Write-Host ""
-            Write-Host "This may be due to:" -ForegroundColor Yellow
-            Write-Host "  • Network connectivity issues" -ForegroundColor Yellow
-            Write-Host "  • Windows version incompatibility" -ForegroundColor Yellow
-            Write-Host "  • Local security policy restrictions" -ForegroundColor Yellow
-            Write-Host ""
-            Write-Host "Please install VoiceMeeter manually:" -ForegroundColor Cyan
-            Write-Host "  1. Visit: https://vb-audio.com/Voicemeeter/download.html" -ForegroundColor Cyan
-            Write-Host "  2. Download and run the installer" -ForegroundColor Cyan
-            Write-Host "  3. Restart Windows" -ForegroundColor Cyan
-            Write-Host ""
-            $answer = Read-Host "Continue without VoiceMeeter? (y/N)"
-            if ($answer -notmatch '^[yY]') {
-                Write-Host "Setup cancelled. Please install VoiceMeeter and run Install-BATCRelayBot again." -ForegroundColor Yellow
-                exit 1
-            }
-        } else {
-            Write-Host "NOTE: VoiceMeeter requires system restart to fully activate." -ForegroundColor Cyan
-        }
-    }
-
-    # Install pip requirements
-    Write-Step "Python dependencies"
-    "Installing Python dependencies..." | Add-Content -Path $logFile
-
-    Write-Host "Upgrading pip..." -ForegroundColor Cyan
-    & $pythonExe -m pip install --upgrade pip --quiet 2>&1 | Add-Content -Path $logFile
-    if ($LASTEXITCODE -ne 0) {
-        $errMsg = "ERROR: pip upgrade failed (exit code $LASTEXITCODE)"
-        Write-Host $errMsg -ForegroundColor Red
-        $errMsg | Add-Content -Path $logFile
-        exit 1
-    }
-
-    $reqFile = Join-Path $BotPath "requirements.txt"
-    if (-not (Test-Path $reqFile)) {
-        $errMsg = "ERROR: requirements.txt not found at $reqFile"
-        Write-Host $errMsg -ForegroundColor Red
-        $errMsg | Add-Content -Path $logFile
-        exit 1
-    }
-
-    Write-Host "Installing required packages (this may take a minute)..." -ForegroundColor Cyan
-    & $pythonExe -m pip install -r $reqFile 2>&1 | Add-Content -Path $logFile
-    if ($LASTEXITCODE -ne 0) {
-        $errMsg = "ERROR: pip install failed (exit code $LASTEXITCODE). Check $logFile for details."
-        Write-Host $errMsg -ForegroundColor Red
-        $errMsg | Add-Content -Path $logFile
-        exit 1
-    }
-    Write-Host "Python dependencies installed." -ForegroundColor Green
-    "Python dependencies installed successfully" | Add-Content -Path $logFile
-
-    # Detect VoiceMeeter
-    Write-Step "Detecting VoiceMeeter device"
-    $tempOut = New-TemporaryFile
-    $tempErr = New-TemporaryFile
-    Start-Process -FilePath $ffmpegExe -ArgumentList @("-list_devices", "true", "-f", "dshow", "-i", "dummy") `
-        -RedirectStandardOutput $tempOut -RedirectStandardError $tempErr -NoNewWindow -Wait
-    $listOutput = (Get-Content $tempOut -Raw -ErrorAction SilentlyContinue) + "`n" + (Get-Content $tempErr -Raw -ErrorAction SilentlyContinue)
-    Remove-Item $tempOut, $tempErr -ErrorAction SilentlyContinue
-
-    $deviceMatches = [regex]::Matches($listOutput, '"(Voicemeeter Out [^"]+)"\s*\(audio\)')
-    $devices = $deviceMatches | ForEach-Object { $_.Groups[1].Value } | Select-Object -Unique
-
-    if ($devices.Count -eq 0) {
-        Write-Host "No VoiceMeeter device found. Is VoiceMeeter installed and started?" -ForegroundColor Yellow
-        $audioDeviceName = Prompt-WithDefault -Message "Enter device name manually" -Default $null
-    } elseif ($devices.Count -eq 1) {
-        $audioDeviceName = $devices[0]
-        Write-Host "Found: $audioDeviceName" -ForegroundColor Green
-    } else {
-        Write-Host "Multiple VoiceMeeter devices found:" -ForegroundColor Cyan
-        for ($i = 0; $i -lt $devices.Count; $i++) {
-            Write-Host "  [$i] $($devices[$i])"
-        }
-        $choice = -1
-        while ($choice -lt 0 -or $choice -ge $devices.Count) {
-            $raw = Read-Host "Which device? (enter number)"
-            [int]::TryParse($raw, [ref]$choice) | Out-Null
-        }
-        $audioDeviceName = $devices[$choice]
-    }
-
-    # Ask for Discord config
-    Write-Step "Discord bot configuration"
-    $configPath = Join-Path $BotPath "config.json"
-    $writeConfig = $true
-    if (Test-Path $configPath) {
-        $answer = Read-Host "config.json exists. Overwrite? (y/N)"
-        if ($answer -notmatch '^[yY]') {
-            $writeConfig = $false
-            Write-Host "config.json will not be changed." -ForegroundColor Yellow
-        }
-    }
-
-    if ($writeConfig) {
-        Write-Host "Find your bot token at: https://discord.com/developers/applications" -ForegroundColor Cyan
-        $secureToken = Read-Host "Bot token (input will not be shown)" -AsSecureString
-        $botToken = [Runtime.InteropServices.Marshal]::PtrToStringAuto(
-            [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureToken)
-        )
-
-        Write-Host "Get IDs by enabling Developer Mode in Discord settings, then right-click." -ForegroundColor Cyan
-        $guildId = Prompt-WithDefault -Message "Server ID (guild_id)" -Default $null
-        $voiceChannelId = Prompt-WithDefault -Message "Voice channel ID" -Default $null
-
-        # Auto-detect VoiceMeeter path (installed via winget)
-        $defaultVoicemeeterPath = "C:\Program Files (x86)\VB\Voicemeeter\voicemeeter_x64.exe"
-        $voicemeeterPath = $null
-
-        if (Test-Path $defaultVoicemeeterPath) {
-            $voicemeeterPath = $defaultVoicemeeterPath
-            Write-Host "VoiceMeeter detected automatically: $voicemeeterPath" -ForegroundColor Green
-        } else {
-            # Fallback: ask user if auto-detection failed
-            Write-Host "VoiceMeeter not found in default location." -ForegroundColor Yellow
-            $voicemeeterPath = Prompt-FilePath -Message "Path to VoiceMeeter (voicemeeter_x64.exe)" -Filter "Programs (*.exe)|*.exe"
-            if ([string]::IsNullOrWhiteSpace($voicemeeterPath)) {
-                Write-Host "WARNING: VoiceMeeter path not provided. You may need to configure this manually." -ForegroundColor Yellow
-            }
-        }
-
-        $voicemeeterProcessName = if ($voicemeeterPath) { [System.IO.Path]::GetFileNameWithoutExtension($voicemeeterPath) } else { "voicemeeter_x64" }
-
-        $batcPath = Prompt-FilePath -Message "Path to BeyondATC.exe" -Filter "Programs (*.exe)|*.exe"
-        $batcProcessName = [System.IO.Path]::GetFileNameWithoutExtension($batcPath)
-
-        $voicemeeterWait = Prompt-WithDefault -Message "Wait time after starting VoiceMeeter (seconds)" -Default "6"
-        $batcWait = Prompt-WithDefault -Message "Wait time after starting BeyondATC (seconds)" -Default "8"
-
-        $configObject = [ordered]@{
-            bot_token                = $botToken
-            guild_id                 = [int64]$guildId
-            voice_channel_id         = [int64]$voiceChannelId
-            audio_device_name        = $audioDeviceName
-            python_path              = $pythonExe
-            voicemeeter_path         = $voicemeeterPath
-            voicemeeter_process_name = $voicemeeterProcessName
-            voicemeeter_wait_seconds = [int]$voicemeeterWait
-            batc_path                = $batcPath
-            batc_process_name        = $batcProcessName
-            batc_wait_seconds        = [int]$batcWait
-        }
-
-        $jsonContent = $configObject | ConvertTo-Json -Depth 5
-        [System.IO.File]::WriteAllText($configPath, $jsonContent, (New-Object System.Text.UTF8Encoding($false)))
-        Write-Host "config.json created." -ForegroundColor Green
-    }
-
-        Write-Step "Setup complete"
-        Write-Host "Technical prerequisites are installed and configured." -ForegroundColor Green
+        Write-Host "Prerequisites detected" -ForegroundColor Green
         Write-Host ""
-        Write-Host "Still to do (manual):" -ForegroundColor Cyan
-        Write-Host "  1. Create a Discord bot at https://discord.com/developers/applications" -ForegroundColor Cyan
-        Write-Host "  2. Invite it to your server with 'Connect' and 'Speak' permissions" -ForegroundColor Cyan
-        Write-Host "  3. Set channel permissions for the bot's role: View Channel, Connect, Speak" -ForegroundColor Cyan
+
+        # PHASE 2: Display info screen
+        Write-Host "[Phase 2] Prerequisite Status" -ForegroundColor Gray
+        Show-PrerequisitesInfo
         Write-Host ""
-        Write-Host "Then start the bot with: Start-BATCRelayBot" -ForegroundColor Green
+
+        # PHASE 3: Collect Discord configuration
+        Write-Host "[Phase 3] Discord Configuration" -ForegroundColor Gray
+        $discordConfig = Get-DiscordConfiguration
+        if (-not $discordConfig) {
+            Write-Host "ERROR: Could not collect Discord configuration" -ForegroundColor Red
+            exit 1
+        }
+        Write-Host ""
+
+        # PHASE 4: Display summary before installing
+        Write-Host "[Phase 4] Installation Summary" -ForegroundColor Gray
+        $summary = Show-InstallationSummary -Prerequisites $prerequisites -DiscordConfig $discordConfig
+
+        if (-not $summary.CanProceed) {
+            Write-Host ""
+            Write-Host "Installation cannot proceed. Check requirements above." -ForegroundColor Red
+            exit 1
+        }
+
+        Write-Host ""
+        Write-Host "Ready to install?" -ForegroundColor Cyan
+        $confirm = Read-Host "Type 'yes' to proceed, or anything else to cancel"
+
+        if ($confirm -ne "yes") {
+            Write-Host "Installation cancelled." -ForegroundColor Yellow
+            exit 0
+        }
+
+        Write-Host ""
+
+        # PHASE 5: Execute installation
+        Write-Host "[Phase 5] Installing..." -ForegroundColor Gray
+        $installResult = Start-Installation -Prerequisites $prerequisites -DiscordConfig $discordConfig
+
+        if (-not $installResult.Success) {
+            Write-Host "Installation failed" -ForegroundColor Red
+            exit 1
+        }
+
+        # PHASE 6: Success message and next steps
+        Write-Host "[Phase 6] Installation Complete" -ForegroundColor Gray
+        Show-PostInstallationMessage `
+            -InstallPath $installResult.InstallPath `
+            -ConfigPath $installResult.ConfigPath `
+            -LogPath $installResult.LogPath
+
+        Write-Host ""
+        Write-Host "Installation finished successfully!" -ForegroundColor Green
+        Write-Host "Log file: $($installResult.LogPath)" -ForegroundColor Gray
+
     } catch {
-        $errorMsg = $_.Exception.Message
-        "" | Add-Content -Path $logFile
-        "ERROR: $_" | Add-Content -Path $logFile
-        "Exception: $errorMsg" | Add-Content -Path $logFile
+        Write-Host ""
+        Write-Host "ERROR: Installation failed" -ForegroundColor Red
+        Write-Host $_.Exception.Message -ForegroundColor Red
+        Write-Host ""
+        Write-Host "For troubleshooting, check the installation log." -ForegroundColor Yellow
 
-        Write-Host ""
-        Write-Host "❌ INSTALLATION ERROR:" -ForegroundColor Red
-        Write-Host $errorMsg -ForegroundColor Red
-        Write-Host ""
-        Write-Host "Full error details:" -ForegroundColor Yellow
-        Write-Host $_ -ForegroundColor Yellow
-        Write-Host ""
-        Write-Host "📝 Log file saved at:" -ForegroundColor Cyan
-        Write-Host "   $logFile" -ForegroundColor White
-        Write-Host ""
-        Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Gray
-        Write-Host "Press ENTER to close this window..." -ForegroundColor Cyan
-        Read-Host
+        if ($installResult.LogPath) {
+            Write-Host "Log: $($installResult.LogPath)" -ForegroundColor Gray
+        }
+
         exit 1
     }
+
+    Write-Host ""
 }
 
+Export-ModuleMember -Function Install-BATCRelayBot
