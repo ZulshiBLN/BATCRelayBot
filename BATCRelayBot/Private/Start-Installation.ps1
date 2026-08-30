@@ -157,7 +157,7 @@ function Start-Installation {
         }
 
         $configJson = $configContent | ConvertTo-Json
-        $configJson | Set-Content -Path $configPath -Force -Encoding UTF8NoBOM
+        $configJson | Set-Content -Path $configPath -Force -Encoding UTF8
         Log-Message "Configuration file created: $configPath" -LogPath $logPath
         Write-Host "      DONE" -ForegroundColor Green
     } catch {
@@ -228,7 +228,7 @@ function Log-Message {
     $logEntry = "[$timestamp] $Message"
 
     try {
-        Add-Content -Path $LogPath -Value $logEntry -Encoding UTF8NoBOM -ErrorAction SilentlyContinue
+        Add-Content -Path $LogPath -Value $logEntry -Encoding UTF8 -ErrorAction SilentlyContinue
     } catch {
         # Silently fail if log write fails
     }
