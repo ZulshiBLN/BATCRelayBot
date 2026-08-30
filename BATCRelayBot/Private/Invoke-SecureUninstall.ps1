@@ -43,8 +43,8 @@ function Invoke-SecureUninstall {
 
     # Create removal log (saved to AppData so it survives directory deletion)
     "=== BATCRelayBot Removal Log ===" | Out-File $logPath -Force -Encoding UTF8NoBOM
-    "Started: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Add-Content $logPath -Encoding UTF8NoBOM -Encoding UTF8NoBOM
-    ""  | Add-Content $logPath -Encoding UTF8NoBOM -Encoding UTF8NoBOM
+    "Started: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Add-Content $logPath -Encoding UTF8NoBOM
+    ""  | Add-Content $logPath -Encoding UTF8NoBOM
 
     Write-Host ""
     Write-Host "Starting installation removal..." -ForegroundColor Green
