@@ -95,7 +95,7 @@ function Test-DiscordBotToken {
     try {
         $headers = @{
             Authorization = "Bot $Token"
-            "User-Agent" = "BATCRelayBot/1.3.12"
+            "User-Agent" = "BATCRelayBot/1.3.13"
         }
 
         $uri = "https://discord.com/api/v10/users/@me"
@@ -110,11 +110,13 @@ function Test-DiscordBotToken {
             Error = $null
         }
     } catch {
+        $errorMsg = $_.Exception.Message
+        Write-Host "DEBUG: Exception during token validation: $errorMsg" -ForegroundColor Yellow
         return @{
             Valid = $false
             BotName = $null
             BotId = $null
-            Error = "Token validation failed"
+            Error = $errorMsg
         }
     }
 }
