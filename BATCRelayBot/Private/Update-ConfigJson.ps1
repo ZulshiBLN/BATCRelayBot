@@ -43,8 +43,8 @@ function Update-ConfigJson {
     $config = Get-Content $ConfigPath -Raw | ConvertFrom-Json
 
     $fieldMap = @{
-        "Token"    = "token"
-        "Channel"  = "channel_id"
+        "Token"    = "bot_token"
+        "Channel"  = "voice_channel_id"
         "Format"   = "output_format"
         "Activity" = "bot_activity"
     }
