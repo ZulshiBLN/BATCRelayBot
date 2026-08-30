@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-08-30
+
+### Added
+- Automatic VoiceMeeter installation path detection during setup
+- Skip user prompt for VoiceMeeter path if auto-detection succeeds
+
+### Changed
+- Simplified setup process: fewer interactive prompts
+- Updated README to document VoiceMeeter auto-detection
+
+### Technical
+- Auto-detect from standard winget installation path: `C:\Program Files (x86)\VB\Voicemeeter\voicemeeter_x64.exe`
+- Graceful fallback to manual path entry if auto-detection fails
+
 ## [1.2.0] - 2026-08-30
 
 ### Added
