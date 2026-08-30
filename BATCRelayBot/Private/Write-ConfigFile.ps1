@@ -1,7 +1,7 @@
 function Write-ConfigFile {
     <#
     .SYNOPSIS
-    Writes JSON content to config file atomically (temp file → replace).
+    Writes JSON content to config file (temp file write → atomic replace).
     #>
 
     param(
@@ -13,7 +13,7 @@ function Write-ConfigFile {
 
     try {
         [System.IO.File]::WriteAllText($tempPath, $JsonContent, [System.Text.Encoding]::UTF8)
-        [System.IO.File]::Replace($tempPath, $ConfigPath, $null, $true)
+        Move-Item $tempPath $ConfigPath -Force
         return $true
     }
     catch {

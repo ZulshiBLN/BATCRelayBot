@@ -38,7 +38,7 @@ function Edit-BATCRelayBotConfig {
     $prereq = Confirm-ConfigEditorPrerequisites -InstallPath $InstallPath
 
     if (-not $prereq.Valid) {
-        Write-Host "❌ Prerequisites check failed:" -ForegroundColor Red
+        Write-Host "Prerequisites check failed:" -ForegroundColor Red
         $prereq.Errors | ForEach-Object { Write-Host "  - $_" -ForegroundColor Red }
 
         return @{
@@ -51,7 +51,7 @@ function Edit-BATCRelayBotConfig {
     }
 
     if ($prereq.BotRunning) {
-        Write-Host "⚠️  Bot is currently running. Changes will take effect after restart." -ForegroundColor Yellow
+        Write-Host "Bot is currently running. Changes will take effect after restart." -ForegroundColor Yellow
         Read-Host "Press Enter to continue"
     }
 
@@ -80,15 +80,15 @@ function Edit-BATCRelayBotConfig {
 
         # Create backup
         $backup = Backup-ConfigFile -ConfigPath $prereq.ConfigPath
-        Write-Host "✓ Backup created: $(Split-Path $backup -Leaf)"
+        Write-Host "Backup created: $(Split-Path $backup -Leaf)"
 
         # Update JSON
         $newJson = Update-ConfigJson -ConfigPath $prereq.ConfigPath -Field $field -Value $newValue
-        Write-Host "✓ Configuration updated in memory"
+        Write-Host "Configuration updated in memory"
 
         # Atomic write
         $written = Write-ConfigFile -ConfigPath $prereq.ConfigPath -JsonContent $newJson
-        Write-Host "✓ Changes written to disk"
+        Write-Host "Changes written to disk"
 
         # Verify
         $verify = Verify-ConfigChange -ConfigPath $prereq.ConfigPath -Field $field -ExpectedValue $newValue
@@ -97,8 +97,8 @@ function Edit-BATCRelayBotConfig {
             # Rollback on verification failure
             Copy-Item $backup $prereq.ConfigPath -Force
             $errors.Add("Verification failed: $($verify.Message). Rolled back to backup.") | Out-Null
-            Write-Host "❌ $($verify.Message)" -ForegroundColor Red
-            Write-Host "✓ Rolled back to backup" -ForegroundColor Green
+            Write-Host "ERROR: $($verify.Message)" -ForegroundColor Red
+            Write-Host "Rolled back to backup" -ForegroundColor Green
 
             return @{
                 Success       = $false
@@ -109,18 +109,18 @@ function Edit-BATCRelayBotConfig {
             }
         }
 
-        Write-Host "✓ Verification passed"
+        Write-Host "Verification passed"
 
         $updatedFields[$field] = $newValue
 
         Write-Host ""
-        Write-Host "✅ Configuration updated successfully!" -ForegroundColor Green
+        Write-Host "SUCCESS: Configuration updated!" -ForegroundColor Green
         Write-Host "Field: $field"
         Write-Host "Backup: $(Split-Path $backup -Leaf)"
 
         if ($prereq.BotRunning) {
             Write-Host ""
-            Write-Host "⚠️  Restart the bot for changes to take effect." -ForegroundColor Yellow
+            Write-Host "Restart the bot for changes to take effect." -ForegroundColor Yellow
         }
 
         return @{
@@ -133,11 +133,11 @@ function Edit-BATCRelayBotConfig {
     }
     catch {
         $errors.Add("Error during save: $_") | Out-Null
-        Write-Host "❌ Error: $_" -ForegroundColor Red
+        Write-Host "ERROR: $_" -ForegroundColor Red
 
         if ($null -ne $backup -and (Test-Path $backup)) {
             Copy-Item $backup $prereq.ConfigPath -Force -ErrorAction SilentlyContinue
-            Write-Host "✓ Rolled back to backup" -ForegroundColor Green
+            Write-Host "Rolled back to backup" -ForegroundColor Green
         }
 
         return @{

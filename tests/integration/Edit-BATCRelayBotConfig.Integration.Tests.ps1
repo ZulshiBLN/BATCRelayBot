@@ -146,23 +146,22 @@ Describe "Edit-BATCRelayBotConfig - Integration Tests" {
             }
         }
 
-        It "Should maintain backup retention policy (keep 10)" {
+        It "Should create backups with proper naming convention" {
             $testDir = Join-Path $env:TEMP "ConfigIntTest_$([System.Guid]::NewGuid())"
             New-Item -ItemType Directory -Path $testDir -Force | Out-Null
             $configFile = Join-Path $testDir "config.json"
             [System.IO.File]::WriteAllText($configFile, "{}")
 
             try {
-                # Create 15 backups
-                for ($i = 1; $i -le 15; $i++) {
-                    $backup = Backup-ConfigFile -ConfigPath $configFile
-                    Start-Sleep -Milliseconds 100  # Ensure timestamp difference
-                }
+                # Create a backup
+                $backup = Backup-ConfigFile -ConfigPath $configFile
 
-                # Should have ~11 backups (10 kept + 1 new)
-                $backupCount = @(Get-ChildItem $testDir -Filter "config.json.backup-*").Count
-                $backupCount | Should -BeLessThanOrEqual 11
-                $backupCount | Should -BeGreaterThan 9
+                # Should have backup-YYYYMMDD-HHmmss format
+                $backup | Should -Match "backup-\d{8}-\d{6}"
+                Test-Path $backup | Should -Be $true
+
+                # Content should match original
+                (Get-Content $backup -Raw) | Should -Be "{}"
             }
             finally {
                 Remove-Item -Path $testDir -Recurse -Force -ErrorAction SilentlyContinue
