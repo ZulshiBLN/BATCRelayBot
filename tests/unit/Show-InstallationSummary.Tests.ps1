@@ -12,7 +12,7 @@ Describe "Show-InstallationSummary" {
             BeyondATC = @{ Found = $false }
         }
         $discord = @{
-            BotToken = "MzA4OTIzMTY4OTEwNzI2MTc2.COIM8g.LFqo5SoZfTgZ0OmfPy6rx7EXPE8"
+            BotToken = "test_bot_token_1234567890abcdef"
             ServerId = "123456789012345678"
             ChannelId = "987654321098765432"
         }

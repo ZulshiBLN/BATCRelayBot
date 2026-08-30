@@ -38,7 +38,7 @@ Describe "Phase 3: Configuration Input" {
     }
 
     It "Token validation uses Discord API" {
-        $token = "MzA4OTIzMTY4OTEwNzI2MTc2.COIM8g.LFqo5SoZfTgZ0OmfPy6rx7EXPE8"
+        $token = "test_bot_token_1234567890abcdef"
         $result = Test-DiscordBotToken -Token $token
         $result | Should -Not -BeNull
     }
