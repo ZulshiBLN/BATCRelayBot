@@ -142,11 +142,14 @@ function Find-VoiceMeeter {
     [OutputType([hashtable])]
     param()
 
-    # Level 1: Registry (primary detection method)
+    # Level 1: Registry - Search for any VoiceMeeter installation (flexible GUID matching)
     try {
-        $vmReg = Get-ItemProperty "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\VB:Voicemeeter {8E47AF3F-EF0F-4201-810F-8CFB5CFF7301}" -ErrorAction Stop
+        $vmReg = Get-ChildItem "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall" -ErrorAction Stop |
+                 Get-ItemProperty -ErrorAction SilentlyContinue |
+                 Where-Object {$_.DisplayName -match "Voicemeeter"} |
+                 Select-Object -First 1
 
-        if ($vmReg.InstallLocation -and (Test-Path $vmReg.InstallLocation)) {
+        if ($vmReg -and $vmReg.InstallLocation -and (Test-Path $vmReg.InstallLocation)) {
             return @{
                 Found = $true
                 Path = $vmReg.InstallLocation
@@ -156,11 +159,14 @@ function Find-VoiceMeeter {
         }
     } catch {}
 
-    # Level 2: Check common filesystem paths
+    # Level 2: Check common filesystem paths (including variations)
     $commonPaths = @(
         "C:\Program Files\VB-Audio\Voicemeeter",
         "C:\Program Files (x86)\VB-Audio\Voicemeeter",
-        "$env:PROGRAMFILES\VB-Audio\Voicemeeter"
+        "C:\Program Files\VB\Voicemeeter",
+        "C:\Program Files (x86)\VB\Voicemeeter",
+        "$env:PROGRAMFILES\VB-Audio\Voicemeeter",
+        "$env:PROGRAMFILES(x86)\VB-Audio\Voicemeeter"
     )
 
     foreach ($path in $commonPaths) {
