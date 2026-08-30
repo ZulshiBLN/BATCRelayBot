@@ -25,7 +25,8 @@
 
     $ErrorActionPreference = "Stop"
 
-    if (-not (Test-Path $BotPath)) {
+    try {
+        if (-not (Test-Path $BotPath)) {
         New-Item -ItemType Directory -Path $BotPath -Force | Out-Null
         Write-Host "Created bot directory: $BotPath" -ForegroundColor Green
     }
@@ -283,14 +284,27 @@
         Write-Host "config.json created." -ForegroundColor Green
     }
 
-    Write-Step "Setup complete"
-    Write-Host "Technical prerequisites are installed and configured." -ForegroundColor Green
-    Write-Host ""
-    Write-Host "Still to do (manual):" -ForegroundColor Cyan
-    Write-Host "  1. Create a Discord bot at https://discord.com/developers/applications" -ForegroundColor Cyan
-    Write-Host "  2. Invite it to your server with 'Connect' and 'Speak' permissions" -ForegroundColor Cyan
-    Write-Host "  3. Set channel permissions for the bot's role: View Channel, Connect, Speak" -ForegroundColor Cyan
-    Write-Host ""
-    Write-Host "Then start the bot with: Start-BATCRelayBot" -ForegroundColor Green
+        Write-Step "Setup complete"
+        Write-Host "Technical prerequisites are installed and configured." -ForegroundColor Green
+        Write-Host ""
+        Write-Host "Still to do (manual):" -ForegroundColor Cyan
+        Write-Host "  1. Create a Discord bot at https://discord.com/developers/applications" -ForegroundColor Cyan
+        Write-Host "  2. Invite it to your server with 'Connect' and 'Speak' permissions" -ForegroundColor Cyan
+        Write-Host "  3. Set channel permissions for the bot's role: View Channel, Connect, Speak" -ForegroundColor Cyan
+        Write-Host ""
+        Write-Host "Then start the bot with: Start-BATCRelayBot" -ForegroundColor Green
+    } catch {
+        Write-Host ""
+        Write-Host "❌ INSTALLATION ERROR:" -ForegroundColor Red
+        Write-Host $_.Exception.Message -ForegroundColor Red
+        Write-Host ""
+        Write-Host "Error details:" -ForegroundColor Yellow
+        Write-Host $_ -ForegroundColor Yellow
+        Write-Host ""
+        Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Gray
+        Write-Host "Press ENTER to close this window..." -ForegroundColor Cyan
+        Read-Host
+        exit 1
+    }
 }
 
