@@ -22,13 +22,13 @@ Describe "Show-RemovalSummary" {
             Remove-Item $testPath -Recurse -Force
         }
 
-        It "Returns boolean true" {
+        It "Returns hashtable with Ready property" {
             $testPath = "$env:TEMP\removal_summary_test"
             if (Test-Path $testPath) { Remove-Item $testPath -Recurse -Force }
             New-Item -ItemType Directory -Path $testPath -Force | Out-Null
 
             $result = Show-RemovalSummary -BotPath $testPath
-            $result | Should -Be $true
+            $result.Ready | Should -Be $true
 
             Remove-Item $testPath -Recurse -Force
         }
@@ -45,7 +45,7 @@ Describe "Show-RemovalSummary" {
 
             # Should display without requiring input
             $result = Show-RemovalSummary -BotPath $testPath
-            $result | Should -Be $true
+            $result.Ready | Should -Be $true
 
             Remove-Item $testPath -Recurse -Force
         }
@@ -172,7 +172,7 @@ Describe "Phase 2: Removal Summary Display" {
     It "Function is read-only (no prompts)" {
         # Verify by successful execution without input
         $result = Show-RemovalSummary -BotPath "$env:TEMP"
-        $result | Should -Be $true
+        $result.Ready | Should -Be $true
     }
 
     It "Displays removal information clearly" {

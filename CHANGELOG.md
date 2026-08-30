@@ -5,13 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.3.10] - 2026-08-30
+## [1.3.11] - 2026-08-30
 
 ### Added
-- Edit-BATCRelayBotConfig: Interactive configuration editor for quick settings updates without reinstalling
-- Atomic file writes with automatic backup and verification for safe config changes
-- Backup retention policy: keeps last 10 config snapshots with automatic cleanup
-- Security: Token values masked in error messages (no credential leaks)
+- Auto-detect VoiceMeeter installation path (flexible registry search for multiple installation variants)
+- Auto-install Python and FFmpeg via winget (interactive setup with re-detection)
+- Improved prerequisite validation with better path detection
+
+### Fixed
+- VoiceMeeter detection: Now finds installations with variant DisplayNames (e.g., "VB\Voicemeeter")
+- PowerShell security warning in bot token input (added -UseBasicParsing flag)
+- Config editor field name mappings (token → bot_token, channel_id → voice_channel_id)
+- Uninstaller return value causing "aborted" message on valid installations
+- Box-drawing character encoding corruption in uninstaller screens
+- GitHub Actions workflow: Fixed missing pytest and pytest-asyncio in test pipeline
+
+### Known Issues
+- Edit-BATCRelayBotConfig disabled for v1.3.10 (coming in v1.3.11) — use manual JSON editing for now
+  - See plans/todo/CONFIG-EDITOR-BUGS-ANALYSIS.md for details
 
 ## [1.3.9] - 2026-08-30
 

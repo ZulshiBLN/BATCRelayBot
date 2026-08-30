@@ -1,6 +1,6 @@
 @{
     RootModule            = 'BATCRelayBot.psm1'
-    ModuleVersion         = '1.3.10'
+    ModuleVersion         = '1.3.11'
     GUID                  = '12345678-1234-1234-1234-123456789012'
     Author                = 'Michel Brosche'
     CompanyName           = ''

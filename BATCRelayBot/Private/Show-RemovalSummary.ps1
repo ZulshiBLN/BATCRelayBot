@@ -42,9 +42,9 @@ function Show-RemovalSummary {
 
     # Display banner
     Write-Host ""
-    Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+    Write-Host "===============================================================" -ForegroundColor Cyan
     Write-Host "        BATCRelayBot Removal - What Will Be Deleted?" -ForegroundColor Cyan
-    Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+    Write-Host "===============================================================" -ForegroundColor Cyan
     Write-Host ""
 
     # Installation Location
@@ -115,10 +115,10 @@ function Show-RemovalSummary {
     Write-Host ""
 
     # Footer
-    Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+    Write-Host "===============================================================" -ForegroundColor Cyan
     Write-Host ""
 
-    return $true
+    return @{ Ready = $true }
 }
 
 Export-ModuleMember -Function Show-RemovalSummary

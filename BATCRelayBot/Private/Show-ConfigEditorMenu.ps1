@@ -28,8 +28,8 @@ function Show-ConfigEditorMenu {
 
     $config = Get-Content $ConfigPath -Raw | ConvertFrom-Json
 
-    $token = $config.token
-    $channelId = $config.channel_id
+    $token = $config.bot_token
+    $channelId = $config.voice_channel_id
     $format = $config.output_format
     $activity = $config.bot_activity
 

@@ -40,7 +40,7 @@ function Get-DependencyChoices {
 
     Write-Host ""
     Write-Host "Optional Dependency Removal" -ForegroundColor Yellow
-    Write-Host "═══════════════════════════════════════" -ForegroundColor Yellow
+    Write-Host "=======================================" -ForegroundColor Yellow
     Write-Host ""
 
     # Check if WinGet is available
@@ -169,7 +169,7 @@ function Get-DependencyChoices {
     Write-Host ""
 
     # Summary
-    Write-Host "═══════════════════════════════════════" -ForegroundColor Yellow
+    Write-Host "=======================================" -ForegroundColor Yellow
     Write-Host ""
 
     return $choices

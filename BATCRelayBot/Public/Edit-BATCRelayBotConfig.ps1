@@ -30,8 +30,26 @@ function Edit-BATCRelayBotConfig {
         [string]$InstallPath = "$env:USERPROFILE\AppData\Local\BATCRelayBot"
     )
 
-    $errors = [System.Collections.ArrayList]@()
-    $updatedFields = @{}
+    # Feature disabled for v1.3.10 - critical bugs identified during audit
+    # See plans/todo/CONFIG-EDITOR-BUGS-ANALYSIS.md for details
+    # Will be fully implemented in v1.3.11
+    Write-Host ""
+    Write-Host "================================================================" -ForegroundColor Yellow
+    Write-Host "  Edit-BATCRelayBotConfig is not yet available in v1.3.10      " -ForegroundColor Yellow
+    Write-Host "  This feature has critical bugs and will be fixed in v1.3.11   " -ForegroundColor Yellow
+    Write-Host "  For now, edit config.json manually or wait for the next       " -ForegroundColor Yellow
+    Write-Host "  release.                                                      " -ForegroundColor Yellow
+    Write-Host "================================================================" -ForegroundColor Yellow
+    Write-Host ""
+
+    return @{
+        Success = $false
+        Message = "Edit-BATCRelayBotConfig is not yet available in this version"
+        BackupPath = $null
+        UpdatedFields = @{}
+        Errors = @("Feature disabled for v1.3.10 - will be implemented in v1.3.11")
+        LogPath = $null
+    }
 
     # Phase 1: Validate Prerequisites
     Write-Host "Checking prerequisites..." -ForegroundColor Cyan

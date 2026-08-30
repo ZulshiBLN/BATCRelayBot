@@ -16,7 +16,7 @@ function Start-Installation {
     Write-Host ""
 
     # Create installation directory
-    Write-Host "[1/5] Creating installation directory..." -ForegroundColor Cyan
+    Write-Host "[1/6] Creating installation directory..." -ForegroundColor Cyan
     try {
         if (-not (Test-Path $installPath)) {
             New-Item -ItemType Directory -Path $installPath -Force | Out-Null
@@ -29,8 +29,55 @@ function Start-Installation {
         return @{ Success = $false; Error = "Directory creation failed" }
     }
 
+    # Auto-install missing prerequisites
+    Write-Host "[2/6] Ensuring required tools are installed..." -ForegroundColor Cyan
+    try {
+        if (-not $Prerequisites.Python.Found) {
+            Write-Host "      Installing Python..." -ForegroundColor Gray
+            winget install Python.Python --silent 2>$null
+            # Re-detect Python after installation
+            $pythonCheck = & {
+                try {
+                    $pythonExe = (Get-Command python.exe -ErrorAction Stop).Source
+                    return @{Found = $true; Path = $pythonExe}
+                } catch {
+                    return @{Found = $false; Path = $null}
+                }
+            }
+            if ($pythonCheck.Found) {
+                $Prerequisites.Python = @{Found = $true; Path = $pythonCheck.Path}
+                Log-Message "Python installed and detected: $($pythonCheck.Path)" -LogPath $logPath
+            }
+        }
+
+        if (-not $Prerequisites.FFmpeg.Found) {
+            Write-Host "      Installing FFmpeg..." -ForegroundColor Gray
+            winget install Gyan.FFmpeg --silent 2>$null
+            # Re-detect FFmpeg after installation
+            $ffmpegCheck = & {
+                try {
+                    $ffmpegExe = (Get-Command ffmpeg.exe -ErrorAction Stop).Source
+                    return @{Found = $true; Path = $ffmpegExe}
+                } catch {
+                    return @{Found = $false; Path = $null}
+                }
+            }
+            if ($ffmpegCheck.Found) {
+                $Prerequisites.FFmpeg = @{Found = $true; Path = $ffmpegCheck.Path}
+                Log-Message "FFmpeg installed and detected: $($ffmpegCheck.Path)" -LogPath $logPath
+            } else {
+                Log-Message "WARNING: FFmpeg install attempted but not detected in PATH yet" -LogPath $logPath
+            }
+        }
+
+        Write-Host "      DONE" -ForegroundColor Green
+    } catch {
+        Log-Message "WARNING: Auto-install of prerequisites had issues: $_" -LogPath $logPath
+        Write-Host "      WARNING: $_" -ForegroundColor Yellow
+    }
+
     # Install Python dependencies
-    Write-Host "[2/5] Installing Python dependencies..." -ForegroundColor Cyan
+    Write-Host "[3/6] Installing Python dependencies..." -ForegroundColor Cyan
     try {
         if ($Prerequisites.Python.Found) {
             $pythonPath = $Prerequisites.Python.Path
@@ -54,7 +101,7 @@ function Start-Installation {
     }
 
     # Create configuration file
-    Write-Host "[3/5] Creating configuration file..." -ForegroundColor Cyan
+    Write-Host "[4/6] Creating configuration file..." -ForegroundColor Cyan
     try {
         $configPath = Join-Path $installPath "config.json"
         $configContent = @{
@@ -67,7 +114,7 @@ function Start-Installation {
         }
 
         $configJson = $configContent | ConvertTo-Json
-        $configJson | Set-Content -Path $configPath -Force
+        $configJson | Set-Content -Path $configPath -Force -Encoding UTF8NoBOM
         Log-Message "Configuration file created: $configPath" -LogPath $logPath
         Write-Host "      DONE" -ForegroundColor Green
     } catch {
@@ -77,7 +124,7 @@ function Start-Installation {
     }
 
     # Copy bot files
-    Write-Host "[4/5] Copying bot files..." -ForegroundColor Cyan
+    Write-Host "[5/6] Copying bot files..." -ForegroundColor Cyan
     try {
         $botSource = Get-BotFilesPath
         if ($botSource -and (Test-Path $botSource)) {
@@ -93,7 +140,7 @@ function Start-Installation {
     }
 
     # Final verification
-    Write-Host "[5/5] Verifying installation..." -ForegroundColor Cyan
+    Write-Host "[6/6] Verifying installation..." -ForegroundColor Cyan
     try {
         $configExists = Test-Path $configPath
         $pythonOk = $Prerequisites.Python.Found
@@ -138,7 +185,7 @@ function Log-Message {
     $logEntry = "[$timestamp] $Message"
 
     try {
-        Add-Content -Path $LogPath -Value $logEntry -ErrorAction SilentlyContinue
+        Add-Content -Path $LogPath -Value $logEntry -Encoding UTF8NoBOM -ErrorAction SilentlyContinue
     } catch {
         # Silently fail if log write fails
     }
