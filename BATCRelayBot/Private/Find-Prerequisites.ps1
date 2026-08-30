@@ -142,11 +142,11 @@ function Find-VoiceMeeter {
     [OutputType([hashtable])]
     param()
 
-    # Level 1: Registry - Search for any VoiceMeeter installation (flexible GUID matching)
+    # Level 1: Registry (HKLM) - Search for VoiceMeeter with case-insensitive pattern
     try {
         $vmReg = Get-ChildItem "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall" -ErrorAction Stop |
                  Get-ItemProperty -ErrorAction SilentlyContinue |
-                 Where-Object {$_.DisplayName -match "Voicemeeter"} |
+                 Where-Object {$_.DisplayName -like "*Voicemeeter*" -or $_.DisplayName -like "*VB-Audio*"} |
                  Select-Object -First 1
 
         if ($vmReg -and $vmReg.InstallLocation -and (Test-Path $vmReg.InstallLocation)) {
@@ -154,19 +154,54 @@ function Find-VoiceMeeter {
                 Found = $true
                 Path = $vmReg.InstallLocation
                 Version = $vmReg.DisplayVersion
-                Method = "Registry"
+                Method = "Registry (HKLM)"
             }
         }
     } catch {}
 
-    # Level 2: Check common filesystem paths (including variations)
+    # Level 1b: Registry (HKCU) - User-level installations
+    try {
+        $vmReg = Get-ChildItem "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall" -ErrorAction Stop |
+                 Get-ItemProperty -ErrorAction SilentlyContinue |
+                 Where-Object {$_.DisplayName -like "*Voicemeeter*" -or $_.DisplayName -like "*VB-Audio*"} |
+                 Select-Object -First 1
+
+        if ($vmReg -and $vmReg.InstallLocation -and (Test-Path $vmReg.InstallLocation)) {
+            return @{
+                Found = $true
+                Path = $vmReg.InstallLocation
+                Version = $vmReg.DisplayVersion
+                Method = "Registry (HKCU)"
+            }
+        }
+    } catch {}
+
+    # Level 1c: Registry (WOW6432Node) - 32-bit registry on 64-bit systems
+    try {
+        $vmReg = Get-ChildItem "HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall" -ErrorAction Stop |
+                 Get-ItemProperty -ErrorAction SilentlyContinue |
+                 Where-Object {$_.DisplayName -like "*Voicemeeter*" -or $_.DisplayName -like "*VB-Audio*"} |
+                 Select-Object -First 1
+
+        if ($vmReg -and $vmReg.InstallLocation -and (Test-Path $vmReg.InstallLocation)) {
+            return @{
+                Found = $true
+                Path = $vmReg.InstallLocation
+                Version = $vmReg.DisplayVersion
+                Method = "Registry (WOW6432)"
+            }
+        }
+    } catch {}
+
+    # Level 2: Check official VoiceMeeter installation paths
+    # Official installations use "VB\" not "VB-Audio\"
     $commonPaths = @(
-        "C:\Program Files\VB-Audio\Voicemeeter",
-        "C:\Program Files (x86)\VB-Audio\Voicemeeter",
-        "C:\Program Files\VB\Voicemeeter",
-        "C:\Program Files (x86)\VB\Voicemeeter",
-        "$env:PROGRAMFILES\VB-Audio\Voicemeeter",
-        "$env:PROGRAMFILES(x86)\VB-Audio\Voicemeeter"
+        "C:\Program Files (x86)\VB\Voicemeeter",      # 32-bit driver (primary)
+        "C:\Program Files\VB\VBVoicemeeterVAIOs",    # 64-bit ASIO driver
+        "C:\Program Files\VB\Voicemeeter",            # Alternative 64-bit location
+        "$env:PROGRAMFILES(x86)\VB\Voicemeeter",      # 32-bit with env var
+        "$env:PROGRAMFILES\VB\Voicemeeter",           # 64-bit with env var
+        "$env:PROGRAMFILES\VB\VBVoicemeeterVAIOs"    # ASIO with env var
     )
 
     foreach ($path in $commonPaths) {
@@ -179,6 +214,24 @@ function Find-VoiceMeeter {
             }
         }
     }
+
+    # Level 3: Wildcard search for VB folder (catches portable/non-standard installations)
+    try {
+        $vbDirs = Get-ChildItem -Path "C:\Program Files", "C:\Program Files (x86)" -Directory -ErrorAction SilentlyContinue |
+                  Where-Object {$_.Name -eq "VB"} |
+                  Get-ChildItem -Directory -ErrorAction SilentlyContinue |
+                  Where-Object {$_.Name -like "*Voicemeeter*" -or $_.Name -like "*VAIO*"} |
+                  Select-Object -First 1
+
+        if ($vbDirs -and (Test-Path $vbDirs.FullName)) {
+            return @{
+                Found = $true
+                Path = $vbDirs.FullName
+                Version = "Unknown (Wildcard Search)"
+                Method = "FileSystem (Wildcard)"
+            }
+        }
+    } catch {}
 
     return @{
         Found = $false
