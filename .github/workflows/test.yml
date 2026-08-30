@@ -81,17 +81,21 @@ jobs:
           pip install pylint flake8 black mypy
 
       - name: Run pylint
+        shell: bash
         run: |
           pylint bot.py --exit-zero --fail-under=8.0 || exit 0
 
       - name: Run flake8
+        shell: bash
         run: |
           flake8 bot.py --max-line-length=120 --exit-zero || exit 0
 
       - name: Check formatting with black
+        shell: bash
         run: |
           black --check bot.py || exit 0
 
       - name: Run mypy type checking
+        shell: bash
         run: |
           mypy bot.py --ignore-missing-imports --exit-code 0 || exit 0
