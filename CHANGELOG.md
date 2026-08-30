@@ -7,9 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.3.1] - 2026-08-30
 
+### Added
+- Automatic VoiceMeeter installation path detection during setup
+- Skip user prompt for VoiceMeeter path if auto-detection succeeds
+
+### Changed
+- Simplified setup process: fewer interactive prompts
+- Updated README to document VoiceMeeter auto-detection
+
 ### Fixed
-- Remove UTF-8 BOM from PowerShell scripts (fixes installation failures)
-- Encoding issue that caused PSGallery and PowerShell loader to reject module
+- Correct VoiceMeeter winget package ID casing (VB-Audio.Voicemeeter)
+- Fixed installation failures due to incorrect package ID
+
+### Technical
+- Auto-detect VoiceMeeter from standard winget path
+- Graceful fallback to manual entry if auto-detection fails
 
 ## [1.3.0] - 2026-08-30
 
