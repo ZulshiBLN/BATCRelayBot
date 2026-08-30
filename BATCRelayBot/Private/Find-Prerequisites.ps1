@@ -285,11 +285,33 @@ function Find-BeyondATC {
     [OutputType([hashtable])]
     param()
 
-    # Level 1: Registry (most common installation method)
+    # Level 1: AppData LocalLow (OFFICIAL configuration location)
+    $btcLocalLow = "$env:USERPROFILE\AppData\LocalLow\Skirmish Mode Games, Inc\BeyondATC"
+    if (Test-Path $btcLocalLow) {
+        return @{
+            Found = $true
+            Path = $btcLocalLow
+            Version = "Unknown (FileSystem)"
+            Method = "FileSystem (AppData LocalLow)"
+        }
+    }
+
+    # Level 2: Program Files (default installation path)
+    $btcProgramFiles = "C:\Program Files\BeyondATC"
+    if (Test-Path $btcProgramFiles) {
+        return @{
+            Found = $true
+            Path = $btcProgramFiles
+            Version = "Unknown (FileSystem)"
+            Method = "FileSystem (Program Files)"
+        }
+    }
+
+    # Level 3: Registry (fallback - most BeyondATC installations don't register)
     try {
         $btcReg = Get-ChildItem "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall" -ErrorAction Stop |
                   Get-ItemProperty -ErrorAction SilentlyContinue |
-                  Where-Object {$_.DisplayName -match "BeyondATC"} |
+                  Where-Object {$_.DisplayName -like "*BeyondATC*"} |
                   Select-Object -First 1
 
         if ($btcReg -and $btcReg.InstallLocation) {
@@ -301,25 +323,6 @@ function Find-BeyondATC {
             }
         }
     } catch {}
-
-    # Level 2: Check common filesystem paths
-    $commonPaths = @(
-        "C:\Program Files\BeyondATC",
-        "C:\Program Files (x86)\BeyondATC",
-        "$env:USERPROFILE\AppData\Local\Programs\BeyondATC",
-        "$env:LOCALAPPDATA\BeyondATC"
-    )
-
-    foreach ($path in $commonPaths) {
-        if (Test-Path $path) {
-            return @{
-                Found = $true
-                Path = $path
-                Version = "Unknown (FileSystem)"
-                Method = "FileSystem"
-            }
-        }
-    }
 
     return @{
         Found = $false
