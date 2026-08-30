@@ -95,11 +95,12 @@ function Test-DiscordBotToken {
     try {
         $headers = @{
             Authorization = "Bot $Token"
-            "User-Agent" = "BATCRelayBot/1.3.11"
+            "User-Agent" = "BATCRelayBot/1.3.12"
         }
 
         $uri = "https://discord.com/api/v10/users/@me"
-        $response = Invoke-WebRequest -Uri $uri -Headers $headers -Method Get -UseBasicParsing -ErrorAction Stop
+        $response = Invoke-WebRequest -Uri $uri -Headers $headers -Method Get `
+            -UseBasicParsing -WarningAction SilentlyContinue -Confirm:$false -ErrorAction Stop
         $user = $response.Content | ConvertFrom-Json
 
         return @{
