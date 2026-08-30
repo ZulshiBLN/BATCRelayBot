@@ -45,22 +45,36 @@
 
     # Copy bot files if they don't exist
     Write-Step "Preparing bot files"
-    $moduleDir = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
+    # $PSScriptRoot = BATCRelayBot/Public, so we need 2 parents to get to repo root
+    $moduleDir = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
     $sourceBot = Join-Path $moduleDir "bot.py"
     $sourceReqs = Join-Path $moduleDir "requirements.txt"
     $sourceConfig = Join-Path $moduleDir "config.example.json"
 
+    "Copying bot files from: $moduleDir" | Add-Content -Path $logFile
+
     if (Test-Path $sourceBot) {
         Copy-Item $sourceBot $BotPath -Force -ErrorAction SilentlyContinue
         Write-Host "bot.py copied to $BotPath" -ForegroundColor Green
+        "✓ bot.py copied" | Add-Content -Path $logFile
+    } else {
+        "✗ bot.py not found at $sourceBot" | Add-Content -Path $logFile
     }
+
     if (Test-Path $sourceReqs) {
         Copy-Item $sourceReqs $BotPath -Force -ErrorAction SilentlyContinue
         Write-Host "requirements.txt copied to $BotPath" -ForegroundColor Green
+        "✓ requirements.txt copied" | Add-Content -Path $logFile
+    } else {
+        "✗ requirements.txt not found at $sourceReqs" | Add-Content -Path $logFile
     }
+
     if (Test-Path $sourceConfig) {
         Copy-Item $sourceConfig $BotPath -Force -ErrorAction SilentlyContinue
         Write-Host "config.example.json copied to $BotPath" -ForegroundColor Green
+        "✓ config.example.json copied" | Add-Content -Path $logFile
+    } else {
+        "✗ config.example.json not found at $sourceConfig" | Add-Content -Path $logFile
     }
 
     # Check winget
