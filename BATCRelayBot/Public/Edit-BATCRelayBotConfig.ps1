@@ -34,12 +34,12 @@ function Edit-BATCRelayBotConfig {
     # See plans/todo/CONFIG-EDITOR-BUGS-ANALYSIS.md for details
     # Will be fully implemented in v1.3.11
     Write-Host ""
-    Write-Host "╔════════════════════════════════════════════════════════════════╗" -ForegroundColor Yellow
-    Write-Host "║  Edit-BATCRelayBotConfig is not yet available in v1.3.10      ║" -ForegroundColor Yellow
-    Write-Host "║  This feature has critical bugs and will be fixed in v1.3.11   ║" -ForegroundColor Yellow
-    Write-Host "║  For now, edit config.json manually or wait for the next       ║" -ForegroundColor Yellow
-    Write-Host "║  release.                                                      ║" -ForegroundColor Yellow
-    Write-Host "╚════════════════════════════════════════════════════════════════╝" -ForegroundColor Yellow
+    Write-Host "================================================================" -ForegroundColor Yellow
+    Write-Host "  Edit-BATCRelayBotConfig is not yet available in v1.3.10      " -ForegroundColor Yellow
+    Write-Host "  This feature has critical bugs and will be fixed in v1.3.11   " -ForegroundColor Yellow
+    Write-Host "  For now, edit config.json manually or wait for the next       " -ForegroundColor Yellow
+    Write-Host "  release.                                                      " -ForegroundColor Yellow
+    Write-Host "================================================================" -ForegroundColor Yellow
     Write-Host ""
 
     return @{

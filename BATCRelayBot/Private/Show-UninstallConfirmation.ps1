@@ -16,9 +16,9 @@ function Show-UninstallConfirmation {
     )
 
     Write-Host ""
-    Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Red
+    Write-Host "===============================================================" -ForegroundColor Red
     Write-Host "       FINAL CONFIRMATION - Removal Cannot Be Undone" -ForegroundColor Red
-    Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Red
+    Write-Host "===============================================================" -ForegroundColor Red
     Write-Host ""
 
     Write-Host "ACTIONS THAT WILL BE PERFORMED:" -ForegroundColor Yellow
@@ -53,7 +53,7 @@ function Show-UninstallConfirmation {
     }
     Write-Host "  * VoiceMeeter is NOT removed (use vendor uninstaller)" -ForegroundColor Yellow
     Write-Host ""
-    Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Red
+    Write-Host "===============================================================" -ForegroundColor Red
     Write-Host ""
 
     Write-Host "Type 'yes' to proceed with uninstallation, or anything else to cancel:" -ForegroundColor Cyan

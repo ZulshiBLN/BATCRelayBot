@@ -28,9 +28,9 @@ function Show-PostRemovalSummary {
     )
 
     Write-Host ""
-    Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Green
+    Write-Host "===============================================================" -ForegroundColor Green
     Write-Host "       BATCRelayBot Uninstallation Complete" -ForegroundColor Green
-    Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Green
+    Write-Host "===============================================================" -ForegroundColor Green
     Write-Host ""
 
     # Removal status
@@ -60,9 +60,9 @@ function Show-PostRemovalSummary {
     }
 
     Write-Host ""
-    Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+    Write-Host "===============================================================" -ForegroundColor Cyan
     Write-Host "MANUAL CLEANUP REQUIRED" -ForegroundColor Cyan
-    Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+    Write-Host "===============================================================" -ForegroundColor Cyan
     Write-Host ""
 
     Write-Host "VoiceMeeter (if installed)" -ForegroundColor Yellow
@@ -78,9 +78,9 @@ function Show-PostRemovalSummary {
 
     # Removal log location
     if ($RemovalResult.LogPath -and (Test-Path $RemovalResult.LogPath)) {
-        Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+        Write-Host "===============================================================" -ForegroundColor Cyan
         Write-Host "REMOVAL LOG" -ForegroundColor Cyan
-        Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+        Write-Host "===============================================================" -ForegroundColor Cyan
         Write-Host ""
         Write-Host "A detailed removal log has been saved for your records:" -ForegroundColor Gray
         Write-Host ""
@@ -91,9 +91,9 @@ function Show-PostRemovalSummary {
     }
 
     # Next steps
-    Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+    Write-Host "===============================================================" -ForegroundColor Cyan
     Write-Host "NEXT STEPS" -ForegroundColor Cyan
-    Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+    Write-Host "===============================================================" -ForegroundColor Cyan
     Write-Host ""
 
     if ($RemovalResult.Success) {
@@ -113,7 +113,7 @@ function Show-PostRemovalSummary {
         Write-Host ""
     }
 
-    Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Green
+    Write-Host "===============================================================" -ForegroundColor Green
     Write-Host ""
 }
 
