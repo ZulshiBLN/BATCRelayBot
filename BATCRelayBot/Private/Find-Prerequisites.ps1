@@ -234,13 +234,14 @@ function Find-VoiceMeeter {
 
     # Level 2: Check official VoiceMeeter installation paths
     # Official installations use "VB\" not "VB-Audio\"
+    # NOTE: Must use ${env:ProgramFiles(x86)} with braces - parentheses require braces in PowerShell
     $commonPaths = @(
-        "C:\Program Files (x86)\VB\Voicemeeter",      # 32-bit driver (primary)
-        "C:\Program Files\VB\VBVoicemeeterVAIOs",    # 64-bit ASIO driver
-        "C:\Program Files\VB\Voicemeeter",            # Alternative 64-bit location
-        "$env:PROGRAMFILES(x86)\VB\Voicemeeter",      # 32-bit with env var
-        "$env:PROGRAMFILES\VB\Voicemeeter",           # 64-bit with env var
-        "$env:PROGRAMFILES\VB\VBVoicemeeterVAIOs"    # ASIO with env var
+        "C:\Program Files (x86)\VB\Voicemeeter",           # 32-bit driver (primary) - hardcoded
+        "C:\Program Files\VB\VBVoicemeeterVAIOs",         # 64-bit ASIO driver - hardcoded
+        "C:\Program Files\VB\Voicemeeter",                 # Alternative 64-bit location - hardcoded
+        "${env:ProgramFiles(x86)}\VB\Voicemeeter",        # 32-bit with env var (FIXED: braces required)
+        "$env:ProgramFiles\VB\Voicemeeter",               # 64-bit with env var (FIXED: correct case)
+        "$env:ProgramFiles\VB\VBVoicemeeterVAIOs"         # ASIO with env var (FIXED: correct case)
     )
 
     foreach ($path in $commonPaths) {
