@@ -118,7 +118,42 @@ Once the module is imported, these commands are available:
 | `Start-BATCRelayBot` | Starts the bot in the background |
 | `Stop-BATCRelayBot` | Stops the bot cleanly |
 | `Get-BATCRelayBotStatus` | Shows whether the bot is running and its uptime |
+| `Edit-BATCRelayBotConfig` | Interactively edit bot configuration (token, channel, format, activity) without reinstalling |
 | `Uninstall-BATCRelayBot` | Removes config and generated files, optionally uninstalls Python/ffmpeg/VoiceMeeter |
+
+---
+
+## Editing Configuration
+
+After installing BATCRelayBot, you can update settings without re-running the installer:
+
+```powershell
+# Open interactive config editor
+$result = Edit-BATCRelayBotConfig
+
+# Or specify custom installation path
+$result = Edit-BATCRelayBotConfig -InstallPath 'C:\Custom\Path\BATCRelayBot'
+
+# Check result
+if ($result.Success) {
+    Write-Host "Configuration updated: $($result.UpdatedFields.Keys -join ', ')"
+    Write-Host "Backup created: $($result.BackupPath)"
+}
+```
+
+### What You Can Edit
+
+- **Discord Token**: Bot authentication token
+- **Channel ID**: Discord voice channel to stream to
+- **Output Format**: Message format (standard/compact/verbose)
+- **Bot Activity**: Custom status message (max 128 characters)
+
+### Important Notes
+
+- **Stop the bot before editing**: `Stop-BATCRelayBot`
+- **Restart required after editing**: `Start-BATCRelayBot` to apply changes
+- **Automatic backup**: Previous configuration is automatically backed up with timestamp
+- **Automatic rollback**: If changes fail, the config automatically rolls back to the last known-good state
 
 ---
 

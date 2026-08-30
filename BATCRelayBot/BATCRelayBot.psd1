@@ -1,6 +1,6 @@
 @{
     RootModule            = 'BATCRelayBot.psm1'
-    ModuleVersion         = '1.3.9'
+    ModuleVersion         = '1.3.10'
     GUID                  = '12345678-1234-1234-1234-123456789012'
     Author                = 'Michel Brosche'
     CompanyName           = ''
@@ -14,7 +14,8 @@
         'Start-BATCRelayBot',
         'Stop-BATCRelayBot',
         'Uninstall-BATCRelayBot',
-        'Get-BATCRelayBotStatus'
+        'Get-BATCRelayBotStatus',
+        'Edit-BATCRelayBotConfig'
     )
 
     CmdletsToExport       = @()

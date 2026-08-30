@@ -39,8 +39,12 @@ Describe "BATCRelayBot Module" {
             Get-Command Uninstall-BATCRelayBot -ErrorAction SilentlyContinue | Should -Not -BeNullOrEmpty
         }
 
-        It "Should have exactly 5 exported functions" {
-            @(Get-Command -Module BATCRelayBot).Count | Should -Be 5
+        It "Should export Edit-BATCRelayBotConfig" {
+            Get-Command Edit-BATCRelayBotConfig -ErrorAction SilentlyContinue | Should -Not -BeNullOrEmpty
+        }
+
+        It "Should have exactly 6 exported functions" {
+            @(Get-Command -Module BATCRelayBot).Count | Should -Be 6
         }
     }
 
@@ -63,6 +67,10 @@ Describe "BATCRelayBot Module" {
 
         It "Uninstall-BATCRelayBot should have help" {
             (Get-Help Uninstall-BATCRelayBot).Synopsis | Should -Not -BeNullOrEmpty
+        }
+
+        It "Edit-BATCRelayBotConfig should have help" {
+            (Get-Help Edit-BATCRelayBotConfig).Synopsis | Should -Not -BeNullOrEmpty
         }
     }
 
