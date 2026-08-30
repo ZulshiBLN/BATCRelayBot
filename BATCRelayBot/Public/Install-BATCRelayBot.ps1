@@ -45,8 +45,9 @@
 
     # Copy bot files if they don't exist
     Write-Step "Preparing bot files"
-    # $PSScriptRoot = BATCRelayBot/Public, so we need 2 parents to get to repo root
-    $moduleDir = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+    # When installed from PSGallery: $PSScriptRoot = Modules\BATCRelayBot\Public
+    # We need 1 parent to get to Modules\BATCRelayBot (where bot.py, requirements.txt should be)
+    $moduleDir = Split-Path -Parent $PSScriptRoot
     $sourceBot = Join-Path $moduleDir "bot.py"
     $sourceReqs = Join-Path $moduleDir "requirements.txt"
     $sourceConfig = Join-Path $moduleDir "config.example.json"

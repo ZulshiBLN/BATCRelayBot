@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.8] - 2026-08-30
+
+### Fixed
+- Correct path calculation for PSGallery module installation (use 1 parent, not 2)
+- Files are now correctly found in Modules\BATCRelayBot directory when installed via Install-Module
+
 ## [1.3.7] - 2026-08-30
 
 ### Fixed
