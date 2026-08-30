@@ -138,13 +138,40 @@
     if ($voicemeeterInstalled) {
         Write-Host "VoiceMeeter already installed" -ForegroundColor Green
     } else {
-        Write-Host "VoiceMeeter not found, installing via winget..." -ForegroundColor Cyan
-        winget install --id VB-Audio.Voicemeeter -e --scope user --silent --accept-package-agreements --accept-source-agreements
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "WARNING: VoiceMeeter installation may have failed (exit code $LASTEXITCODE)." -ForegroundColor Yellow
-            Write-Host "VoiceMeeter requires restart. Please visit https://vb-audio.com/Voicemeeter/ to install manually if needed." -ForegroundColor Yellow
+        Write-Host "VoiceMeeter not found, attempting installation via winget..." -ForegroundColor Cyan
+
+        # Try main version first, then Potato if it fails
+        $voicemeeterInstalled = $false
+        foreach ($pkgId in @("VB-Audio.Voicemeeter", "VB-Audio.Voicemeeter.Potato")) {
+            Write-Host "Trying package: $pkgId" -ForegroundColor Cyan
+            winget install --id $pkgId -e --scope user --silent --accept-package-agreements --accept-source-agreements 2>$null
+            if ($LASTEXITCODE -eq 0) {
+                $voicemeeterInstalled = $true
+                Write-Host "VoiceMeeter installed successfully" -ForegroundColor Green
+                break
+            }
+        }
+
+        if (-not $voicemeeterInstalled) {
+            Write-Host ""
+            Write-Host "⚠️  VoiceMeeter installation via winget failed." -ForegroundColor Yellow
+            Write-Host ""
+            Write-Host "This may be due to:" -ForegroundColor Yellow
+            Write-Host "  • Network connectivity issues" -ForegroundColor Yellow
+            Write-Host "  • Windows version incompatibility" -ForegroundColor Yellow
+            Write-Host "  • Local security policy restrictions" -ForegroundColor Yellow
+            Write-Host ""
+            Write-Host "Please install VoiceMeeter manually:" -ForegroundColor Cyan
+            Write-Host "  1. Visit: https://vb-audio.com/Voicemeeter/download.html" -ForegroundColor Cyan
+            Write-Host "  2. Download and run the installer" -ForegroundColor Cyan
+            Write-Host "  3. Restart Windows" -ForegroundColor Cyan
+            Write-Host ""
+            $answer = Read-Host "Continue without VoiceMeeter? (y/N)"
+            if ($answer -notmatch '^[yY]') {
+                Write-Host "Setup cancelled. Please install VoiceMeeter and run Install-BATCRelayBot again." -ForegroundColor Yellow
+                exit 1
+            }
         } else {
-            Write-Host "VoiceMeeter installed" -ForegroundColor Green
             Write-Host "NOTE: VoiceMeeter requires system restart to fully activate." -ForegroundColor Cyan
         }
     }
