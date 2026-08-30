@@ -118,42 +118,51 @@ Once the module is imported, these commands are available:
 | `Start-BATCRelayBot` | Starts the bot in the background |
 | `Stop-BATCRelayBot` | Stops the bot cleanly |
 | `Get-BATCRelayBotStatus` | Shows whether the bot is running and its uptime |
-| `Edit-BATCRelayBotConfig` | Interactively edit bot configuration (token, channel, format, activity) without reinstalling |
+| `Edit-BATCRelayBotConfig` | (Coming in v1.3.11) — Interactive editor for config changes. For now, manually edit config.json |
 | `Uninstall-BATCRelayBot` | Removes config and generated files, optionally uninstalls Python/ffmpeg/VoiceMeeter |
 
 ---
 
 ## Editing Configuration
 
-After installing BATCRelayBot, you can update settings without re-running the installer:
+**Note:** Interactive configuration editing is coming in v1.3.11. For now, edit configuration manually.
+
+### Manual JSON Editing (v1.3.10)
+
+To update settings, edit `config.json` directly:
 
 ```powershell
-# Open interactive config editor
-$result = Edit-BATCRelayBotConfig
+# Stop the bot first
+Stop-BATCRelayBot
 
-# Or specify custom installation path
-$result = Edit-BATCRelayBotConfig -InstallPath 'C:\Custom\Path\BATCRelayBot'
+# Edit the configuration file
+notepad $env:USERPROFILE\AppData\Local\BATCRelayBot\config.json
 
-# Check result
-if ($result.Success) {
-    Write-Host "Configuration updated: $($result.UpdatedFields.Keys -join ', ')"
-    Write-Host "Backup created: $($result.BackupPath)"
-}
+# Restart the bot to apply changes
+Start-BATCRelayBot
 ```
 
-### What You Can Edit
+### Configuration Fields
 
-- **Discord Token**: Bot authentication token
-- **Channel ID**: Discord voice channel to stream to
-- **Output Format**: Message format (standard/compact/verbose)
-- **Bot Activity**: Custom status message (max 128 characters)
+The `config.json` file contains these fields (you can edit all of them):
+
+- **`bot_token`**: Discord bot authentication token (secret — treat like a password)
+- **`server_id`**: Discord server/guild ID
+- **`voice_channel_id`**: Discord voice channel ID where the bot will stream
+- **`voicemeeter_path`**: Path to voicemeeter_x64.exe (auto-detected during setup)
+- **`ffmpeg_path`**: Path to ffmpeg.exe (auto-detected during setup)
+- **`python_path`**: Path to python.exe (auto-detected during setup)
 
 ### Important Notes
 
 - **Stop the bot before editing**: `Stop-BATCRelayBot`
-- **Restart required after editing**: `Start-BATCRelayBot` to apply changes
-- **Automatic backup**: Previous configuration is automatically backed up with timestamp
-- **Automatic rollback**: If changes fail, the config automatically rolls back to the last known-good state
+- **Restart required after editing**: `Start-BATCRelayBot` applies your changes
+- **Backup your config**: Before major edits, manually copy config.json to config.json.backup
+- **JSON syntax matters**: Make sure your JSON is valid after editing (use a JSON validator if unsure)
+
+### Coming in v1.3.11
+
+The interactive `Edit-BATCRelayBotConfig` function will let you update settings without manual JSON editing. See [CONFIG-EDITOR-BUGS-ANALYSIS.md](plans/todo/CONFIG-EDITOR-BUGS-ANALYSIS.md) for why it's not available yet.
 
 ---
 
