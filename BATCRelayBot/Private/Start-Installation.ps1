@@ -138,7 +138,7 @@ function Log-Message {
     $logEntry = "[$timestamp] $Message"
 
     try {
-        Add-Content -Path $LogPath -Value $logEntry -ErrorAction SilentlyContinue
+        Add-Content -Path $LogPath -Value $logEntry -Encoding UTF8NoBOM -ErrorAction SilentlyContinue
     } catch {
         # Silently fail if log write fails
     }
