@@ -43,39 +43,75 @@
 
     Set-Location $BotPath
 
-    # Copy bot files if they don't exist
+    # Prepare bot files
     Write-Step "Preparing bot files"
-    # When installed from PSGallery: $PSScriptRoot = Modules\BATCRelayBot\Public
-    # We need 1 parent to get to Modules\BATCRelayBot (where bot.py, requirements.txt should be)
     $moduleDir = Split-Path -Parent $PSScriptRoot
     $sourceBot = Join-Path $moduleDir "bot.py"
     $sourceReqs = Join-Path $moduleDir "requirements.txt"
     $sourceConfig = Join-Path $moduleDir "config.example.json"
 
-    "Copying bot files from: $moduleDir" | Add-Content -Path $logFile
+    $gitHubRawUrl = "https://raw.githubusercontent.com/ZulshiBLN/BATCRelayBot/main"
+    $botDestination = Join-Path $BotPath "bot.py"
+    $reqsDestination = Join-Path $BotPath "requirements.txt"
+    $configDestination = Join-Path $BotPath "config.example.json"
 
+    "Preparing bot files from: $moduleDir" | Add-Content -Path $logFile
+
+    # Try to copy bot.py from module directory, fallback to GitHub
     if (Test-Path $sourceBot) {
-        Copy-Item $sourceBot $BotPath -Force -ErrorAction SilentlyContinue
-        Write-Host "bot.py copied to $BotPath" -ForegroundColor Green
-        "✓ bot.py copied" | Add-Content -Path $logFile
+        Copy-Item $sourceBot $botDestination -Force -ErrorAction SilentlyContinue
+        Write-Host "bot.py copied from module directory" -ForegroundColor Green
+        "✓ bot.py copied from module" | Add-Content -Path $logFile
     } else {
-        "✗ bot.py not found at $sourceBot" | Add-Content -Path $logFile
+        Write-Host "bot.py not in module directory, downloading from GitHub..." -ForegroundColor Cyan
+        try {
+            Invoke-WebRequest -Uri "$gitHubRawUrl/bot.py" -OutFile $botDestination -ErrorAction Stop
+            Write-Host "bot.py downloaded from GitHub" -ForegroundColor Green
+            "✓ bot.py downloaded from GitHub" | Add-Content -Path $logFile
+        } catch {
+            $errMsg = "ERROR: Could not download bot.py from GitHub: $_"
+            Write-Host $errMsg -ForegroundColor Red
+            $errMsg | Add-Content -Path $logFile
+            exit 1
+        }
     }
 
+    # Try to copy requirements.txt from module directory, fallback to GitHub
     if (Test-Path $sourceReqs) {
-        Copy-Item $sourceReqs $BotPath -Force -ErrorAction SilentlyContinue
-        Write-Host "requirements.txt copied to $BotPath" -ForegroundColor Green
-        "✓ requirements.txt copied" | Add-Content -Path $logFile
+        Copy-Item $sourceReqs $reqsDestination -Force -ErrorAction SilentlyContinue
+        Write-Host "requirements.txt copied from module directory" -ForegroundColor Green
+        "✓ requirements.txt copied from module" | Add-Content -Path $logFile
     } else {
-        "✗ requirements.txt not found at $sourceReqs" | Add-Content -Path $logFile
+        Write-Host "requirements.txt not in module directory, downloading from GitHub..." -ForegroundColor Cyan
+        try {
+            Invoke-WebRequest -Uri "$gitHubRawUrl/requirements.txt" -OutFile $reqsDestination -ErrorAction Stop
+            Write-Host "requirements.txt downloaded from GitHub" -ForegroundColor Green
+            "✓ requirements.txt downloaded from GitHub" | Add-Content -Path $logFile
+        } catch {
+            $errMsg = "ERROR: Could not download requirements.txt from GitHub: $_"
+            Write-Host $errMsg -ForegroundColor Red
+            $errMsg | Add-Content -Path $logFile
+            exit 1
+        }
     }
 
+    # Try to copy config.example.json from module directory, fallback to GitHub
     if (Test-Path $sourceConfig) {
-        Copy-Item $sourceConfig $BotPath -Force -ErrorAction SilentlyContinue
-        Write-Host "config.example.json copied to $BotPath" -ForegroundColor Green
-        "✓ config.example.json copied" | Add-Content -Path $logFile
+        Copy-Item $sourceConfig $configDestination -Force -ErrorAction SilentlyContinue
+        Write-Host "config.example.json copied from module directory" -ForegroundColor Green
+        "✓ config.example.json copied from module" | Add-Content -Path $logFile
     } else {
-        "✗ config.example.json not found at $sourceConfig" | Add-Content -Path $logFile
+        Write-Host "config.example.json not in module directory, downloading from GitHub..." -ForegroundColor Cyan
+        try {
+            Invoke-WebRequest -Uri "$gitHubRawUrl/config.example.json" -OutFile $configDestination -ErrorAction Stop
+            Write-Host "config.example.json downloaded from GitHub" -ForegroundColor Green
+            "✓ config.example.json downloaded from GitHub" | Add-Content -Path $logFile
+        } catch {
+            $errMsg = "ERROR: Could not download config.example.json from GitHub: $_"
+            Write-Host $errMsg -ForegroundColor Red
+            $errMsg | Add-Content -Path $logFile
+            exit 1
+        }
     }
 
     # Check winget

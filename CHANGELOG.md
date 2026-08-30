@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.9] - 2026-08-30
+
+### Fixed
+- Download bot files from GitHub if not in module directory (PSGallery limitation)
+- Fallback mechanism: try local copy first, then GitHub Raw URL
+- Proper error handling for download failures
+- Works reliably with PSGallery-installed modules
+
 ## [1.3.8] - 2026-08-30
 
 ### Fixed
