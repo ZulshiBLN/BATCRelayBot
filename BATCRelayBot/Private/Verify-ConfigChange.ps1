@@ -43,10 +43,16 @@ function Verify-ConfigChange {
             }
         }
         else {
+            $message = if ($Field -eq "Token") {
+                "Token verification failed - value does not match saved configuration"
+            } else {
+                "Value mismatch: expected value does not match written value"
+            }
+
             return @{
                 Verified     = $false
                 WrittenValue = $actualValue
-                Message      = "Value mismatch: expected '$ExpectedValue', got '$actualValue'"
+                Message      = $message
             }
         }
     }
