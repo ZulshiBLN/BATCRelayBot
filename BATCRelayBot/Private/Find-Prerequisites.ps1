@@ -17,19 +17,37 @@ function Find-Python {
     [OutputType([hashtable])]
     param()
 
-    # Level 1: Check PATH (fastest)
+    # Level 1: Check winget default location (AppData) - HIGHEST PRIORITY
     try {
-        $pythonExe = (Get-Command python.exe -ErrorAction Stop).Source
-        $version = & $pythonExe --version 2>&1
-        return @{
-            Found = $true
-            Path = $pythonExe
-            Version = $version
-            Method = "PATH"
+        $pythonExe = Get-ChildItem -Path "$env:LOCALAPPDATA\Programs\Python\*\python.exe" -ErrorAction SilentlyContinue |
+                     Select-Object -First 1
+        if ($pythonExe) {
+            $version = & $pythonExe.FullName --version 2>&1
+            return @{
+                Found = $true
+                Path = $pythonExe.FullName
+                Version = $version
+                Method = "FileSystem (winget/AppData)"
+            }
         }
     } catch {}
 
-    # Level 2: Check Registry (Python.org installations)
+    # Level 2: Check Program Files (machine-scope or manual installs)
+    try {
+        $pythonExe = Get-ChildItem -Path "C:\Program Files\Python*\python.exe" -ErrorAction SilentlyContinue |
+                     Select-Object -First 1
+        if ($pythonExe) {
+            $version = & $pythonExe.FullName --version 2>&1
+            return @{
+                Found = $true
+                Path = $pythonExe.FullName
+                Version = $version
+                Method = "FileSystem (Program Files)"
+            }
+        }
+    } catch {}
+
+    # Level 3: Check Registry (Python.org installations)
     try {
         $pythonReg = Get-ChildItem "HKCU:\Software\Python\PythonCore" -ErrorAction Stop |
                      Get-ItemProperty -ErrorAction SilentlyContinue |
@@ -46,25 +64,17 @@ function Find-Python {
         }
     } catch {}
 
-    # Level 3: Check Common Filesystem Paths
-    $commonPaths = @(
-        "C:\Program Files\Python*\python.exe",
-        "C:\Program Files (x86)\Python*\python.exe",
-        "$env:USERPROFILE\AppData\Local\Programs\Python\Python*\python.exe",
-        "$env:USERPROFILE\AppData\Local\Microsoft\WindowsApps\python.exe"
-    )
-
-    foreach ($pattern in $commonPaths) {
-        $found = Get-Item -Path $pattern -ErrorAction SilentlyContinue | Select-Object -First 1
-        if ($found) {
-            return @{
-                Found = $true
-                Path = $found.FullName
-                Version = "Unknown (FileSystem)"
-                Method = "FileSystem"
-            }
+    # Level 4: Check PATH (fallback if PATH was updated)
+    try {
+        $pythonExe = (Get-Command python.exe -ErrorAction Stop).Source
+        $version = & $pythonExe --version 2>&1
+        return @{
+            Found = $true
+            Path = $pythonExe
+            Version = $version
+            Method = "PATH"
         }
-    }
+    } catch {}
 
     # Not found
     return @{
@@ -79,23 +89,41 @@ function Find-FFmpeg {
     [OutputType([hashtable])]
     param()
 
-    # Level 1: Check PATH
+    # Level 1: Check winget default location (AppData) - HIGHEST PRIORITY - NESTED DIRECTORY STRUCTURE
     try {
-        $ffmpegExe = (Get-Command ffmpeg.exe -ErrorAction Stop).Source
-        $version = & $ffmpegExe -version 2>&1 | Select-Object -First 1
-        return @{
-            Found = $true
-            Path = $ffmpegExe
-            Version = $version
-            Method = "PATH"
+        $ffmpegExe = Get-ChildItem -Path "$env:LOCALAPPDATA\Microsoft\WinGet\Packages\Gyan.FFmpeg*\*\bin\ffmpeg.exe" -ErrorAction SilentlyContinue |
+                     Select-Object -First 1
+        if ($ffmpegExe) {
+            $version = & $ffmpegExe.FullName -version 2>&1 | Select-Object -First 1
+            return @{
+                Found = $true
+                Path = $ffmpegExe.FullName
+                Version = $version
+                Method = "FileSystem (winget/AppData)"
+            }
         }
     } catch {}
 
-    # Level 2: Check Registry (Gyan.FFmpeg or similar winget installations)
+    # Level 2: Check Program Files (machine-scope winget installs)
+    try {
+        $ffmpegExe = Get-ChildItem -Path "C:\Program Files\WinGet\Packages\Gyan.FFmpeg*\*\bin\ffmpeg.exe" -ErrorAction SilentlyContinue |
+                     Select-Object -First 1
+        if ($ffmpegExe) {
+            $version = & $ffmpegExe.FullName -version 2>&1 | Select-Object -First 1
+            return @{
+                Found = $true
+                Path = $ffmpegExe.FullName
+                Version = $version
+                Method = "FileSystem (Program Files/winget)"
+            }
+        }
+    } catch {}
+
+    # Level 3: Check Registry (Gyan.FFmpeg or similar installations)
     try {
         $ffmpegReg = Get-ChildItem "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall" -ErrorAction Stop |
                      Get-ItemProperty -ErrorAction SilentlyContinue |
-                     Where-Object {$_.DisplayName -match "FFmpeg"} |
+                     Where-Object {$_.DisplayName -like "*FFmpeg*"} |
                      Select-Object -First 1
 
         if ($ffmpegReg -and $ffmpegReg.InstallLocation) {
@@ -111,11 +139,10 @@ function Find-FFmpeg {
         }
     } catch {}
 
-    # Level 3: Common Paths
+    # Level 4: Check other common paths (manual/traditional installs)
     $commonPaths = @(
         "C:\Program Files\FFmpeg\bin\ffmpeg.exe",
         "C:\Program Files (x86)\FFmpeg\bin\ffmpeg.exe",
-        "$env:USERPROFILE\AppData\Local\Programs\FFmpeg\bin\ffmpeg.exe",
         "C:\ffmpeg\bin\ffmpeg.exe"
     )
 
@@ -125,10 +152,22 @@ function Find-FFmpeg {
                 Found = $true
                 Path = $path
                 Version = "Unknown (FileSystem)"
-                Method = "FileSystem"
+                Method = "FileSystem (manual)"
             }
         }
     }
+
+    # Level 5: Check PATH (fallback if PATH was updated)
+    try {
+        $ffmpegExe = (Get-Command ffmpeg.exe -ErrorAction Stop).Source
+        $version = & $ffmpegExe -version 2>&1 | Select-Object -First 1
+        return @{
+            Found = $true
+            Path = $ffmpegExe
+            Version = $version
+            Method = "PATH"
+        }
+    } catch {}
 
     return @{
         Found = $false
