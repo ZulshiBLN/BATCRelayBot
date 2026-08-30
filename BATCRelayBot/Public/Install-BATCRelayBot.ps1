@@ -213,13 +213,23 @@
         $guildId = Prompt-WithDefault -Message "Server ID (guild_id)" -Default $null
         $voiceChannelId = Prompt-WithDefault -Message "Voice channel ID" -Default $null
 
+        # Auto-detect VoiceMeeter path (installed via winget)
         $defaultVoicemeeterPath = "C:\Program Files (x86)\VB\Voicemeeter\voicemeeter_x64.exe"
-        if (-not (Test-Path $defaultVoicemeeterPath)) { $defaultVoicemeeterPath = $null }
-        $voicemeeterPath = Prompt-FilePath -Message "Path to VoiceMeeter (voicemeeter_x64.exe)" -Filter "Programs (*.exe)|*.exe"
-        if ([string]::IsNullOrWhiteSpace($voicemeeterPath) -and $defaultVoicemeeterPath) {
+        $voicemeeterPath = $null
+
+        if (Test-Path $defaultVoicemeeterPath) {
             $voicemeeterPath = $defaultVoicemeeterPath
+            Write-Host "VoiceMeeter detected automatically: $voicemeeterPath" -ForegroundColor Green
+        } else {
+            # Fallback: ask user if auto-detection failed
+            Write-Host "VoiceMeeter not found in default location." -ForegroundColor Yellow
+            $voicemeeterPath = Prompt-FilePath -Message "Path to VoiceMeeter (voicemeeter_x64.exe)" -Filter "Programs (*.exe)|*.exe"
+            if ([string]::IsNullOrWhiteSpace($voicemeeterPath)) {
+                Write-Host "WARNING: VoiceMeeter path not provided. You may need to configure this manually." -ForegroundColor Yellow
+            }
         }
-        $voicemeeterProcessName = [System.IO.Path]::GetFileNameWithoutExtension($voicemeeterPath)
+
+        $voicemeeterProcessName = if ($voicemeeterPath) { [System.IO.Path]::GetFileNameWithoutExtension($voicemeeterPath) } else { "voicemeeter_x64" }
 
         $batcPath = Prompt-FilePath -Message "Path to BeyondATC.exe" -Filter "Programs (*.exe)|*.exe"
         $batcProcessName = [System.IO.Path]::GetFileNameWithoutExtension($batcPath)

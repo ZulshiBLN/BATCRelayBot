@@ -52,6 +52,7 @@ This will automatically:
 - Install Python 3.10+ (via winget)
 - Install ffmpeg (via winget)
 - Install VoiceMeeter (via winget)
+- **Auto-detect VoiceMeeter installation path** (no prompt if already installed)
 - Install required Python packages
 - Auto-detect your VoiceMeeter output device
 - Prompt you for:
@@ -59,6 +60,7 @@ This will automatically:
   - Discord server ID (guild_id)
   - Discord voice channel ID
   - Path to BeyondATC.exe (if using BeyondATC)
+  - Path to VoiceMeeter (only if auto-detection failed)
 - Write configuration to `config.json`
 
 **Note:** VoiceMeeter installation may require a **system restart** to fully activate. If the setup completes but VoiceMeeter isn't working, restart Windows.
