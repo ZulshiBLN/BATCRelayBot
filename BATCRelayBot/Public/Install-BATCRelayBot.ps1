@@ -76,15 +76,6 @@ function Install-BATCRelayBot {
         }
 
         Write-Host ""
-        Write-Host "Ready to install?" -ForegroundColor Cyan
-        $confirm = Read-Host "Type 'yes' to proceed, or anything else to cancel"
-
-        if ($confirm -ne "yes") {
-            Write-Host "Installation cancelled." -ForegroundColor Yellow
-            exit 0
-        }
-
-        Write-Host ""
 
         # PHASE 5: Execute installation
         Write-Host "[Phase 5] Installing..." -ForegroundColor Gray

@@ -34,10 +34,10 @@ function Start-Installation {
     try {
         if (-not $Prerequisites.Python.Found) {
             Write-Host "      Installing Python 3.12..." -ForegroundColor Gray
-            $pythonInstallOutput = winget install Python.Python.3.12 --silent 2>&1
+            winget install Python.Python.3.12 --silent 2>&1 | Out-Null
 
             if ($LASTEXITCODE -ne 0) {
-                Log-Message "WARNING: Python installation returned exit code $LASTEXITCODE. Output: $pythonInstallOutput" -LogPath $logPath
+                Log-Message "WARNING: Python installation returned exit code $LASTEXITCODE" -LogPath $logPath
                 Write-Host "      WARNING: Python install failed" -ForegroundColor Yellow
             } else {
                 Log-Message "Python.Python.3.12 install command completed" -LogPath $logPath
@@ -88,10 +88,10 @@ function Start-Installation {
 
         if (-not $Prerequisites.FFmpeg.Found) {
             Write-Host "      Installing FFmpeg..." -ForegroundColor Gray
-            $ffmpegInstallOutput = winget install Gyan.FFmpeg --silent 2>&1
+            winget install Gyan.FFmpeg --silent 2>&1 | Out-Null
 
             if ($LASTEXITCODE -ne 0) {
-                Log-Message "WARNING: FFmpeg installation returned exit code $LASTEXITCODE. Output: $ffmpegInstallOutput" -LogPath $logPath
+                Log-Message "WARNING: FFmpeg installation returned exit code $LASTEXITCODE" -LogPath $logPath
                 Write-Host "      WARNING: FFmpeg install failed" -ForegroundColor Yellow
             } else {
                 Log-Message "Gyan.FFmpeg install command completed" -LogPath $logPath
@@ -185,6 +185,27 @@ function Start-Installation {
 
         $configJson = $configContent | ConvertTo-Json
         $configJson | Set-Content -Path $configPath -Force -Encoding UTF8
+
+        # Restrict config.json to current user only (CRITICAL: S2 fix)
+        try {
+            $acl = Get-Acl -Path $configPath
+            $acl.SetAccessRuleProtection($true, $false)
+
+            $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().User
+            if ($currentUser) {
+                $rule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+                    $currentUser,
+                    'FullControl',
+                    'Allow'
+                )
+                $acl.SetAccessRule($rule)
+                Set-Acl -Path $configPath -AclObject $acl -ErrorAction Stop
+                Log-Message "Config file permissions restricted to current user" -LogPath $logPath
+            }
+        } catch {
+            Log-Message "WARNING: Could not restrict config file permissions: $_" -LogPath $logPath
+        }
+
         Log-Message "Configuration file created: $configPath" -LogPath $logPath
         Write-Host "      DONE" -ForegroundColor Green
     } catch {
@@ -250,6 +271,17 @@ function Log-Message {
         [string]$Message,
         [string]$LogPath
     )
+
+    if (-not $LogPath) { return }
+
+    $logDir = Split-Path -Parent $LogPath
+    if (-not (Test-Path $logDir)) {
+        try {
+            New-Item -ItemType Directory -Path $logDir -Force -ErrorAction Stop | Out-Null
+        } catch {
+            return
+        }
+    }
 
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     $logEntry = "[$timestamp] $Message"
