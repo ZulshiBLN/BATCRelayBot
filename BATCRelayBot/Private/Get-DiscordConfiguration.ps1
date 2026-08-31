@@ -37,8 +37,11 @@ function Get-DiscordConfiguration {
             $config.BotToken = $tokenStr
             $tokenValid = $true
         } else {
-            Write-Host "Token validation failed: $($validation.Error)" -ForegroundColor Red
             $attempts++
+            Write-Host "ERROR: Token validation failed (attempt $attempts/3): $($validation.Error)" -ForegroundColor Red
+            if ($attempts -eq 3) {
+                Write-Host "Maximum attempts exceeded. Please try again later." -ForegroundColor Yellow
+            }
         }
         Write-Host ""
     }
@@ -95,7 +98,7 @@ function Test-DiscordBotToken {
     try {
         $headers = @{
             Authorization = "Bot $Token"
-            "User-Agent" = "DiscordBot (BATCRelayBot/1.3.14)"
+            "User-Agent" = "DiscordBot (BATCRelayBot/1.3.15)"
         }
 
         $uri = "https://discord.com/api/v10/users/@me"
@@ -128,7 +131,7 @@ function Test-DiscordBotToken {
                 if ($errorMsg -like "*timeout*" -or $errorMsg -like "*No such host*") {
                     "Cannot reach Discord API. Check your internet connection"
                 } else {
-                    "API connection failed: $errorMsg"
+                    "API connection failed. Please check your internet connection and try again"
                 }
             }
         }

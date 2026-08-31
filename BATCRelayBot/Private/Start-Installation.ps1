@@ -15,6 +15,33 @@ function Start-Installation {
     Write-Host "Starting Installation..." -ForegroundColor Green
     Write-Host ""
 
+    # PHASE 0b: Migrate existing configuration (apply ACL security to existing configs)
+    $existingConfigPath = Join-Path $installPath "config.json"
+    if (Test-Path $existingConfigPath) {
+        Write-Host "[0b/6] Securing existing configuration..." -ForegroundColor Cyan
+        try {
+            $acl = Get-Acl -Path $existingConfigPath
+            $acl.SetAccessRuleProtection($true, $false)
+
+            $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().User
+            if ($currentUser) {
+                $rule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+                    $currentUser,
+                    'FullControl',
+                    'Allow'
+                )
+                $acl.SetAccessRule($rule)
+                Set-Acl -Path $existingConfigPath -AclObject $acl -ErrorAction Stop
+                Log-Message "MIGRATION: Applied ACL security to existing config.json" -LogPath $logPath
+                Write-Host "      DONE - Configuration secured for v1.3.15" -ForegroundColor Green
+            }
+        } catch {
+            Log-Message "MIGRATION-WARNING: Could not apply ACL to existing config: $_" -LogPath $logPath
+            Write-Host "      WARNING: Existing config permissions unchanged (non-critical)" -ForegroundColor Yellow
+        }
+        Write-Host ""
+    }
+
     # Create installation directory
     Write-Host "[1/6] Creating installation directory..." -ForegroundColor Cyan
     try {
@@ -34,10 +61,10 @@ function Start-Installation {
     try {
         if (-not $Prerequisites.Python.Found) {
             Write-Host "      Installing Python 3.12..." -ForegroundColor Gray
-            $pythonInstallOutput = winget install Python.Python.3.12 --silent 2>&1
+            winget install Python.Python.3.12 --silent 2>&1 | Out-Null
 
             if ($LASTEXITCODE -ne 0) {
-                Log-Message "WARNING: Python installation returned exit code $LASTEXITCODE. Output: $pythonInstallOutput" -LogPath $logPath
+                Log-Message "WARNING: Python installation returned exit code $LASTEXITCODE" -LogPath $logPath
                 Write-Host "      WARNING: Python install failed" -ForegroundColor Yellow
             } else {
                 Log-Message "Python.Python.3.12 install command completed" -LogPath $logPath
@@ -88,10 +115,10 @@ function Start-Installation {
 
         if (-not $Prerequisites.FFmpeg.Found) {
             Write-Host "      Installing FFmpeg..." -ForegroundColor Gray
-            $ffmpegInstallOutput = winget install Gyan.FFmpeg --silent 2>&1
+            winget install Gyan.FFmpeg --silent 2>&1 | Out-Null
 
             if ($LASTEXITCODE -ne 0) {
-                Log-Message "WARNING: FFmpeg installation returned exit code $LASTEXITCODE. Output: $ffmpegInstallOutput" -LogPath $logPath
+                Log-Message "WARNING: FFmpeg installation returned exit code $LASTEXITCODE" -LogPath $logPath
                 Write-Host "      WARNING: FFmpeg install failed" -ForegroundColor Yellow
             } else {
                 Log-Message "Gyan.FFmpeg install command completed" -LogPath $logPath
@@ -185,6 +212,27 @@ function Start-Installation {
 
         $configJson = $configContent | ConvertTo-Json
         $configJson | Set-Content -Path $configPath -Force -Encoding UTF8
+
+        # Restrict config.json to current user only (CRITICAL: S2 fix)
+        try {
+            $acl = Get-Acl -Path $configPath
+            $acl.SetAccessRuleProtection($true, $false)
+
+            $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().User
+            if ($currentUser) {
+                $rule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+                    $currentUser,
+                    'FullControl',
+                    'Allow'
+                )
+                $acl.SetAccessRule($rule)
+                Set-Acl -Path $configPath -AclObject $acl -ErrorAction Stop
+                Log-Message "Config file permissions restricted to current user" -LogPath $logPath
+            }
+        } catch {
+            Log-Message "WARNING: Could not restrict config file permissions: $_" -LogPath $logPath
+        }
+
         Log-Message "Configuration file created: $configPath" -LogPath $logPath
         Write-Host "      DONE" -ForegroundColor Green
     } catch {
@@ -209,22 +257,42 @@ function Start-Installation {
         Write-Host "      WARNING: $_" -ForegroundColor Yellow
     }
 
-    # Final verification
+    # Final verification (R3: Prerequisites Verification)
     Write-Host "[6/6] Verifying installation..." -ForegroundColor Cyan
     try {
         $configExists = Test-Path $configPath
         $pythonOk = $Prerequisites.Python.Found
+        $ffmpegOk = $Prerequisites.FFmpeg.Found
+        $voicemeterOk = $Prerequisites.VoiceMeeter.Found
 
-        if ($configExists -and $pythonOk) {
-            Log-Message "Installation verification: SUCCESS" -LogPath $logPath
-            Write-Host "      DONE" -ForegroundColor Green
-        } else {
-            throw "Verification failed: config=$configExists, python=$pythonOk"
+        if (-not $configExists) {
+            throw "Config file not created"
         }
+
+        if (-not $pythonOk) {
+            throw "Python not detected after installation"
+        }
+
+        if (-not $ffmpegOk) {
+            throw "FFmpeg not detected after installation"
+        }
+
+        if (-not $voicemeterOk) {
+            throw "VoiceMeeter not detected - required for audio routing"
+        }
+
+        Log-Message "Installation verification: SUCCESS" -LogPath $logPath
+        Write-Host "      DONE" -ForegroundColor Green
     } catch {
         Log-Message "ERROR: Installation verification failed: $_" -LogPath $logPath
         Write-Host "      FAILED: $_" -ForegroundColor Red
-        return @{ Success = $false; Error = "Verification failed" }
+        Write-Host ""
+        Write-Host "Missing prerequisites:" -ForegroundColor Red
+        if (-not $configExists) { Write-Host "  - Configuration file" -ForegroundColor Red }
+        if (-not $pythonOk) { Write-Host "  - Python 3.12 (get from https://www.python.org)" -ForegroundColor Red }
+        if (-not $ffmpegOk) { Write-Host "  - FFmpeg (get from https://ffmpeg.org)" -ForegroundColor Red }
+        if (-not $voicemeterOk) { Write-Host "  - VoiceMeeter (get from https://vb-audio.com/Voicemeeter/)" -ForegroundColor Red }
+        return @{ Success = $false; Error = "Prerequisites verification failed" }
     }
 
     Write-Host ""
@@ -251,6 +319,17 @@ function Log-Message {
         [string]$LogPath
     )
 
+    if (-not $LogPath) { return }
+
+    $logDir = Split-Path -Parent $LogPath
+    if (-not (Test-Path $logDir)) {
+        try {
+            New-Item -ItemType Directory -Path $logDir -Force -ErrorAction Stop | Out-Null
+        } catch {
+            return
+        }
+    }
+
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     $logEntry = "[$timestamp] $Message"
 
@@ -262,16 +341,53 @@ function Log-Message {
 }
 
 function Get-RequirementsPath {
-    # Find requirements.txt
+    # Multi-level resolution: module root → current → parent
     $path = "requirements.txt"
-    if (Test-Path $path) { return (Resolve-Path $path).Path }
+
+    # Level 1: Try module root (preferred)
+    try {
+        $moduleRoot = (Get-Module BATCRelayBot).ModuleBase
+        if ($moduleRoot) {
+            $modulePath = Join-Path $moduleRoot "requirements.txt"
+            if (Test-Path $modulePath) { return $modulePath }
+        }
+    } catch {}
+
+    # Level 2: Try current directory
+    if (Test-Path $path) {
+        return (Resolve-Path $path).Path
+    }
+
+    # Level 3: Try parent directory
+    $parentPath = Join-Path ".." $path
+    if (Test-Path $parentPath) {
+        return (Resolve-Path $parentPath).Path
+    }
+
     return $null
 }
 
 function Get-BotFilesPath {
-    # Find bot.py in source
-    $path = "bot.py"
-    if (Test-Path $path) { return (Split-Path (Resolve-Path $path).Path) }
+    # Multi-level resolution: module root → current → parent
+    # Level 1: Try module root (preferred)
+    try {
+        $moduleRoot = (Get-Module BATCRelayBot).ModuleBase
+        if ($moduleRoot) {
+            $botPath = Join-Path $moduleRoot "bot.py"
+            if (Test-Path $botPath) { return $moduleRoot }
+        }
+    } catch {}
+
+    # Level 2: Try current directory
+    if (Test-Path "bot.py") {
+        return (Resolve-Path ".").Path
+    }
+
+    # Level 3: Try parent directory
+    if (Test-Path "..\bot.py") {
+        return (Resolve-Path "..").Path
+    }
+
     return $null
 }
 

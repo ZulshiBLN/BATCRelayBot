@@ -55,8 +55,7 @@ function Show-InstallationSummary {
     Write-Host ""
     Write-Host "  Bot Token:" -ForegroundColor Gray
     if ($DiscordConfig.BotToken) {
-        $tokenDisplay = $DiscordConfig.BotToken.Substring(0, [Math]::Min(10, $DiscordConfig.BotToken.Length)) + "..."
-        Write-Host "    Token: $tokenDisplay (length: $($DiscordConfig.BotToken.Length))" -ForegroundColor Green
+        Write-Host "    Token: [REDACTED] (length: $($DiscordConfig.BotToken.Length) chars)" -ForegroundColor Green
     } else {
         Write-Host "    Token: NOT PROVIDED" -ForegroundColor Red
     }

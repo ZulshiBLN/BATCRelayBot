@@ -34,7 +34,7 @@ function Find-Python {
 
     # Level 2: Check Program Files (machine-scope or manual installs)
     try {
-        $pythonExe = Get-ChildItem -Path "C:\Program Files\Python*\python.exe" -ErrorAction SilentlyContinue |
+        $pythonExe = Get-ChildItem -Path "$env:ProgramFiles\Python*\python.exe" -ErrorAction SilentlyContinue |
                      Select-Object -First 1
         if ($pythonExe) {
             $version = & $pythonExe.FullName --version 2>&1
@@ -106,7 +106,7 @@ function Find-FFmpeg {
 
     # Level 2: Check Program Files (machine-scope winget installs)
     try {
-        $ffmpegExe = Get-ChildItem -Path "C:\Program Files\WinGet\Packages\Gyan.FFmpeg*\*\bin\ffmpeg.exe" -ErrorAction SilentlyContinue |
+        $ffmpegExe = Get-ChildItem -Path "$env:ProgramFiles\WinGet\Packages\Gyan.FFmpeg*\*\bin\ffmpeg.exe" -ErrorAction SilentlyContinue |
                      Select-Object -First 1
         if ($ffmpegExe) {
             $version = & $ffmpegExe.FullName -version 2>&1 | Select-Object -First 1
@@ -141,8 +141,8 @@ function Find-FFmpeg {
 
     # Level 4: Check other common paths (manual/traditional installs)
     $commonPaths = @(
-        "C:\Program Files\FFmpeg\bin\ffmpeg.exe",
-        "C:\Program Files (x86)\FFmpeg\bin\ffmpeg.exe",
+        "$env:ProgramFiles\FFmpeg\bin\ffmpeg.exe",
+        "${env:ProgramFiles(x86)}\FFmpeg\bin\ffmpeg.exe",
         "C:\ffmpeg\bin\ffmpeg.exe"
     )
 
@@ -236,12 +236,9 @@ function Find-VoiceMeeter {
     # Official installations use "VB\" not "VB-Audio\"
     # NOTE: Must use ${env:ProgramFiles(x86)} with braces - parentheses require braces in PowerShell
     $commonPaths = @(
-        "C:\Program Files (x86)\VB\Voicemeeter",           # 32-bit driver (primary) - hardcoded
-        "C:\Program Files\VB\VBVoicemeeterVAIOs",         # 64-bit ASIO driver - hardcoded
-        "C:\Program Files\VB\Voicemeeter",                 # Alternative 64-bit location - hardcoded
-        "${env:ProgramFiles(x86)}\VB\Voicemeeter",        # 32-bit with env var (FIXED: braces required)
-        "$env:ProgramFiles\VB\Voicemeeter",               # 64-bit with env var (FIXED: correct case)
-        "$env:ProgramFiles\VB\VBVoicemeeterVAIOs"         # ASIO with env var (FIXED: correct case)
+        "${env:ProgramFiles(x86)}\VB\Voicemeeter",        # 32-bit driver (primary)
+        "$env:ProgramFiles\VB\Voicemeeter",               # 64-bit alternative
+        "$env:ProgramFiles\VB\VBVoicemeeterVAIOs"         # ASIO driver
     )
 
     foreach ($path in $commonPaths) {
@@ -257,7 +254,7 @@ function Find-VoiceMeeter {
 
     # Level 3: Wildcard search for VB folder (catches portable/non-standard installations)
     try {
-        $vbDirs = Get-ChildItem -Path "C:\Program Files", "C:\Program Files (x86)" -Directory -ErrorAction SilentlyContinue |
+        $vbDirs = Get-ChildItem -Path $env:ProgramFiles, ${env:ProgramFiles(x86)} -Directory -ErrorAction SilentlyContinue |
                   Where-Object {$_.Name -eq "VB"} |
                   Get-ChildItem -Directory -ErrorAction SilentlyContinue |
                   Where-Object {$_.Name -like "*Voicemeeter*" -or $_.Name -like "*VAIO*"} |
@@ -297,7 +294,7 @@ function Find-BeyondATC {
     }
 
     # Level 2: Program Files (default installation path)
-    $btcProgramFiles = "C:\Program Files\BeyondATC"
+    $btcProgramFiles = "$env:ProgramFiles\BeyondATC"
     if (Test-Path $btcProgramFiles) {
         return @{
             Found = $true
