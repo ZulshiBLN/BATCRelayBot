@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.15] - 2026-08-31
+
+### Security (CRITICAL)
+- **S1:** Bot token fully redacted in installation summary (no partial display in logs/console)
+- **S2:** config.json restricted to current user only via NTFS ACLs (prevents unauthorized access)
+- **S3:** Sanitized sensitive data from logs (winget output, Discord API errors no longer exposed)
+
+### Design & Robustness (HIGH)
+- **D1:** Phase 4b auto-install confirmation for missing tools (ADR-005 compliant 6-phase structure)
+  - Users can choose: auto-install, manual install, or skip
+  - Prompt only appears when tools are actually missing
+- **R3:** Installation now fails if critical prerequisites still missing after auto-install attempt
+- **R6/R7:** Multi-level path resolution for requirements.txt and bot.py (works from any directory)
+
+### Enhancement & Maintenance (MEDIUM/LOW)
+- **D2-Paths:** Replaced all hardcoded `C:\Program Files` paths with environment variables (fixes non-English Windows)
+- **D3:** Token validation retry messages now show attempt counter (e.g., "attempt 2/3")
+- **R5:** Log directory guaranteed to exist before writing (prevents silent log failures)
+- **S3b:** Error messages sanitized (no raw exception details exposed to users)
+- **Migration:** Phase 0b auto-applies ACL security to existing v1.3.14 configurations
+
+### Technical Details
+- Prompt count reduced to ADR-005 compliance (3 mandatory + 1 conditional)
+- ACL migration handles permission failures gracefully (non-blocking)
+- Environment variable paths support non-English Windows installations
+- All fixes backward-compatible with v1.3.14 installations
+
 ## [1.3.14] - 2026-08-31
 
 ### Fixed
