@@ -33,7 +33,7 @@ function Start-Installation {
                 $acl.SetAccessRule($rule)
                 Set-Acl -Path $existingConfigPath -AclObject $acl -ErrorAction Stop
                 Log-Message "MIGRATION: Applied ACL security to existing config.json" -LogPath $logPath
-                Write-Host "      DONE - Configuration secured for v1.3.15" -ForegroundColor Green
+                Write-Host "      DONE - Configuration secured for v1.3.16" -ForegroundColor Green
             }
         } catch {
             Log-Message "MIGRATION-WARNING: Could not apply ACL to existing config: $_" -LogPath $logPath
