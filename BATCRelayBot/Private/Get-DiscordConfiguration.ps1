@@ -128,7 +128,7 @@ function Test-DiscordBotToken {
                 if ($errorMsg -like "*timeout*" -or $errorMsg -like "*No such host*") {
                     "Cannot reach Discord API. Check your internet connection"
                 } else {
-                    "API connection failed: $errorMsg"
+                    "API connection failed. Please check your internet connection and try again"
                 }
             }
         }

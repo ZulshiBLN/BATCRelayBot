@@ -230,22 +230,42 @@ function Start-Installation {
         Write-Host "      WARNING: $_" -ForegroundColor Yellow
     }
 
-    # Final verification
+    # Final verification (R3: Prerequisites Verification)
     Write-Host "[6/6] Verifying installation..." -ForegroundColor Cyan
     try {
         $configExists = Test-Path $configPath
         $pythonOk = $Prerequisites.Python.Found
+        $ffmpegOk = $Prerequisites.FFmpeg.Found
+        $voicemeterOk = $Prerequisites.VoiceMeeter.Found
 
-        if ($configExists -and $pythonOk) {
-            Log-Message "Installation verification: SUCCESS" -LogPath $logPath
-            Write-Host "      DONE" -ForegroundColor Green
-        } else {
-            throw "Verification failed: config=$configExists, python=$pythonOk"
+        if (-not $configExists) {
+            throw "Config file not created"
         }
+
+        if (-not $pythonOk) {
+            throw "Python not detected after installation"
+        }
+
+        if (-not $ffmpegOk) {
+            throw "FFmpeg not detected after installation"
+        }
+
+        if (-not $voicemeterOk) {
+            throw "VoiceMeeter not detected - required for audio routing"
+        }
+
+        Log-Message "Installation verification: SUCCESS" -LogPath $logPath
+        Write-Host "      DONE" -ForegroundColor Green
     } catch {
         Log-Message "ERROR: Installation verification failed: $_" -LogPath $logPath
         Write-Host "      FAILED: $_" -ForegroundColor Red
-        return @{ Success = $false; Error = "Verification failed" }
+        Write-Host ""
+        Write-Host "Missing prerequisites:" -ForegroundColor Red
+        if (-not $configExists) { Write-Host "  - Configuration file" -ForegroundColor Red }
+        if (-not $pythonOk) { Write-Host "  - Python 3.12 (get from https://www.python.org)" -ForegroundColor Red }
+        if (-not $ffmpegOk) { Write-Host "  - FFmpeg (get from https://ffmpeg.org)" -ForegroundColor Red }
+        if (-not $voicemeterOk) { Write-Host "  - VoiceMeeter (get from https://vb-audio.com/Voicemeeter/)" -ForegroundColor Red }
+        return @{ Success = $false; Error = "Prerequisites verification failed" }
     }
 
     Write-Host ""
@@ -294,16 +314,53 @@ function Log-Message {
 }
 
 function Get-RequirementsPath {
-    # Find requirements.txt
+    # Multi-level resolution: module root → current → parent
     $path = "requirements.txt"
-    if (Test-Path $path) { return (Resolve-Path $path).Path }
+
+    # Level 1: Try module root (preferred)
+    try {
+        $moduleRoot = (Get-Module BATCRelayBot).ModuleBase
+        if ($moduleRoot) {
+            $modulePath = Join-Path $moduleRoot "requirements.txt"
+            if (Test-Path $modulePath) { return $modulePath }
+        }
+    } catch {}
+
+    # Level 2: Try current directory
+    if (Test-Path $path) {
+        return (Resolve-Path $path).Path
+    }
+
+    # Level 3: Try parent directory
+    $parentPath = Join-Path ".." $path
+    if (Test-Path $parentPath) {
+        return (Resolve-Path $parentPath).Path
+    }
+
     return $null
 }
 
 function Get-BotFilesPath {
-    # Find bot.py in source
-    $path = "bot.py"
-    if (Test-Path $path) { return (Split-Path (Resolve-Path $path).Path) }
+    # Multi-level resolution: module root → current → parent
+    # Level 1: Try module root (preferred)
+    try {
+        $moduleRoot = (Get-Module BATCRelayBot).ModuleBase
+        if ($moduleRoot) {
+            $botPath = Join-Path $moduleRoot "bot.py"
+            if (Test-Path $botPath) { return $moduleRoot }
+        }
+    } catch {}
+
+    # Level 2: Try current directory
+    if (Test-Path "bot.py") {
+        return (Resolve-Path ".").Path
+    }
+
+    # Level 3: Try parent directory
+    if (Test-Path "..\bot.py") {
+        return (Resolve-Path "..").Path
+    }
+
     return $null
 }
 
