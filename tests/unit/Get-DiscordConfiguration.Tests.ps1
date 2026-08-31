@@ -43,3 +43,41 @@ Describe "Phase 3: Configuration Input" {
         $result | Should -Not -BeNull
     }
 }
+
+Describe "Token Validation - User-Agent Compliance" {
+    It "User-Agent contains DiscordBot prefix" {
+        $content = Get-Content -Path "$PSScriptRoot\..\..\BATCRelayBot\Private\Get-DiscordConfiguration.ps1" -Raw
+        $content | Should -Match 'User-Agent.*DiscordBot'
+    }
+
+    It "User-Agent includes application name and version" {
+        $content = Get-Content -Path "$PSScriptRoot\..\..\BATCRelayBot\Private\Get-DiscordConfiguration.ps1" -Raw
+        $content | Should -Match 'DiscordBot \(BATCRelayBot/[\d.]+\)'
+    }
+}
+
+Describe "Token Validation - Error Classification" {
+    It "Classifies 401 unauthorized error" -Skip {
+        # Requires mock Discord API endpoint returning 401
+        # Mock: Invoke-WebRequest throws 401 Unauthorized
+        # Expected: Error contains "Token expired or invalid"
+    }
+
+    It "Classifies 403 forbidden error" -Skip {
+        # Requires mock Discord API endpoint returning 403
+        # Mock: Invoke-WebRequest throws 403 Forbidden
+        # Expected: Error contains "lacks required permissions"
+    }
+
+    It "Classifies 404 not found error" -Skip {
+        # Requires mock Discord API endpoint returning 404
+        # Mock: Invoke-WebRequest throws 404 Not Found
+        # Expected: Error contains "BOT token, not USER"
+    }
+
+    It "Classifies network timeout error" -Skip {
+        # Requires mock Discord API endpoint timeout
+        # Mock: Invoke-WebRequest throws timeout exception
+        # Expected: Error contains "Cannot reach Discord API"
+    }
+}

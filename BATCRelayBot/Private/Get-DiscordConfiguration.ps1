@@ -95,7 +95,7 @@ function Test-DiscordBotToken {
     try {
         $headers = @{
             Authorization = "Bot $Token"
-            "User-Agent" = "BATCRelayBot/1.3.12"
+            "User-Agent" = "DiscordBot (BATCRelayBot/1.3.14)"
         }
 
         $uri = "https://discord.com/api/v10/users/@me"
@@ -110,11 +110,34 @@ function Test-DiscordBotToken {
             Error = $null
         }
     } catch {
+        $statusCode = $null
+        $errorMsg = $_.Exception.Message
+
+        if ($_.Exception.Response) {
+            $statusCode = $_.Exception.Response.StatusCode
+        }
+
+        $classifiedError = switch ([int]$statusCode) {
+            401 { "Token expired or invalid. Get new token: https://discord.com/developers/applications" }
+            403 { "Bot lacks required permissions in server or channel. Check bot role settings" }
+            404 { "Bot account not found. Verify you're using a BOT token, not a USER token" }
+            429 { "Too many requests. Discord API rate limited. Try again in a moment" }
+            500 { "Discord API server error. Try again later" }
+            503 { "Discord API temporarily unavailable. Try again later" }
+            default {
+                if ($errorMsg -like "*timeout*" -or $errorMsg -like "*No such host*") {
+                    "Cannot reach Discord API. Check your internet connection"
+                } else {
+                    "API connection failed: $errorMsg"
+                }
+            }
+        }
+
         return @{
             Valid = $false
             BotName = $null
             BotId = $null
-            Error = "Token validation failed"
+            Error = $classifiedError
         }
     }
 }

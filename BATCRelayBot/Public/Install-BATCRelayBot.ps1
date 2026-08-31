@@ -35,7 +35,7 @@ function Install-BATCRelayBot {
 
     Write-Host ""
     Write-Host "========================================" -ForegroundColor Cyan
-    Write-Host "   BATCRelayBot Installation (v1.3.13)" -ForegroundColor Cyan
+    Write-Host "   BATCRelayBot Installation (v1.3.14)" -ForegroundColor Cyan
     Write-Host "========================================" -ForegroundColor Cyan
     Write-Host ""
 
