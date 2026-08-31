@@ -65,19 +65,7 @@ function Install-BATCRelayBot {
         }
         Write-Host ""
 
-        # PHASE 4: Display summary before installing
-        Write-Host "[Phase 4] Installation Summary" -ForegroundColor Gray
-        $summary = Show-InstallationSummary -Prerequisites $prerequisites -DiscordConfig $discordConfig
-
-        if (-not $summary.CanProceed) {
-            Write-Host ""
-            Write-Host "Installation cannot proceed. Check requirements above." -ForegroundColor Red
-            exit 1
-        }
-
-        Write-Host ""
-
-        # PHASE 4b: Auto-install confirmation (if prerequisites missing)
+        # PHASE 4b: Auto-install confirmation (if prerequisites missing) - BEFORE summary check
         $missingTools = @()
         if (-not $prerequisites.Python.Found) { $missingTools += "Python 3.12" }
         if (-not $prerequisites.FFmpeg.Found) { $missingTools += "FFmpeg" }
@@ -110,17 +98,38 @@ function Install-BATCRelayBot {
                 }
                 Write-Host ""
                 Write-Host "After installation, please re-run this installer" -ForegroundColor Yellow
+                Write-Host ""
+                Write-Host "Press Enter to exit..." -ForegroundColor Yellow
+                Read-Host
                 exit 0
             }
             Write-Host ""
         }
+
+        # PHASE 4: Display summary before installing
+        Write-Host "[Phase 4] Installation Summary" -ForegroundColor Gray
+        $summary = Show-InstallationSummary -Prerequisites $prerequisites -DiscordConfig $discordConfig
+
+        if (-not $summary.CanProceed) {
+            Write-Host ""
+            Write-Host "Installation cannot proceed. Check requirements above." -ForegroundColor Red
+            Write-Host "Press Enter to exit..." -ForegroundColor Yellow
+            Read-Host
+            exit 1
+        }
+
+        Write-Host ""
 
         # PHASE 5: Execute installation
         Write-Host "[Phase 5] Installing..." -ForegroundColor Gray
         $installResult = Start-Installation -Prerequisites $prerequisites -DiscordConfig $discordConfig
 
         if (-not $installResult.Success) {
-            Write-Host "Installation failed" -ForegroundColor Red
+            Write-Host ""
+            Write-Host "Installation failed: $($installResult.Error)" -ForegroundColor Red
+            Write-Host ""
+            Write-Host "Press Enter to exit..." -ForegroundColor Yellow
+            Read-Host
             exit 1
         }
 
@@ -146,6 +155,9 @@ function Install-BATCRelayBot {
             Write-Host "Log: $($installResult.LogPath)" -ForegroundColor Gray
         }
 
+        Write-Host ""
+        Write-Host "Press Enter to exit..." -ForegroundColor Yellow
+        Read-Host
         exit 1
     }
 
