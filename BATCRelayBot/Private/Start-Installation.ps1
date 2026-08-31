@@ -15,6 +15,33 @@ function Start-Installation {
     Write-Host "Starting Installation..." -ForegroundColor Green
     Write-Host ""
 
+    # PHASE 0b: Migrate existing configuration (apply ACL security to existing configs)
+    $existingConfigPath = Join-Path $installPath "config.json"
+    if (Test-Path $existingConfigPath) {
+        Write-Host "[0b/6] Securing existing configuration..." -ForegroundColor Cyan
+        try {
+            $acl = Get-Acl -Path $existingConfigPath
+            $acl.SetAccessRuleProtection($true, $false)
+
+            $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().User
+            if ($currentUser) {
+                $rule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+                    $currentUser,
+                    'FullControl',
+                    'Allow'
+                )
+                $acl.SetAccessRule($rule)
+                Set-Acl -Path $existingConfigPath -AclObject $acl -ErrorAction Stop
+                Log-Message "MIGRATION: Applied ACL security to existing config.json" -LogPath $logPath
+                Write-Host "      DONE - Configuration secured for v1.3.15" -ForegroundColor Green
+            }
+        } catch {
+            Log-Message "MIGRATION-WARNING: Could not apply ACL to existing config: $_" -LogPath $logPath
+            Write-Host "      WARNING: Existing config permissions unchanged (non-critical)" -ForegroundColor Yellow
+        }
+        Write-Host ""
+    }
+
     # Create installation directory
     Write-Host "[1/6] Creating installation directory..." -ForegroundColor Cyan
     try {

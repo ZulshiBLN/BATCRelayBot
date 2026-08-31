@@ -37,8 +37,11 @@ function Get-DiscordConfiguration {
             $config.BotToken = $tokenStr
             $tokenValid = $true
         } else {
-            Write-Host "Token validation failed: $($validation.Error)" -ForegroundColor Red
             $attempts++
+            Write-Host "ERROR: Token validation failed (attempt $attempts/3): $($validation.Error)" -ForegroundColor Red
+            if ($attempts -eq 3) {
+                Write-Host "Maximum attempts exceeded. Please try again later." -ForegroundColor Yellow
+            }
         }
         Write-Host ""
     }
