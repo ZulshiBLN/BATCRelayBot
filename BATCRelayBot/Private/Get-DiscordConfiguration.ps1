@@ -98,7 +98,7 @@ function Test-DiscordBotToken {
     try {
         $headers = @{
             Authorization = "Bot $Token"
-            "User-Agent" = "DiscordBot (BATCRelayBot/1.3.15)"
+            "User-Agent" = "DiscordBot (BATCRelayBot/1.3.16)"
         }
 
         $uri = "https://discord.com/api/v10/users/@me"

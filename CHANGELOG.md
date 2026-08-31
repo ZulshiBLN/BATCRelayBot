@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.16] - 2026-08-31 (HOTFIX)
+
+### Fixed (CRITICAL)
+- **Installer crash on error:** PowerShell now pauses before exit, allowing users to see error messages
+- **Phase 4b unreachable:** Auto-install prompt now displays when prerequisites missing (moved before summary check)
+- **Error visibility:** Installation failures now show pause prompt instead of instant window close
+
+### Impact
+Users can now see what went wrong during installation and access the auto-install functionality for missing tools.
+
 ## [1.3.15] - 2026-08-31
 
 ### Security (CRITICAL)
