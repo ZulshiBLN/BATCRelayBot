@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.14] - 2026-08-31
+
+### Fixed
+- Fixed Discord API token validation failure in installer (User-Agent header compliance)
+- Improved error messages for Discord API connection failures (contextual guidance)
+- Removed debug output that exposed exception details (security fix)
+
+### Technical Details
+- User-Agent header now includes "DiscordBot" prefix as required by Discord API (Issue #4908, #6473)
+- Token validation failures now provide specific guidance (401 vs 403 vs network errors)
+- Cloudflare blocking issue resolved through proper User-Agent formatting
+- Installer token validation now succeeds for valid bot tokens
+
 ## [1.3.13] - 2026-08-30 (HOTFIX)
 
 ### Fixed (CRITICAL)
