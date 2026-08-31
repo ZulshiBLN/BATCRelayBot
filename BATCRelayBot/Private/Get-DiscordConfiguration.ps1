@@ -100,7 +100,7 @@ function Test-DiscordBotToken {
 
         $uri = "https://discord.com/api/v10/users/@me"
         $response = Invoke-WebRequest -Uri $uri -Headers $headers -Method Get `
-            -UseBasicParsing -WarningAction SilentlyContinue -Confirm:$false -ErrorAction Stop
+            -UseBasicParsing -WarningAction SilentlyContinue -ErrorAction Stop
         $user = $response.Content | ConvertFrom-Json
 
         return @{
