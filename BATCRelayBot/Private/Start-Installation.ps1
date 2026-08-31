@@ -33,8 +33,21 @@ function Start-Installation {
     Write-Host "[2/6] Ensuring required tools are installed..." -ForegroundColor Cyan
     try {
         if (-not $Prerequisites.Python.Found) {
-            Write-Host "      Installing Python..." -ForegroundColor Gray
-            winget install Python.Python --silent 2>$null
+            Write-Host "      Installing Python 3.12..." -ForegroundColor Gray
+            $pythonInstallOutput = winget install Python.Python.3.12 --silent 2>&1
+
+            if ($LASTEXITCODE -ne 0) {
+                Log-Message "WARNING: Python installation returned exit code $LASTEXITCODE. Output: $pythonInstallOutput" -LogPath $logPath
+                Write-Host "      WARNING: Python install failed" -ForegroundColor Yellow
+            } else {
+                Log-Message "Python.Python.3.12 install command completed" -LogPath $logPath
+            }
+
+            # Wait for installation to complete and registry to update
+            Start-Sleep -Seconds 2
+
+            # Refresh PowerShell PATH from system registry (winget updates system PATH only)
+            $env:PATH = [System.Environment]::GetEnvironmentVariable('PATH','Machine') + ';' + [System.Environment]::GetEnvironmentVariable('PATH','User')
 
             # Re-detect Python after installation
             $pythonCheck = & {
@@ -67,12 +80,25 @@ function Start-Installation {
             if ($pythonCheck.Found) {
                 $Prerequisites.Python = @{Found = $true; Path = $pythonCheck.Path}
                 Log-Message "Python installed and detected: $($pythonCheck.Path)" -LogPath $logPath
+            } else {
+                Log-Message "ERROR: Python installation completed but executable not found in expected locations" -LogPath $logPath
+                Write-Host "      ERROR: Python not detected after installation" -ForegroundColor Red
             }
         }
 
         if (-not $Prerequisites.FFmpeg.Found) {
             Write-Host "      Installing FFmpeg..." -ForegroundColor Gray
-            winget install Gyan.FFmpeg --silent 2>$null
+            $ffmpegInstallOutput = winget install Gyan.FFmpeg --silent 2>&1
+
+            if ($LASTEXITCODE -ne 0) {
+                Log-Message "WARNING: FFmpeg installation returned exit code $LASTEXITCODE. Output: $ffmpegInstallOutput" -LogPath $logPath
+                Write-Host "      WARNING: FFmpeg install failed" -ForegroundColor Yellow
+            } else {
+                Log-Message "Gyan.FFmpeg install command completed" -LogPath $logPath
+            }
+
+            # Wait for installation to complete and registry to update
+            Start-Sleep -Seconds 2
 
             # Refresh PowerShell PATH from system registry (winget updates system PATH only)
             $env:PATH = [System.Environment]::GetEnvironmentVariable('PATH','Machine') + ';' + [System.Environment]::GetEnvironmentVariable('PATH','User')
@@ -109,7 +135,8 @@ function Start-Installation {
                 $Prerequisites.FFmpeg = @{Found = $true; Path = $ffmpegCheck.Path}
                 Log-Message "FFmpeg installed and detected: $($ffmpegCheck.Path)" -LogPath $logPath
             } else {
-                Log-Message "WARNING: FFmpeg install attempted but not detected" -LogPath $logPath
+                Log-Message "ERROR: FFmpeg installation completed but executable not found in expected locations" -LogPath $logPath
+                Write-Host "      ERROR: FFmpeg not detected after installation" -ForegroundColor Red
             }
         }
 
