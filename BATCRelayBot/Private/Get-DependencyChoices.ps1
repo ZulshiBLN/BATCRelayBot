@@ -1,178 +1,143 @@
 #Requires -Version 5.1
 
+<#
+.SYNOPSIS
+Asks which optional dependencies to remove (uninstaller phase 3).
+
+.DESCRIPTION
+Python and FFmpeg are asked about separately and removed only on explicit
+confirmation. Neither is removed by default: you may well be using them for
+something other than this bot, and the uninstaller cannot know.
+
+Two things used to make this unusable. Detection ran `winget show`, which
+queries the catalogue rather than the machine, so FFmpeg was offered even when
+it was not installed. And only the literal string "yes" was accepted, so a "y"
+fell through to the default and silently meant no.
+
+VoiceMeeter is never offered: it ships audio drivers and must be removed with
+VB-Audio's own uninstaller.
+#>
+
 function Get-DependencyChoices {
-    <#
-    .SYNOPSIS
-    Prompts user for optional dependency removal choices (Phase 3).
-
-    .DESCRIPTION
-    Detects WinGet-installed dependencies and asks user which ones to remove.
-    Only shows prompts for WinGet-installed packages (Python, FFmpeg, PowerShell module).
-    VoiceMeeter is NOT included (manual uninstall via vendor).
-
-    .PARAMETER Prerequisites
-    Hashtable from Phase 1 (optional, for reference).
-
-    .OUTPUTS
-    Hashtable with user choices:
-    @{
-        RemovePython = $true/$false
-        RemoveFFmpeg = $true/$false
-        RemoveModule = $true/$false
-        SkipDependencyPrompts = $true/$false  # If WinGet unavailable
-    }
-
-    .EXAMPLE
-    $choices = Get-DependencyChoices
-    if ($choices.RemovePython) { winget uninstall Python }
-    #>
-
+    [OutputType([hashtable])]
     param(
         [hashtable]$Prerequisites = @{}
     )
 
     $choices = @{
-        RemovePython = $false
-        RemoveFFmpeg = $false
-        RemoveModule = $false
+        RemovePython          = $false
+        RemoveFFmpeg          = $false
+        RemoveModule          = $false
+        PythonPackages        = @()
+        FFmpegPackages        = @()
         SkipDependencyPrompts = $false
     }
 
     Write-Host ""
-    Write-Host "Optional Dependency Removal" -ForegroundColor Yellow
-    Write-Host "=======================================" -ForegroundColor Yellow
+    Write-Host "Optional components" -ForegroundColor Yellow
+    Write-Host "Nothing here is removed unless you say so." -ForegroundColor Gray
     Write-Host ""
 
-    # Check if WinGet is available
-    $wingetAvailable = $null -ne (Get-Command winget -ErrorAction SilentlyContinue)
-
-    if (-not $wingetAvailable) {
-        Write-Host "⚠ WinGet not found. Skipping optional dependency detection." -ForegroundColor Yellow
+    if (-not (Test-WingetPresent)) {
+        Write-Host "  winget is not available, so Python and FFmpeg cannot be removed" -ForegroundColor Yellow
+        Write-Host "  automatically. Remove them via Settings > Apps if you want them gone." -ForegroundColor Gray
         Write-Host ""
         $choices.SkipDependencyPrompts = $true
         return $choices
     }
 
-    # Detect Python (any version 3.x)
+    # --- Python ---------------------------------------------------------
     Write-Host "1. Python" -ForegroundColor Cyan
-    $pythonList = winget list "Python" 2>$null | Select-String "Python\."
+    $pythonPackages = @(Get-InstalledWingetPackage -IdPrefix 'Python.Python' -IdPattern 'Python\.Python\.[\d.]+')
 
-    if ($pythonList) {
-        # Extract version info
-        $pythonString = $pythonList | Out-String
-        if ($pythonString -match "Python\.Python\.(\d+\.\d+)") {
-            $pythonVersion = $matches[1]
-            Write-Host "   Found: Python $pythonVersion (installed via WinGet)" -ForegroundColor Gray
-        } else {
-            Write-Host "   Found: Python (installed via WinGet)" -ForegroundColor Gray
-        }
-
-        Write-Host "   ⚠ Warning: Other programs may depend on Python" -ForegroundColor Yellow
-        Write-Host ""
-        Write-Host "   Uninstall Python?"
-        try {
-            $pythonChoice = Read-Host "   (Yes/No/Info)"
-        } catch {
-            Write-Host "   (No input available - defaulting to No)" -ForegroundColor Gray
-            $pythonChoice = "No"
-        }
-
-        switch ($pythonChoice.ToLower()) {
-            "yes" { $choices.RemovePython = $true }
-            "info" {
-                Write-Host ""
-                Write-Host "   Python is required for many development tools." -ForegroundColor Gray
-                Write-Host "   Uninstalling may break other applications." -ForegroundColor Gray
-                Write-Host "   Only remove if you're sure nothing else needs it." -ForegroundColor Gray
-                Write-Host ""
-                try {
-                    $pythonRetry = Read-Host "   Uninstall Python anyway? (Yes/No)"
-                } catch {
-                    $pythonRetry = "No"
-                }
-                if ($pythonRetry.ToLower() -eq "yes") { $choices.RemovePython = $true }
-            }
-            default { $choices.RemovePython = $false }
-        }
+    if ($pythonPackages.Count -eq 0) {
+        Write-Host "   Not installed via winget - nothing to remove here." -ForegroundColor Gray
     } else {
-        Write-Host "   Not installed (or not via WinGet)" -ForegroundColor Gray
+        foreach ($package in $pythonPackages) {
+            Write-Host "   Found: $($package.Id)  ($($package.Version))" -ForegroundColor Gray
+        }
+        Write-Host "   WARNING: other software may depend on Python, and you may well be" -ForegroundColor Yellow
+        Write-Host "   using it yourself. Removing it can break unrelated applications." -ForegroundColor Yellow
+        Write-Host ""
+
+        if (Read-YesNo -Question "   Remove Python?") {
+            $choices.RemovePython = $true
+            $choices.PythonPackages = $pythonPackages
+        }
     }
     Write-Host ""
 
-    # Detect FFmpeg (Gyan.FFmpeg)
+    # --- FFmpeg ---------------------------------------------------------
     Write-Host "2. FFmpeg" -ForegroundColor Cyan
-    $ffmpegFound = $null -ne (winget show --id Gyan.FFmpeg 2>$null)
+    $ffmpegPackages = @(Get-InstalledWingetPackage -IdPrefix 'Gyan.FFmpeg' -IdPattern 'Gyan\.FFmpeg\S*')
 
-    if ($ffmpegFound) {
-        Write-Host "   Found: FFmpeg (installed via WinGet)" -ForegroundColor Gray
-        Write-Host "   ⚠ Warning: Used by media applications and tools" -ForegroundColor Yellow
-        Write-Host ""
-        Write-Host "   Uninstall FFmpeg?"
-        try {
-            $ffmpegChoice = Read-Host "   (Yes/No/Info)"
-        } catch {
-            Write-Host "   (No input available - defaulting to No)" -ForegroundColor Gray
-            $ffmpegChoice = "No"
-        }
-
-        switch ($ffmpegChoice.ToLower()) {
-            "yes" { $choices.RemoveFFmpeg = $true }
-            "info" {
-                Write-Host ""
-                Write-Host "   FFmpeg is used by video/audio applications." -ForegroundColor Gray
-                Write-Host "   Uninstalling may break streaming and media tools." -ForegroundColor Gray
-                Write-Host "   Only remove if you're sure nothing else needs it." -ForegroundColor Gray
-                Write-Host ""
-                try {
-                    $ffmpegRetry = Read-Host "   Uninstall FFmpeg anyway? (Yes/No)"
-                } catch {
-                    $ffmpegRetry = "No"
-                }
-                if ($ffmpegRetry.ToLower() -eq "yes") { $choices.RemoveFFmpeg = $true }
-            }
-            default { $choices.RemoveFFmpeg = $false }
-        }
+    if ($ffmpegPackages.Count -eq 0) {
+        Write-Host "   Not installed via winget - nothing to remove here." -ForegroundColor Gray
     } else {
-        Write-Host "   Not installed (or not via WinGet)" -ForegroundColor Gray
+        foreach ($package in $ffmpegPackages) {
+            Write-Host "   Found: $($package.Id)  ($($package.Version))" -ForegroundColor Gray
+        }
+        Write-Host "   WARNING: FFmpeg is used by many media and streaming tools." -ForegroundColor Yellow
+        Write-Host "   Removing it can break them." -ForegroundColor Yellow
+        Write-Host ""
+
+        if (Read-YesNo -Question "   Remove FFmpeg?") {
+            $choices.RemoveFFmpeg = $true
+            $choices.FFmpegPackages = $ffmpegPackages
+        }
     }
     Write-Host ""
 
-    # PowerShell Module
-    Write-Host "3. PowerShell Module (BATCRelayBot)" -ForegroundColor Cyan
-    $moduleInstalled = $null -ne (Get-Module BATCRelayBot -ErrorAction SilentlyContinue) -or `
-                      $null -ne (Get-Module -ListAvailable -Name BATCRelayBot -ErrorAction SilentlyContinue)
+    # --- PowerShell module ----------------------------------------------
+    Write-Host "3. BATCRelayBot PowerShell module" -ForegroundColor Cyan
+    $moduleInstalled = [bool](Get-Module -ListAvailable -Name BATCRelayBot -ErrorAction SilentlyContinue)
 
-    if ($moduleInstalled) {
-        Write-Host "   Found: BATCRelayBot PowerShell Module" -ForegroundColor Gray
-        Write-Host ""
-        Write-Host "   Uninstall PowerShell Module?"
-        try {
-            $moduleChoice = Read-Host "   (Yes/No)"
-        } catch {
-            Write-Host "   (No input available - defaulting to No)" -ForegroundColor Gray
-            $moduleChoice = "No"
-        }
-
-        switch ($moduleChoice.ToLower()) {
-            "yes" { $choices.RemoveModule = $true }
-            default { $choices.RemoveModule = $false }
-        }
+    if (-not $moduleInstalled) {
+        Write-Host "   Not installed from PSGallery (running from a local copy)." -ForegroundColor Gray
     } else {
-        Write-Host "   Not installed as PowerShell module" -ForegroundColor Gray
+        Write-Host "   Found: BATCRelayBot module" -ForegroundColor Gray
+        Write-Host ""
+        if (Read-YesNo -Question "   Remove the PowerShell module?") {
+            $choices.RemoveModule = $true
+        }
     }
     Write-Host ""
 
-    # VoiceMeeter Note (NOT included in this phase)
-    Write-Host "Note: VoiceMeeter (if installed)" -ForegroundColor Gray
-    Write-Host "  VoiceMeeter is a manual installation and must be uninstalled" -ForegroundColor Gray
-    Write-Host "  using the vendor's uninstaller (Control Panel → Programs)" -ForegroundColor Gray
-    Write-Host ""
-
-    # Summary
-    Write-Host "=======================================" -ForegroundColor Yellow
+    Write-Host "VoiceMeeter is never removed here - it installs audio drivers and has" -ForegroundColor Gray
+    Write-Host "to go through VB-Audio's own uninstaller (Settings > Apps)." -ForegroundColor Gray
     Write-Host ""
 
     return $choices
 }
 
-Export-ModuleMember -Function Get-DependencyChoices
+function Read-YesNo {
+    <#
+    .SYNOPSIS
+    Asks a yes/no question that defaults to no.
+
+    .DESCRIPTION
+    Accepts the short and long forms in English and German, because the
+    previous version only recognised the exact word "yes" and treated
+    everything else - "y" included - as a silent no.
+
+    Defaults to no on empty input and on a non-interactive host, so an
+    automated run never removes anything by accident.
+    #>
+    [OutputType([bool])]
+    param(
+        [Parameter(Mandatory = $true)][string]$Question
+    )
+
+    try {
+        $answer = Read-Host "$Question [y/N]"
+    } catch {
+        Write-Host "   (no input available - keeping it)" -ForegroundColor Gray
+        return $false
+    }
+
+    if ([string]::IsNullOrWhiteSpace($answer)) { return $false }
+
+    return ($answer.Trim() -match '^(y|yes|j|ja)$')
+}
+
+Export-ModuleMember -Function @('Get-DependencyChoices', 'Read-YesNo')

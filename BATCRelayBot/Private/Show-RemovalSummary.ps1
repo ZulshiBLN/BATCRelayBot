@@ -56,7 +56,7 @@ function Show-RemovalSummary {
     Write-Host "Files to be DELETED:" -ForegroundColor Yellow
     if ($files.Count -gt 0) {
         $files | Sort-Object | ForEach-Object {
-            Write-Host "  • $_" -ForegroundColor Gray
+            Write-Host "  - $_" -ForegroundColor Gray
         }
     } else {
         Write-Host "  (No files found)" -ForegroundColor Gray
@@ -67,8 +67,10 @@ function Show-RemovalSummary {
     Write-Host "Configuration & Sensitive Data:" -ForegroundColor Yellow
     $configPath = Join-Path $BotPath "config.json"
     if (Test-Path $configPath) {
-        Write-Host "  ⚠ config.json (CONTAINS DISCORD TOKEN - SECURELY DELETED)" -ForegroundColor Red
-        Write-Host "    Deletion Method: 3-pass SDelete overwrite (unrecoverable)" -ForegroundColor DarkRed
+        Write-Host "  config.json - CONTAINS YOUR DISCORD BOT TOKEN" -ForegroundColor Red
+        Write-Host "    It is overwritten three times and then deleted." -ForegroundColor DarkRed
+        Write-Host "    On an SSD that is not a guarantee, so reset the token afterwards:" -ForegroundColor DarkRed
+        Write-Host "    https://discord.com/developers/applications > Bot > Reset Token" -ForegroundColor DarkRed
     } else {
         Write-Host "  config.json (not found)" -ForegroundColor Gray
     }
@@ -80,7 +82,7 @@ function Show-RemovalSummary {
                   Select-Object -ExpandProperty Name)
     if ($logFiles.Count -gt 0) {
         $logFiles | ForEach-Object {
-            Write-Host "  • $_" -ForegroundColor Gray
+            Write-Host "  - $_" -ForegroundColor Gray
         }
     } else {
         Write-Host "  (No log files found)" -ForegroundColor Gray
@@ -108,7 +110,7 @@ function Show-RemovalSummary {
 
     # Manual steps
     Write-Host "Manual Steps After Removal:" -ForegroundColor Yellow
-    Write-Host "  1. If you installed VoiceMeeter: Use Windows Control Panel → Programs" -ForegroundColor Gray
+    Write-Host "  1. If you installed VoiceMeeter: remove it via Settings > Apps" -ForegroundColor Gray
     Write-Host "     to uninstall it separately (we don't touch it)" -ForegroundColor Gray
     Write-Host "  2. Python & FFmpeg: Only removed if you choose in next screen" -ForegroundColor Gray
     Write-Host "  3. PowerShell Module: Only removed if you choose in next screen" -ForegroundColor Gray

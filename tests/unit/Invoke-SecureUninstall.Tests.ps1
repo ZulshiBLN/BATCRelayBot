@@ -254,9 +254,12 @@ Describe "Invoke-SecureUninstall" {
             $result = Invoke-SecureUninstall -BotPath $testDir -DependencyChoices @{}
             $logContent = Get-Content $result.LogPath -Raw
 
-            # Check for key phases
+            # The log has to say what was done and how it ended, so that a
+            # failed removal can be diagnosed after the directory is gone.
             $logContent | Should -Match "Started:"
-            $logContent | Should -Match "Pre-deletion verification|Removal completed"
+            $logContent | Should -Match "Target:"
+            $logContent | Should -Match "Finished:"
+            $logContent | Should -Match "Success:"
         }
 
         It "Log path is accessible" {

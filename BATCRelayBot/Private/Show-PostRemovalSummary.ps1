@@ -39,7 +39,12 @@ function Show-PostRemovalSummary {
         Write-Host "Successfully removed" -ForegroundColor Green
         Write-Host ""
         Write-Host "All BATCRelayBot installation files have been deleted." -ForegroundColor Green
-        Write-Host "Discord bot token was securely deleted (3-pass overwrite)." -ForegroundColor Green
+        Write-Host ""
+        Write-Host "IMPORTANT - reset your bot token:" -ForegroundColor Yellow
+        Write-Host "  config.json was overwritten and deleted, but overwriting a file" -ForegroundColor Gray
+        Write-Host "  does not reliably erase it on an SSD. Resetting the token is the" -ForegroundColor Gray
+        Write-Host "  only way to be certain it is worthless:" -ForegroundColor Gray
+        Write-Host "  https://discord.com/developers/applications > your app > Bot > Reset Token" -ForegroundColor Cyan
     } else {
         Write-Host "Status: " -ForegroundColor Yellow -NoNewline
         Write-Host "Removal completed with issues" -ForegroundColor Yellow
@@ -47,8 +52,8 @@ function Show-PostRemovalSummary {
 
         if ($RemovalResult.Errors -and $RemovalResult.Errors.Count -gt 0) {
             Write-Host "Errors encountered:" -ForegroundColor Yellow
-            foreach ($error in $RemovalResult.Errors) {
-                Write-Host "  * $error" -ForegroundColor Yellow
+            foreach ($removalError in $RemovalResult.Errors) {
+                Write-Host "  * $removalError" -ForegroundColor Yellow
             }
             Write-Host ""
         }
@@ -56,7 +61,18 @@ function Show-PostRemovalSummary {
 
     # Files deleted
     if ($RemovalResult.DeletedFiles -and $RemovalResult.DeletedFiles.Count -gt 0) {
-        Write-Host "Files deleted: $($RemovalResult.DeletedFiles.Count)" -ForegroundColor Cyan
+        Write-Host "Removed:" -ForegroundColor Cyan
+        foreach ($entry in $RemovalResult.DeletedFiles) {
+            Write-Host "  - $entry" -ForegroundColor Gray
+        }
+    }
+
+    if ($RemovalResult.RemovedDependencies -and $RemovalResult.RemovedDependencies.Count -gt 0) {
+        Write-Host ""
+        Write-Host "Optional components removed:" -ForegroundColor Cyan
+        foreach ($dependency in $RemovalResult.RemovedDependencies) {
+            Write-Host "  - $dependency" -ForegroundColor Gray
+        }
     }
 
     Write-Host ""
@@ -71,7 +87,7 @@ function Show-PostRemovalSummary {
     Write-Host "    1. Open Control Panel" -ForegroundColor Gray
     Write-Host "    2. Go to Programs > Programs and Features" -ForegroundColor Gray
     Write-Host "    3. Find 'VB-Audio VoiceMeeter'" -ForegroundColor Gray
-    Write-Host "    4. Click 'Uninstall'" -ForegroundColor Gray
+    Write-Host "    4. Click 'Uninstall', then reboot" -ForegroundColor Gray
     Write-Host ""
     Write-Host "  Note: Only remove VoiceMeeter if no other applications need it." -ForegroundColor DarkGray
     Write-Host ""

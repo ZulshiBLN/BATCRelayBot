@@ -1,228 +1,236 @@
 #Requires -Version 5.1
 
+<#
+.SYNOPSIS
+Performs the removal (uninstaller phase 5).
+
+.DESCRIPTION
+Every step reports what actually happened rather than what was attempted.
+The previous version wrapped native winget calls in try/catch, which never
+fires because native commands do not throw, so it logged "[OK] Python
+uninstalled" regardless of the outcome.
+#>
+
 function Invoke-SecureUninstall {
-    <#
-    .SYNOPSIS
-    Executes secure uninstallation (Phase 5).
-
-    .DESCRIPTION
-    Performs actual removal with secure file deletion.
-    - Stops bot process if running
-    - Securely deletes config.json (3-pass SDelete)
-    - Deletes all other files
-    - Cleans AppData
-    - Optionally uninstalls dependencies
-    - Comprehensive logging
-
-    .PARAMETER BotPath
-    Installation directory to remove.
-
-    .PARAMETER DependencyChoices
-    Hashtable with user's dependency removal choices.
-
-    .OUTPUTS
-    Hashtable with removal status:
-    @{
-        Success = $true/$false
-        DeletedFiles = @(list)
-        Errors = @(list)
-        LogPath = path
-    }
-    #>
-
+    [OutputType([hashtable])]
     param(
-        [string]$BotPath = "$env:USERPROFILE\AppData\Local\BATCRelayBot",
+        [string]$BotPath = (Join-Path $env:LOCALAPPDATA "BATCRelayBot"),
         [hashtable]$DependencyChoices = @{}
     )
 
-    $logDir = "$env:APPDATA\BATCRelayBot-Uninstall"
+    # The log lives outside the installation so it survives the deletion.
+    $logDir = Join-Path $env:APPDATA "BATCRelayBot-Uninstall"
     New-Item -ItemType Directory -Path $logDir -Force -ErrorAction SilentlyContinue | Out-Null
     $logPath = Join-Path $logDir "removal-$(Get-Date -Format 'yyyyMMdd-HHmmss').log"
+
     $deletedFiles = @()
     $errors = @()
+    $removedDependencies = @()
 
-    # Create removal log (saved to AppData so it survives directory deletion)
-    "=== BATCRelayBot Removal Log ===" | Out-File $logPath -Force -Encoding UTF8
-    "Started: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Add-Content $logPath -Encoding UTF8
-    ""  | Add-Content $logPath -Encoding UTF8
+    @(
+        "=== BATCRelayBot removal log ===",
+        "Started: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')",
+        "Target: $BotPath",
+        ""
+    ) | Out-File $logPath -Force -Encoding UTF8
 
     Write-Host ""
-    Write-Host "Starting installation removal..." -ForegroundColor Green
-    Write-Host ""
 
-    # Step 1: Stop bot process
-    Write-Host "[1/6] Stopping bot process..." -ForegroundColor Cyan
+    # ---- 1: stop the bot ------------------------------------------------
+    Write-Host "  [1/5] Stopping the bot" -ForegroundColor Gray
     try {
-        $botProcess = Get-Process python -ErrorAction SilentlyContinue |
-                      Where-Object { $_.CommandLine -match "bot\.py" }
-        if ($botProcess) {
-            Stop-Process $botProcess -Force -ErrorAction Stop
-            "[OK] Bot process stopped" | Add-Content $logPath -Encoding UTF8
-            Write-Host "      DONE" -ForegroundColor Green
-        } else {
-            Write-Host "      (Not running)" -ForegroundColor Gray
+        $stopResult = Stop-BotProcess -BotPath $BotPath -TimeoutSeconds 15
+
+        switch ($stopResult.Method) {
+            'not running' {
+                Write-Host "        Not running." -ForegroundColor Gray
+                "[OK] No running bot process" | Add-Content $logPath -Encoding UTF8
+            }
+            'graceful' {
+                Write-Host "        Stopped cleanly (left the voice channel)." -ForegroundColor Green
+                "[OK] Bot stopped gracefully (PIDs: $($stopResult.ProcessIds -join ', '))" | Add-Content $logPath -Encoding UTF8
+            }
+            'forced' {
+                if ($stopResult.Stopped) {
+                    Write-Host "        Did not respond in time - terminated." -ForegroundColor Yellow
+                    "[WARN] Bot force-terminated (PIDs: $($stopResult.ProcessIds -join ', '))" | Add-Content $logPath -Encoding UTF8
+                } else {
+                    $message = "Bot process could not be stopped (PIDs: $($stopResult.ProcessIds -join ', '))"
+                    $errors += $message
+                    "[ERROR] $message" | Add-Content $logPath -Encoding UTF8
+                    Write-Host "        FAILED - files may stay locked." -ForegroundColor Red
+                }
+            }
         }
     } catch {
-        $msg = "Warning: Could not stop bot process: $_"
-        $msg | Add-Content $logPath -Encoding UTF8
-        Write-Host "      WARNING: $_" -ForegroundColor Yellow
+        $message = "Stopping the bot failed: $($_.Exception.Message)"
+        $errors += $message
+        "[ERROR] $message" | Add-Content $logPath -Encoding UTF8
+        Write-Host "        WARNING: $($_.Exception.Message)" -ForegroundColor Yellow
     }
-    Write-Host ""
 
-    # Step 2: Secure delete config.json
-    Write-Host "[2/6] Securely deleting config.json..." -ForegroundColor Cyan
+    # ---- 2: overwrite and delete config.json ----------------------------
+    Write-Host "  [2/5] Removing config.json" -ForegroundColor Gray
     $configPath = Join-Path $BotPath "config.json"
     if (Test-Path $configPath) {
         try {
-            # Try SDelete first (bundled with module)
-            $sdeleteExe = Join-Path $PSScriptRoot "..\..\tools\sdelete64.exe"
-            if (Test-Path $sdeleteExe) {
-                & $sdeleteExe -p 3 $configPath 2>$null
-                "[OK] config.json securely deleted (3-pass SDelete)" | Add-Content $logPath -Encoding UTF8
-                Write-Host "      DONE (SDelete)" -ForegroundColor Green
-            } else {
-                # Fallback: Multi-pass PowerShell overwrite
-                $bytes = [byte[]]@(0) * (Get-Item $configPath).Length
-                $random = New-Object Random
-                for ($i = 0; $i -lt 3; $i++) {
-                    $random.NextBytes($bytes)
-                    [System.IO.File]::WriteAllBytes($configPath, $bytes)
+            # Overwrite before deleting. On an SSD this does not guarantee the
+            # old bytes are unreachable - wear levelling may keep them - so it
+            # is described as overwriting, not as secure erasure, and the user
+            # is told to reset the token instead.
+            $length = (Get-Item $configPath).Length
+            if ($length -gt 0) {
+                $buffer = New-Object byte[] $length
+                $random = New-Object System.Random
+                for ($pass = 0; $pass -lt 3; $pass++) {
+                    $random.NextBytes($buffer)
+                    [System.IO.File]::WriteAllBytes($configPath, $buffer)
                 }
-                Remove-Item $configPath -Force
-                "[OK] config.json deleted (multi-pass overwrite)" | Add-Content $logPath -Encoding UTF8
-                Write-Host "      DONE (Multi-pass)" -ForegroundColor Green
             }
+            Remove-Item $configPath -Force -ErrorAction Stop
             $deletedFiles += "config.json"
+            "[OK] config.json overwritten (3 passes) and deleted" | Add-Content $logPath -Encoding UTF8
+            Write-Host "        Overwritten and deleted." -ForegroundColor Green
         } catch {
-            $msg = "ERROR: Failed to delete config.json: $_"
-            $msg | Add-Content $logPath -Encoding UTF8
-            $errors += $msg
-            Write-Host "      FAILED: $_" -ForegroundColor Red
+            $message = "config.json could not be removed: $($_.Exception.Message)"
+            $errors += $message
+            "[ERROR] $message" | Add-Content $logPath -Encoding UTF8
+            Write-Host "        FAILED: $($_.Exception.Message)" -ForegroundColor Red
         }
+    } else {
+        Write-Host "        Not present." -ForegroundColor Gray
     }
-    Write-Host ""
 
-    # Step 3: Delete other files
-    Write-Host "[3/6] Deleting installation files..." -ForegroundColor Cyan
-    try {
-        if (Test-Path $BotPath) {
-            $files = Get-ChildItem -Path $BotPath -File -ErrorAction SilentlyContinue
-            $count = 0
-            foreach ($file in $files) {
-                try {
-                    Remove-Item $file.FullName -Force -ErrorAction Stop
-                    $deletedFiles += $file.Name
-                    $count++
-                } catch {
-                    $errors += "Could not delete $($file.Name): $_"
-                }
+    # ---- 3: remove the installation directory ---------------------------
+    Write-Host "  [3/5] Removing the installation directory" -ForegroundColor Gray
+    if (Test-Path $BotPath) {
+        try {
+            # Enumerate before deleting so the log and the summary can name
+            # what went, not just how many.
+            $doomed = @(Get-ChildItem -Path $BotPath -Recurse -File -ErrorAction SilentlyContinue |
+                Select-Object -ExpandProperty Name)
+
+            Remove-Item $BotPath -Recurse -Force -ErrorAction Stop
+
+            foreach ($name in $doomed) {
+                if ($deletedFiles -notcontains $name) { $deletedFiles += $name }
             }
-            "[OK] Deleted $count files from $BotPath" | Add-Content $logPath -Encoding UTF8
-            Write-Host "      DONE ($count files)" -ForegroundColor Green
+            "[OK] Removed $BotPath ($($doomed.Count) files)" | Add-Content $logPath -Encoding UTF8
+            Write-Host "        Removed ($($doomed.Count) files)." -ForegroundColor Green
+        } catch {
+            $message = "Could not remove $($BotPath): $($_.Exception.Message)"
+            $errors += $message
+            "[ERROR] $message" | Add-Content $logPath -Encoding UTF8
+            Write-Host "        FAILED: $($_.Exception.Message)" -ForegroundColor Red
         }
-    } catch {
-        $msg = "ERROR: Failed to delete files: $_"
-        $msg | Add-Content $logPath -Encoding UTF8
-        $errors += $msg
-        Write-Host "      FAILED: $_" -ForegroundColor Red
+    } else {
+        Write-Host "        Already gone." -ForegroundColor Gray
     }
-    Write-Host ""
 
-    # Step 4: Clean AppData
-    Write-Host "[4/6] Cleaning AppData..." -ForegroundColor Cyan
-    try {
-        $appDataPath = "$env:APPDATA\BATCRelayBot"
-        if (Test-Path $appDataPath) {
-            Remove-Item $appDataPath -Recurse -Force -ErrorAction SilentlyContinue
-            "[OK] Cleaned AppData\BATCRelayBot" | Add-Content $logPath -Encoding UTF8
-            Write-Host "      DONE" -ForegroundColor Green
-        } else {
-            Write-Host "      (No AppData folder)" -ForegroundColor Gray
+    # ---- 4: roaming AppData leftovers -----------------------------------
+    Write-Host "  [4/5] Cleaning up leftovers" -ForegroundColor Gray
+    $appDataPath = Join-Path $env:APPDATA "BATCRelayBot"
+    if (Test-Path $appDataPath) {
+        try {
+            Remove-Item $appDataPath -Recurse -Force -ErrorAction Stop
+            "[OK] Removed $appDataPath" | Add-Content $logPath -Encoding UTF8
+            Write-Host "        Removed $appDataPath" -ForegroundColor Green
+        } catch {
+            "[WARN] Could not remove $($appDataPath): $($_.Exception.Message)" | Add-Content $logPath -Encoding UTF8
+            Write-Host "        WARNING: could not remove $appDataPath" -ForegroundColor Yellow
         }
-
-        $pipCache = "$env:APPDATA\pip\cache"
-        if ((Test-Path $pipCache) -and $DependencyChoices.RemovePython) {
-            Get-ChildItem -Path $pipCache -Recurse -ErrorAction SilentlyContinue | Remove-Item -Force -Recurse -ErrorAction SilentlyContinue
-            "[OK] Cleaned pip cache" | Add-Content $logPath -Encoding UTF8
-        }
-    } catch {
-        Write-Host "      WARNING: $_" -ForegroundColor Yellow
+    } else {
+        Write-Host "        Nothing to clean up." -ForegroundColor Gray
     }
-    Write-Host ""
 
-    # Step 5: Uninstall optional dependencies
-    Write-Host "[5/6] Uninstalling optional dependencies..." -ForegroundColor Cyan
-    $depsRemoved = 0
+    # ---- 5: optional components -----------------------------------------
+    Write-Host "  [5/5] Optional components" -ForegroundColor Gray
 
     if ($DependencyChoices.RemovePython) {
-        try {
-            Write-Host "      Uninstalling Python..." -ForegroundColor Gray
-            winget uninstall "Python.Python" --silent 2>$null
-            "[OK] Python uninstalled" | Add-Content $logPath -Encoding UTF8
-            $depsRemoved++
-        } catch {
-            Write-Host "      WARNING: Python uninstall failed" -ForegroundColor Yellow
+        foreach ($package in @($DependencyChoices.PythonPackages)) {
+            $removedDependencies += (Remove-OptionalPackage -Package $package -Label "Python" `
+                -LogPath $logPath -ErrorList ([ref]$errors))
         }
     }
 
     if ($DependencyChoices.RemoveFFmpeg) {
-        try {
-            Write-Host "      Uninstalling FFmpeg..." -ForegroundColor Gray
-            winget uninstall "Gyan.FFmpeg" --silent 2>$null
-            "[OK] FFmpeg uninstalled" | Add-Content $logPath -Encoding UTF8
-            $depsRemoved++
-        } catch {
-            Write-Host "      WARNING: FFmpeg uninstall failed" -ForegroundColor Yellow
+        foreach ($package in @($DependencyChoices.FFmpegPackages)) {
+            $removedDependencies += (Remove-OptionalPackage -Package $package -Label "FFmpeg" `
+                -LogPath $logPath -ErrorList ([ref]$errors))
         }
     }
 
     if ($DependencyChoices.RemoveModule) {
+        Write-Host "        Removing the PowerShell module..." -ForegroundColor Gray
         try {
-            Write-Host "      Uninstalling PowerShell module..." -ForegroundColor Gray
-            Uninstall-Module BATCRelayBot -Force -ErrorAction Stop
-            "[OK] PowerShell module uninstalled" | Add-Content $logPath -Encoding UTF8
-            $depsRemoved++
+            Uninstall-Module BATCRelayBot -AllVersions -Force -ErrorAction Stop
+            $removedDependencies += "BATCRelayBot module"
+            "[OK] PowerShell module removed" | Add-Content $logPath -Encoding UTF8
+            Write-Host "        Removed the PowerShell module." -ForegroundColor Green
         } catch {
-            Write-Host "      WARNING: Module uninstall failed" -ForegroundColor Yellow
+            $message = "PowerShell module could not be removed: $($_.Exception.Message)"
+            $errors += $message
+            "[ERROR] $message" | Add-Content $logPath -Encoding UTF8
+            Write-Host "        FAILED: $($_.Exception.Message)" -ForegroundColor Red
         }
     }
 
-    if ($depsRemoved -eq 0) {
-        Write-Host "      (No dependencies selected)" -ForegroundColor Gray
-    } else {
-        Write-Host "      DONE ($depsRemoved items removed)" -ForegroundColor Green
-    }
-    Write-Host ""
-
-    # Write final verification BEFORE deleting directory (log is inside it)
-    $success = -not (Test-Path $BotPath)
-    if (-not $success) {
-        "[OK] Pre-deletion verification: Installation directory exists, proceeding with removal" | Add-Content $logPath -Encoding UTF8
+    $removedDependencies = @($removedDependencies | Where-Object { $_ })
+    if ($removedDependencies.Count -eq 0) {
+        Write-Host "        Nothing selected." -ForegroundColor Gray
     }
 
-    # Step 6: Delete installation directory
-    Write-Host "[6/6] Removing installation directory..." -ForegroundColor Cyan
-    try {
-        if (Test-Path $BotPath) {
-            Remove-Item $BotPath -Recurse -Force -ErrorAction SilentlyContinue
-            Write-Host "      DONE" -ForegroundColor Green
-        }
-    } catch {
-        $msg = "ERROR: Could not remove directory: $_"
-        $errors += $msg
-        Write-Host "      FAILED: $_" -ForegroundColor Red
-    }
-    Write-Host ""
+    $success = (-not (Test-Path $BotPath)) -and ($errors.Count -eq 0)
 
-    # Verify removal (log file will be gone after directory deletion)
-    $success = -not (Test-Path $BotPath)
+    @(
+        "",
+        "Finished: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')",
+        "Success: $success",
+        "Errors: $($errors.Count)"
+    ) | Add-Content $logPath -Encoding UTF8
 
     return @{
-        Success = $success
-        DeletedFiles = $deletedFiles
-        Errors = $errors
-        LogPath = $logPath
+        Success             = $success
+        DeletedFiles        = $deletedFiles
+        RemovedDependencies = $removedDependencies
+        Errors              = $errors
+        LogPath             = $logPath
     }
 }
 
-Export-ModuleMember -Function Invoke-SecureUninstall
+function Remove-OptionalPackage {
+    <#
+    .SYNOPSIS
+    Removes one winget package and reports the verified outcome.
+
+    .OUTPUTS
+    A description of what was removed, or $null when it was not.
+    #>
+    [OutputType([string])]
+    param(
+        [hashtable]$Package,
+        [string]$Label,
+        [string]$LogPath,
+        [ref]$ErrorList
+    )
+
+    if (-not $Package -or -not $Package.Id) { return $null }
+
+    Write-Host "        Removing $Label ($($Package.Id))..." -ForegroundColor Gray
+    $result = Uninstall-WingetPackage -Id $Package.Id -LogPath $LogPath
+
+    if ($result.Removed) {
+        "[OK] $Label removed: $($Package.Id)" | Add-Content $LogPath -Encoding UTF8
+        Write-Host "        Removed $Label." -ForegroundColor Green
+        return "$Label ($($Package.Id))"
+    }
+
+    $message = "$Label ($($Package.Id)) was not removed: $($result.Detail)"
+    $ErrorList.Value += $message
+    "[ERROR] $message" | Add-Content $LogPath -Encoding UTF8
+    Write-Host "        FAILED: $($result.Detail)" -ForegroundColor Red
+    Write-Host "        Remove it manually with: winget uninstall --id $($Package.Id) --exact" -ForegroundColor Yellow
+    return $null
+}
+
+Export-ModuleMember -Function @('Invoke-SecureUninstall', 'Remove-OptionalPackage')

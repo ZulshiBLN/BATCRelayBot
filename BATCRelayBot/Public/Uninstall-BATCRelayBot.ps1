@@ -1,100 +1,112 @@
-﻿#Requires -Version 5.1
+#Requires -Version 5.1
 
 function Uninstall-BATCRelayBot {
     <#
     .SYNOPSIS
-    Uninstalls BATCRelayBot with secure file deletion.
+    Removes a BATCRelayBot installation.
 
     .DESCRIPTION
-    Complete uninstallation of BATCRelayBot following a 6-phase workflow:
-    1. Pre-checks (installation directory exists, bot not running)
-    2. Summary (files to be deleted, disk space)
-    3. Optional dependencies (Python, FFmpeg, module)
-    4. Final confirmation (requires explicit "yes")
-    5. Secure deletion (config.json + all files)
-    6. Post-removal summary (next steps, manual cleanup)
+    Five phases:
+      1. Inspect the installation
+      2. Show what will be removed
+      3. Ask about optional components (Python, FFmpeg, PowerShell module)
+      4. Final confirmation
+      5. Remove, then report what actually happened
 
-    Securely deletes Discord bot token via SDelete 3-pass overwrite.
-    VoiceMeeter must be removed manually (vendor software).
+    A running bot is stopped automatically, cleanly where possible - it leaves
+    the voice channel before exiting.
+
+    Python and FFmpeg are removed only if you confirm each of them; you may be
+    using them for other things. VoiceMeeter is never removed: it installs
+    audio drivers and needs VB-Audio's own uninstaller.
 
     .PARAMETER InstallPath
-    Installation directory (default: $env:USERPROFILE\AppData\Local\BATCRelayBot)
+    Installation directory. Defaults to $env:LOCALAPPDATA\BATCRelayBot.
+
+    .PARAMETER Force
+    Skip the final confirmation. For unattended cleanup; optional components
+    are still only removed when explicitly chosen.
 
     .EXAMPLE
     Uninstall-BATCRelayBot
-    Uninstall-BATCRelayBot -InstallPath "C:\Custom\BATCRelayBot"
 
-    .NOTES
-    This function requires manual confirmation before deletion.
-    All data will be permanently removed - no recovery possible.
+    .EXAMPLE
+    Uninstall-BATCRelayBot -InstallPath "D:\MyBot"
+
+    .OUTPUTS
+    Hashtable with Success, DeletedFiles, RemovedDependencies, Errors, LogPath.
     #>
-
+    [CmdletBinding()]
+    [OutputType([hashtable])]
     param(
-        [string]$InstallPath = "$env:USERPROFILE\AppData\Local\BATCRelayBot"
+        [string]$InstallPath = (Join-Path $env:LOCALAPPDATA "BATCRelayBot"),
+        [switch]$Force
     )
 
+    $version = Get-ModuleVersion
+
     Write-Host ""
-    Write-Host "BATCRelayBot Uninstaller" -ForegroundColor Cyan
-    Write-Host "Version 1.0" -ForegroundColor Gray
+    Write-Host "=====================================" -ForegroundColor Cyan
+    Write-Host "   BATCRelayBot Uninstaller (v$version)" -ForegroundColor Cyan
+    Write-Host "=====================================" -ForegroundColor Cyan
     Write-Host ""
 
-    # Phase 1: Pre-checks
-    Write-Host "Phase 1: Checking prerequisites..." -ForegroundColor Cyan
+    # ---- Phase 1: inspect ----------------------------------------------
+    Write-Host "[1/5] Checking the installation" -ForegroundColor Cyan
     $prerequisites = Confirm-UninstallPrerequisites -BotPath $InstallPath
+
+    foreach ($warning in $prerequisites.Warnings) {
+        Write-Host "      Note: $warning" -ForegroundColor Yellow
+    }
 
     if (-not $prerequisites.Valid) {
         Write-Host ""
-        Write-Host "Uninstallation aborted." -ForegroundColor Yellow
-        Write-Host ""
-        if ($prerequisites.Errors -and $prerequisites.Errors.Count -gt 0) {
-            foreach ($err in $prerequisites.Errors) {
-                Write-Host "  * $err" -ForegroundColor Yellow
-            }
+        foreach ($problem in $prerequisites.Errors) {
+            Write-Host "  $problem" -ForegroundColor Red
         }
-        return
-    }
-
-    Write-Host "OK - Installation found and valid" -ForegroundColor Green
-    Write-Host ""
-
-    # Phase 2: Show removal summary
-    Write-Host "Phase 2: Removal Summary" -ForegroundColor Cyan
-    $removalSummary = Show-RemovalSummary -BotPath $prerequisites.InstallPath
-
-    if (-not $removalSummary.Ready) {
         Write-Host ""
-        Write-Host "Uninstallation aborted." -ForegroundColor Yellow
-        return
+        Write-Host "Nothing was changed." -ForegroundColor Yellow
+        Write-Host ""
+        return @{ Success = $false; Errors = $prerequisites.Errors }
     }
 
-    # Phase 3: Get optional dependency choices
+    Write-Host "      Installation found at $($prerequisites.InstallPath)" -ForegroundColor Green
     Write-Host ""
-    Write-Host "Phase 3: Optional Dependencies" -ForegroundColor Cyan
+
+    # ---- Phase 2: what will go -----------------------------------------
+    Write-Host "[2/5] What will be removed" -ForegroundColor Cyan
+    Show-RemovalSummary -BotPath $prerequisites.InstallPath | Out-Null
+
+    # ---- Phase 3: optional components ----------------------------------
+    Write-Host "[3/5] Optional components" -ForegroundColor Cyan
     $dependencyChoices = Get-DependencyChoices -Prerequisites $prerequisites
 
-    # Phase 4: Final confirmation
-    Write-Host ""
-    Write-Host "Phase 4: Final Confirmation" -ForegroundColor Cyan
-    $confirmation = Show-UninstallConfirmation -RemovalPlan $removalSummary -DependencyChoices $dependencyChoices
+    # ---- Phase 4: confirm ----------------------------------------------
+    if ($Force) {
+        Write-Host "[4/5] Confirmation skipped (-Force)" -ForegroundColor Yellow
+        Write-Host ""
+    } else {
+        Write-Host "[4/5] Confirmation" -ForegroundColor Cyan
+        $confirmation = Show-UninstallConfirmation `
+            -RemovalPlan @{ InstallPath = $prerequisites.InstallPath } `
+            -DependencyChoices $dependencyChoices
 
-    if (-not $confirmation.Confirmed) {
-        Write-Host ""
-        Write-Host "Uninstallation cancelled." -ForegroundColor Yellow
-        Write-Host ""
-        return
+        if (-not $confirmation.Confirmed) {
+            Write-Host "Nothing was changed." -ForegroundColor Yellow
+            Write-Host ""
+            return @{ Success = $false; Errors = @("Cancelled by the user") }
+        }
     }
 
-    # Phase 5: Secure removal
-    Write-Host ""
-    Write-Host "Phase 5: Secure Removal" -ForegroundColor Cyan
-    $removalResult = Invoke-SecureUninstall -BotPath $prerequisites.InstallPath -DependencyChoices $dependencyChoices
+    # ---- Phase 5: remove -------------------------------------------------
+    Write-Host "[5/5] Removing" -ForegroundColor Cyan
+    $removalResult = Invoke-SecureUninstall `
+        -BotPath $prerequisites.InstallPath `
+        -DependencyChoices $dependencyChoices
 
-    # Phase 6: Post-removal summary
-    Write-Host ""
-    Write-Host "Phase 6: Summary" -ForegroundColor Cyan
     Show-PostRemovalSummary -RemovalResult $removalResult
 
-    Write-Host ""
+    return $removalResult
 }
 
 Export-ModuleMember -Function Uninstall-BATCRelayBot

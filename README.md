@@ -132,7 +132,7 @@ Once the module is imported, these commands are available:
 | `Stop-BATCRelayBot` | Stops the bot cleanly |
 | `Get-BATCRelayBotStatus` | Shows whether the bot is running and its uptime |
 | `Edit-BATCRelayBotConfig` | (Coming in v1.3.11) — Interactive editor for config changes. For now, manually edit config.json |
-| `Uninstall-BATCRelayBot` | Removes config and generated files, optionally uninstalls Python/ffmpeg/VoiceMeeter |
+| `Uninstall-BATCRelayBot` | Stops the bot, removes the installation, and optionally uninstalls Python/ffmpeg after separate confirmation |
 
 ---
 
@@ -262,12 +262,29 @@ Uninstall-BATCRelayBot
 ```
 
 This will:
-- Stop the bot (if running)
-- Securely delete `config.json` (which contains your Discord token)
-- Remove generated files (logs, bot.pid, stop.signal)
-- Optionally uninstall Python, ffmpeg, and/or VoiceMeeter (will ask for confirmation separately in case you use them for other projects)
+- **Stop the bot** if it is running — cleanly, so it leaves the voice channel
+  before exiting
+- Overwrite and delete `config.json`, then remove the whole installation
+  directory including logs, `bot.pid` and `stop.signal`
+- Ask **separately** about Python and FFmpeg, showing the exact package and
+  version. Neither is removed unless you confirm it — you may well be using
+  them for something else. Answer `y` or `yes`; anything else keeps them.
 
-Bot files in `$env:USERPROFILE\AppData\Local\BATCRelayBot` remain in place.
+Add `-Force` to skip the final confirmation for unattended cleanup. Optional
+components still require an explicit yes.
+
+**VoiceMeeter is never removed.** It installs audio drivers, so it has to go
+through VB-Audio's own uninstaller (Settings → Apps), followed by a reboot.
+
+### Reset your bot token
+
+`config.json` is overwritten three times before deletion, but on an SSD that
+is **not** a guarantee: wear levelling can leave the original bytes readable.
+The only reliable step is to invalidate the token itself:
+
+> https://discord.com/developers/applications → your app → Bot → **Reset Token**
+
+Do this whenever you uninstall, and certainly before handing the machine on.
 
 ---
 

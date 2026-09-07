@@ -89,6 +89,60 @@ Minor rather than patch: the config file schema changed. Existing
   Administrator permission.
 - `!BATCstatus` reports whether the relay is paused.
 
+### Fixed (CRITICAL) - the uninstaller removed nothing it was asked to
+
+- **Confirming removal of Python or FFmpeg had no effect.** Three separate
+  causes, each sufficient on its own:
+  - Only the literal string `yes` was accepted. A `y` fell through to the
+    default branch and silently meant no.
+  - `winget uninstall "Python.Python"` is not a real package id; the installed
+    one is `Python.Python.3.12`. Ids are now read from what is actually
+    installed.
+  - The winget calls sat inside `try/catch`, which never fires for a native
+    command, and no exit code was checked. The uninstaller logged
+    `[OK] Python uninstalled` regardless of what happened. Removal is now
+    verified by querying winget again afterwards, and a failure reports the
+    manual command to run.
+- **FFmpeg was offered for removal even when it was never installed.**
+  Detection used `winget show`, which queries the catalogue rather than the
+  machine and therefore succeeds for any package that exists at all.
+  Presence is now decided with `winget list`.
+- **A running bot was never detected, by the uninstaller either.** The check
+  was `Get-Process python | Where-Object { $_.CommandLine -match 'bot\.py' }`,
+  and a `Process` object has no `CommandLine` property on Windows PowerShell
+  5.1, so it matched nothing. Files were deleted out from under a live
+  process. Detection now uses `Win32_Process`, covers `pythonw.exe` (which is
+  what `Start-BATCRelayBot` launches), and is shared with `Stop-BATCRelayBot`.
+- **A half-finished installation could not be removed.** A missing
+  config.json aborted the whole uninstall, so the uninstaller refused exactly
+  the case it is most needed for. It is now a warning. A stray *file* where
+  the installation directory should be is reported and removed as well.
+- `Show-PostRemovalSummary` iterated with `foreach ($error in ...)`,
+  shadowing PowerShell's automatic `$error` variable.
+
+### Changed - uninstaller behaviour
+
+- A running bot is now stopped automatically before anything is deleted,
+  gracefully where possible: it leaves the voice channel before exiting, and
+  is only terminated if it does not respond within 15 seconds.
+- Python and FFmpeg are asked about separately, each showing the exact package
+  id and version, each with a warning that other software may depend on it,
+  and each removed only on explicit confirmation. Nothing is removed by
+  default, and a non-interactive run removes nothing at all.
+- Yes/no answers accept `y`, `yes`, `j` and `ja` in either case.
+- `Uninstall-BATCRelayBot` gained `-Force` to skip the final confirmation for
+  unattended cleanup. Optional components still require an explicit choice.
+- The uninstaller returns a result object instead of only printing.
+
+### Changed - honesty about deleting the token
+
+- The uninstaller claimed config.json was erased with a "3-pass SDelete
+  overwrite (UNRECOVERABLE)". SDelete was never bundled - there is no `tools/`
+  directory - so the PowerShell fallback always ran, and overwriting a file
+  in place does not reliably erase it on an SSD anyway. The wording now says
+  what actually happens, and every screen points at the one step that does
+  work: resetting the token in the Discord developer portal.
+
 ### Changed - chat commands and startup behaviour
 
 - **Starting the bot no longer joins a voice channel.** The process comes
