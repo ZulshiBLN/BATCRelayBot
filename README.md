@@ -22,7 +22,10 @@ Before you start, you need:
 | BeyondATC | https://www.beyondatc.net/download | (Optional) Only needed to stream ATC radio traffic |
 | Microsoft Flight Simulator 2024 | https://flightsimulator.xbox.com | (Optional) Only needed if using BeyondATC |
 
-**Python, ffmpeg, and VoiceMeeter are installed automatically by the setup function.**
+**Python and ffmpeg can be installed for you by the setup function** (via winget,
+per-user, no admin rights). **VoiceMeeter and BeyondATC cannot** — VoiceMeeter ships
+audio drivers and BeyondATC is commercial software, so both must come from their own
+installers. The setup function checks for them and tells you what to do.
 
 ---
 
@@ -111,7 +114,7 @@ Start-BATCRelayBot
 ```
 
 This will:
-- Start VoiceMeeter (if not running)
+- Start VoiceMeeter (if configured and not running)
 - Start BeyondATC (if not running and configured)
 - Start the bot in the background
 - Log output to `logs\bot_output.log` and errors to `logs\bot_error.log`
@@ -134,16 +137,17 @@ Once the module is imported, these commands are available:
 | `Start-BATCRelayBot` | Starts the bot in the background |
 | `Stop-BATCRelayBot` | Stops the bot cleanly |
 | `Get-BATCRelayBotStatus` | Shows whether the bot is running and its uptime |
-| `Edit-BATCRelayBotConfig` | (Coming in v1.3.11) — Interactive editor for config changes. For now, manually edit config.json |
+| `Edit-BATCRelayBotConfig` | Not available yet — edit config.json manually, or re-run `Install-BATCRelayBot` |
 | `Uninstall-BATCRelayBot` | Stops the bot, removes the installation, and optionally uninstalls Python/ffmpeg after separate confirmation |
 
 ---
 
 ## Editing Configuration
 
-**Note:** Interactive configuration editing is coming in v1.3.11. For now, edit configuration manually.
+**Note:** `Edit-BATCRelayBotConfig` is not available yet. Edit `config.json` manually, or
+re-run `Install-BATCRelayBot` to regenerate it.
 
-### Manual JSON Editing (v1.3.10)
+### Manual JSON editing
 
 To update settings, edit `config.json` directly:
 
@@ -152,7 +156,7 @@ To update settings, edit `config.json` directly:
 Stop-BATCRelayBot
 
 # Edit the configuration file
-notepad $env:USERPROFILE\AppData\Local\BATCRelayBot\config.json
+notepad $env:LOCALAPPDATA\BATCRelayBot\config.json
 
 # Restart the bot to apply changes
 Start-BATCRelayBot
@@ -168,7 +172,8 @@ Required by `bot.py` — the bot exits at startup if any is missing or empty:
 - **`guild_id`**: Discord server ID, as a **number, not a string**
 - **`voice_channel_id`**: Discord voice channel ID, likewise a number
 - **`audio_device_name`**: The recording device to stream, spelled exactly as
-  ffmpeg reports it, e.g. `VoiceMeeter Output (VB-Audio Voicemeeter VAIO)`.
+  ffmpeg reports it, e.g. `Voicemeeter Out B1 (VB-Audio Voicemeeter VAIO)`.
+  Use a **B** bus (virtual, capturable), not an **A** bus (your speakers).
   List the available names with:
   ```powershell
   ffmpeg -list_devices true -f dshow -i dummy
