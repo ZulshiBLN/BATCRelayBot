@@ -98,7 +98,6 @@ Describe "Get-RankedAudioDevice" {
 
     It "puts every virtual bus ahead of every physical one" {
         $ranked = @(Get-RankedAudioDevice -Devices $script:RealDevices)
-        $lastVirtual = ($ranked | Select-Object -Last 1)
 
         $virtualIndexes = @()
         $physicalIndexes = @()
@@ -145,10 +144,91 @@ Describe "Get-RankedAudioDevice" {
     }
 }
 
-Describe "Select-AudioDevice has no unsafe default" {
+Describe "Select-AudioDevice" {
 
-    It "requires an explicit choice when no virtual bus is present" {
-        $source = Get-Content "$PSScriptRoot\..\..\BATCRelayBot\Private\Get-AudioDevice.ps1" -Raw
-        $source | Should -Match 'no safe default'
+    BeforeEach {
+        Mock -ModuleName BATCRelayBot Write-InstallLog { }
+    }
+
+    Context "when VoiceMeeter buses are present" {
+
+        It "returns B1 when the user just presses Enter" {
+            Mock -ModuleName BATCRelayBot Get-DshowAudioDevice { $script:RealDevices }
+            Mock -ModuleName BATCRelayBot Read-Host { "" }
+
+            $result = Select-AudioDevice -FFmpegPath "C:\fake\ffmpeg.exe" 6>$null
+            $result | Should -Be 'Voicemeeter Out B1 (VB-Audio Voicemeeter VAIO)'
+        }
+
+        It "numbers only the three virtual buses, not all twelve devices" {
+            # The physical buses and microphones are filtered out, so [3] is
+            # the last valid choice even though ffmpeg reported twelve devices.
+            Mock -ModuleName BATCRelayBot Get-DshowAudioDevice { $script:RealDevices }
+            Mock -ModuleName BATCRelayBot Read-Host { "3" }
+
+            $result = Select-AudioDevice -FFmpegPath "C:\fake\ffmpeg.exe" 6>$null
+            $result | Should -Be 'Voicemeeter Out B3 (VB-Audio Voicemeeter VAIO)'
+        }
+
+        It "never offers a microphone or an A bus" {
+            # Every selectable position must resolve to a B bus. On this list
+            # ffmpeg reported nine other VoiceMeeter devices and three
+            # microphones; none of them may be reachable by number.
+            Mock -ModuleName BATCRelayBot Get-DshowAudioDevice { $script:RealDevices }
+
+            foreach ($choice in 1..3) {
+                Mock -ModuleName BATCRelayBot Read-Host { "$choice" }.GetNewClosure()
+                $result = Select-AudioDevice -FFmpegPath "C:\fake\ffmpeg.exe" 6>$null
+                $result | Should -Match 'Out B\d' -Because "position $choice must be a virtual bus"
+            }
+        }
+    }
+
+    Context "when no VoiceMeeter bus is present" {
+
+        It "falls back to the full list rather than showing nothing" {
+            $micsOnly = @('External Mic (Sound BlasterX G6)', 'Headset Microphone (Oculus Virtual Audio Device)')
+            Mock -ModuleName BATCRelayBot Get-DshowAudioDevice { $micsOnly }.GetNewClosure()
+            Mock -ModuleName BATCRelayBot Read-Host { "1" } -ParameterFilter { $Prompt -match 'Select device' }
+            Mock -ModuleName BATCRelayBot Read-Host { "y" } -ParameterFilter { $Prompt -match 'anyway' }
+
+            $result = Select-AudioDevice -FFmpegPath "C:\fake\ffmpeg.exe" 6>$null
+            $result | Should -Be 'External Mic (Sound BlasterX G6)'
+        }
+
+        It "makes the user confirm a non-virtual device instead of taking it silently" {
+            $micsOnly = @('External Mic (Sound BlasterX G6)')
+            Mock -ModuleName BATCRelayBot Get-DshowAudioDevice { $micsOnly }.GetNewClosure()
+            Mock -ModuleName BATCRelayBot Read-Host { "1" } -ParameterFilter { $Prompt -match 'Select device' }
+            Mock -ModuleName BATCRelayBot Read-Host { "y" } -ParameterFilter { $Prompt -match 'anyway' }
+
+            Select-AudioDevice -FFmpegPath "C:\fake\ffmpeg.exe" 6>$null | Out-Null
+
+            Should -Invoke -ModuleName BATCRelayBot Read-Host -Times 1 -Exactly `
+                -ParameterFilter { $Prompt -match 'anyway' }
+        }
+
+        It "has no Enter default when nothing is safe to preselect" {
+            $source = Get-Content "$PSScriptRoot\..\..\BATCRelayBot\Private\Get-AudioDevice.ps1" -Raw
+            $source | Should -Match 'no safe default'
+        }
+    }
+
+    Context "when ffmpeg reports nothing" {
+
+        It "falls back to manual entry" {
+            Mock -ModuleName BATCRelayBot Get-DshowAudioDevice { @() }
+            Mock -ModuleName BATCRelayBot Read-Host { "Voicemeeter Out B1 (VB-Audio Voicemeeter VAIO)" }
+
+            $result = Select-AudioDevice -FFmpegPath "C:\fake\ffmpeg.exe" 6>$null
+            $result | Should -Be 'Voicemeeter Out B1 (VB-Audio Voicemeeter VAIO)'
+        }
+
+        It "returns null when the user enters nothing" {
+            Mock -ModuleName BATCRelayBot Get-DshowAudioDevice { @() }
+            Mock -ModuleName BATCRelayBot Read-Host { "" }
+
+            Select-AudioDevice -FFmpegPath "C:\fake\ffmpeg.exe" 6>$null | Should -BeNullOrEmpty
+        }
     }
 }

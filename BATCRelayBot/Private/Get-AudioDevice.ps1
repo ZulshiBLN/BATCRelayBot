@@ -196,15 +196,20 @@ function Select-AudioDevice {
     Prompts the user to choose the recording device to stream from.
 
     .DESCRIPTION
-    Presents the capturable VoiceMeeter buses first, with B1 preselected, and
-    everything else below. Falls back to manual entry when ffmpeg is
-    unavailable or reports nothing, so a missing device list slows the user
-    down instead of stopping the install.
+    Only the VoiceMeeter B buses are offered, with B1 preselected. Everything
+    else on a machine - A buses feeding speakers, microphones, headsets - is
+    not something this bot should ever relay, so listing it only invites the
+    mistake. On the machine this was built against that turns a list of twelve
+    into a list of three.
 
-    When no virtual bus exists there is deliberately no default: the
-    alternative would be to preselect whatever happened to be first, which on
-    a typical machine is a live microphone - and silently relaying someone's
-    microphone into a voice channel is the one wrong answer worth ruling out.
+    Two fallbacks keep the shortened list from becoming a dead end:
+    ffmpeg reporting nothing at all drops to manual entry, and no B bus being
+    present (usually VoiceMeeter not running) shows the full list with a
+    warning rather than leaving nothing to choose.
+
+    In that fallback there is deliberately no default. Preselecting whatever
+    came first would put a live microphone one keystroke from being relayed
+    into a voice channel.
 
     .OUTPUTS
     The chosen device name, or $null if the user aborted.
@@ -239,36 +244,41 @@ function Select-AudioDevice {
 
     $ordered = @(Get-RankedAudioDevice -Devices $devices)
     $virtual = @($ordered | Where-Object { $_.IsVirtual })
-    $others = @($ordered | Where-Object { -not $_.IsVirtual })
 
     if ($virtual.Count -gt 0) {
-        Write-Host "  VoiceMeeter virtual buses - what the bot should capture:" -ForegroundColor Gray
+        # Physical buses and microphones are filtered out entirely: they are
+        # never the right answer for this bot, and offering them is how the
+        # wrong bus got picked in the first place.
+        $all = $virtual
+        $hasDefault = $true
+
+        Write-Host "  VoiceMeeter virtual buses:" -ForegroundColor Gray
         Write-Host ""
-        for ($i = 0; $i -lt $virtual.Count; $i++) {
+        for ($i = 0; $i -lt $all.Count; $i++) {
             $marker = if ($i -eq 0) { "   <- recommended" } else { "" }
             $color = if ($i -eq 0) { "Green" } else { "Gray" }
-            Write-Host ("    [{0}] {1}{2}" -f ($i + 1), $virtual[$i].Name, $marker) -ForegroundColor $color
+            Write-Host ("    [{0}] {1}{2}" -f ($i + 1), $all[$i].Name, $marker) -ForegroundColor $color
         }
         Write-Host ""
         Write-Host "  B1 is the bus the setup guide routes audio to (README step 3)." -ForegroundColor DarkGray
+        Write-Host "  Physical outputs and microphones are not listed - the bot cannot use them." -ForegroundColor DarkGray
         Write-Host ""
     } else {
-        Write-Host "  No VoiceMeeter virtual bus found." -ForegroundColor Yellow
-        Write-Host "  Start VoiceMeeter and run the installer again, or pick manually below." -ForegroundColor Yellow
-        Write-Host ""
-    }
+        # No B bus at all, almost always because VoiceMeeter is not running.
+        # Showing everything beats leaving an empty list.
+        $all = $ordered
+        $hasDefault = $false
 
-    if ($others.Count -gt 0) {
-        Write-Host "  Other inputs - A buses feed speakers, the rest are live microphones:" -ForegroundColor DarkGray
+        Write-Host "  No VoiceMeeter virtual bus (B1-B3) was found." -ForegroundColor Yellow
+        Write-Host "  VoiceMeeter is probably not running - its buses only appear while it is." -ForegroundColor Yellow
+        Write-Host "  Start it and run the installer again, or pick from everything ffmpeg sees:" -ForegroundColor Yellow
         Write-Host ""
-        for ($i = 0; $i -lt $others.Count; $i++) {
-            Write-Host ("    [{0}] {1}" -f ($virtual.Count + $i + 1), $others[$i].Name) -ForegroundColor DarkGray
+        for ($i = 0; $i -lt $all.Count; $i++) {
+            Write-Host ("    [{0}] {1}   ({2})" -f ($i + 1), $all[$i].Name, $all[$i].Note) -ForegroundColor DarkGray
         }
         Write-Host ""
+        Write-InstallLog "No VoiceMeeter B bus found; offering the full device list" -LogPath $LogPath -Level WARN
     }
-
-    $all = @($virtual) + @($others)
-    $hasDefault = ($virtual.Count -gt 0)
 
     while ($true) {
         $prompt = if ($hasDefault) {

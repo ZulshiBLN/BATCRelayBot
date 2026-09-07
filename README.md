@@ -68,10 +68,10 @@ already typed:
    - Discord server ID (`guild_id`)
    - Discord voice channel ID
    - The recording device to stream, **chosen from a list** that ffmpeg
-     reports, so the name always matches exactly. VoiceMeeter's virtual
-     buses (B1-B3) are listed first with **B1** preselected - that is the
-     bus step 3 below routes audio to. The A buses feed your speakers and
-     are not what you want to relay.
+     reports, so the name always matches exactly. Only VoiceMeeter's
+     virtual buses (B1-B3) are offered, with **B1** preselected - that is
+     the bus step 3 below routes audio to. Physical outputs (A1-A5) and
+     microphones are filtered out; the bot cannot relay them.
 5. **Confirm** the summary
 6. **Install** — Python packages, `bot.py` and `config.json` into
    `$env:LOCALAPPDATA\BATCRelayBot`, then verify that the generated config

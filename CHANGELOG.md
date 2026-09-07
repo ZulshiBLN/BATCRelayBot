@@ -50,15 +50,19 @@ Minor rather than patch: the config file schema changed. Existing
 
   The names carry meaning the old logic ignored: `B1`-`B3` are virtual buses,
   which exist precisely so other software can capture them, while `A1`-`A5`
-  are physical buses feeding speakers and headphones. Only a B bus is now
-  recommendable, ordered B1, B2, B3; the list is grouped and labelled so the
-  difference is visible; and choosing a non-virtual device asks for
-  confirmation first.
+  are physical buses feeding speakers and headphones.
 
-- **With no VoiceMeeter present the installer preselected device number one,**
-  which on a typical machine is a live microphone - one keystroke away from
-  relaying someone's microphone into a voice channel. There is now no default
-  in that case; a number must be entered.
+  **Only the B buses are listed now**, ordered B1, B2, B3, with B1
+  preselected. Physical outputs and microphones are filtered out entirely -
+  the bot cannot use them, so offering them only invites the mistake. On the
+  reporting machine that turns a list of twelve devices into a list of three.
+
+- **With no VoiceMeeter bus present the installer preselected device number
+  one,** which on a typical machine is a live microphone - one keystroke away
+  from relaying someone's microphone into a voice channel. That case (usually
+  VoiceMeeter not running) now shows the full list with a warning, has no
+  default at all, and asks for confirmation before accepting a non-virtual
+  device.
 
 - `Sort-Object -Property 'Rank'` does not sort hashtables: a bare property
   name resolves against the PSObject adapter, which exposes Count/Keys/Values
