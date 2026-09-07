@@ -73,9 +73,27 @@ Minor rather than patch: the config file schema changed. Existing
 - bot.py passes `ffmpeg_path` to discord.py instead of relying on ffmpeg
   being on PATH.
 
+### Fixed - a stopped bot could not be stopped
+
+- **`Stop-BATCRelayBot` could orphan a running bot permanently.** It treated
+  `bot.pid` as the only source of truth: a stale PID made it delete the file
+  and report "not running", after which every later call said the same while
+  the process kept rejoining the voice channel. Closing PowerShell or
+  uninstalling the module changes nothing - the Python process is independent
+  of both. The PID file is now a hint, with the actual process as fallback.
+- **`!leave` was undone by the watchdog within ten seconds,** so there was no
+  chat command that could get the bot out of a channel. `!leave` now pauses
+  the relay until `!join`.
+- **New `!shutdown` command** stops the bot process from chat, for exactly the
+  case where the PowerShell side can no longer reach it. Requires the
+  Administrator permission.
+- `!status` reports whether the relay is paused.
+
 ### Security
 
 - The bot token is redacted from all log output and never partially printed.
+- `!shutdown` is restricted to administrators so any server member cannot stop
+  the relay.
 - `SecureString` conversion frees its unmanaged buffer, which previously left
   the token in memory for the life of the session.
 

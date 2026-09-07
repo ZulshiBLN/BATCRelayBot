@@ -114,6 +114,12 @@ async def connect_and_stream():
         log.info("Audio stream started (device: %s)", CONFIG["audio_device_name"])
 
 
+# Set by !leave, cleared by !join. Without this the watchdog below undoes
+# !leave within ten seconds, which left no way to get the bot out of a
+# channel from chat.
+relay_paused = False
+
+
 @tasks.loop(seconds=10)
 async def watchdog():
     """
@@ -121,6 +127,8 @@ async def watchdog():
     and (re)connects / restarts the stream if needed (e.g. after a
     connection drop).
     """
+    if relay_paused:
+        return
     try:
         await connect_and_stream()
     except Exception:
@@ -171,7 +179,10 @@ async def status(ctx: commands.Context):
     vc = ctx.guild.voice_client if ctx.guild else None
     if vc and vc.is_connected():
         state = "streaming" if vc.is_playing() else "connected, but no active stream"
-        await ctx.send(f"Connected to **{vc.channel.name}** - {state}.")
+        suffix = " (relay paused, use `!join`)" if relay_paused else ""
+        await ctx.send(f"Connected to **{vc.channel.name}** - {state}{suffix}.")
+    elif relay_paused:
+        await ctx.send("Not connected - relay is paused. Use `!join` to resume.")
     else:
         await ctx.send("Not connected to a voice channel.")
 
@@ -187,12 +198,49 @@ async def restart_stream(ctx: commands.Context):
 
 @bot.command(name="leave")
 async def leave(ctx: commands.Context):
+    """Leave the channel and stay out until !join."""
+    global relay_paused
+    relay_paused = True
+
     vc = ctx.guild.voice_client if ctx.guild else None
     if vc:
         await vc.disconnect()
-        await ctx.send("Left the voice channel.")
+        await ctx.send("Left the voice channel. The relay is paused - `!join` to resume.")
     else:
-        await ctx.send("Wasn't connected to begin with.")
+        await ctx.send("Wasn't connected. The relay is now paused - `!join` to resume.")
+
+
+@bot.command(name="join")
+async def join(ctx: commands.Context):
+    """Resume relaying after !leave."""
+    global relay_paused
+    relay_paused = False
+
+    await connect_and_stream()
+    await ctx.send("Relay resumed.")
+
+
+@bot.command(name="shutdown")
+@commands.has_permissions(administrator=True)
+async def shutdown(ctx: commands.Context):
+    """
+    Stop the bot process entirely from chat.
+
+    Writes the same stop.signal that Stop-BATCRelayBot uses, so the shutdown
+    path is the one already exercised elsewhere: leave the channel cleanly,
+    close the connection, exit the process. Exists because a bot started in
+    the background and orphaned from its PID file was otherwise unreachable.
+    """
+    await ctx.send("Shutting down - leaving the channel and stopping the process.")
+    STOP_SIGNAL_PATH.touch()
+
+
+@shutdown.error
+async def shutdown_error(ctx: commands.Context, error):
+    if isinstance(error, commands.MissingPermissions):
+        await ctx.send("`!shutdown` requires the Administrator permission.")
+    else:
+        raise error
 
 
 if __name__ == "__main__":
