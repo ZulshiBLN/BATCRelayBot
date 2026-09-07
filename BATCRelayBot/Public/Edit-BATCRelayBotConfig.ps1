@@ -1,172 +1,153 @@
+#Requires -Version 5.1
+
 function Edit-BATCRelayBotConfig {
     <#
     .SYNOPSIS
-    Interactive configuration editor for BATCRelayBot.
+    Changes one setting in an existing installation without reinstalling.
 
     .DESCRIPTION
-    Allows users to modify specific config fields (token, channel, format, activity)
-    without re-running the full installer. Validates, backs up, and safely saves changes.
+    Edits the fields bot.py actually reads: the bot token, the server ID, the
+    voice channel ID and the audio device. Each change is backed up, written
+    atomically, read back and verified; a failed verification rolls the file
+    back to the backup.
+
+    Disabled since v1.3.10 for good reason - the editor wrote `token` while
+    the installer wrote `bot_token`, so an edited token went into a field
+    nothing read and the bot kept using the old one. That mapping now has a
+    single definition in Get-ConfigFieldMap, and it is covered by tests.
 
     .PARAMETER InstallPath
-    Path to BATCRelayBot installation (default: $env:USERPROFILE\AppData\Local\BATCRelayBot)
+    Installation directory. Defaults to $env:LOCALAPPDATA\BATCRelayBot.
 
-    .OUTPUTS
-    Hashtable with properties:
-    - Success (bool): Operation succeeded
-    - BackupPath (string): Path to created backup
-    - UpdatedFields (hashtable): Fields that were changed
-    - Errors (array): Any errors encountered
-    - LogPath (string): Path to operation log
+    .EXAMPLE
+    Edit-BATCRelayBotConfig
 
     .EXAMPLE
     $result = Edit-BATCRelayBotConfig
-    if ($result.Success) {
-        Write-Host "Configuration updated successfully"
-        Write-Host "Backup: $($result.BackupPath)"
-    }
-    #>
+    if ($result.Success) { "Changed: $($result.UpdatedFields.Keys)" }
 
+    .OUTPUTS
+    Hashtable with Success, BackupPath, UpdatedFields, Errors.
+    #>
+    [CmdletBinding()]
+    [OutputType([hashtable])]
     param(
-        [string]$InstallPath = "$env:USERPROFILE\AppData\Local\BATCRelayBot"
+        [string]$InstallPath = (Join-Path $env:LOCALAPPDATA "BATCRelayBot")
     )
 
-    # Still disabled. The helper functions it builds on (Update-ConfigJson,
-    # Verify-ConfigChange, Write-ConfigFile) were fixed in 1.4.0, but this
-    # command has not been re-audited against the current config schema, so it
-    # stays off rather than shipping half-verified. Everything below this
-    # return is therefore unreachable by design.
+    # Initialised up front. Both of these used to be referenced without ever
+    # being created - $errors.Add on the rollback path and $updatedFields[...]
+    # on the success path - so the function threw on whichever branch it took.
+    $errors = [System.Collections.ArrayList]@()
+    $updatedFields = @{}
+    $backup = $null
+
     Write-Host ""
-    Write-Host "================================================================" -ForegroundColor Yellow
-    Write-Host "  Edit-BATCRelayBotConfig is not available yet.                 " -ForegroundColor Yellow
-    Write-Host "                                                                " -ForegroundColor Yellow
-    Write-Host "  Edit config.json directly, or re-run Install-BATCRelayBot to   " -ForegroundColor Yellow
-    Write-Host "  regenerate it:                                                " -ForegroundColor Yellow
-    Write-Host "    notepad `$env:LOCALAPPDATA\BATCRelayBot\config.json          " -ForegroundColor Yellow
-    Write-Host "================================================================" -ForegroundColor Yellow
+    Write-Host "BATCRelayBot Configuration Editor" -ForegroundColor Cyan
     Write-Host ""
 
-    return @{
-        Success = $false
-        Message = "Edit-BATCRelayBotConfig is not available in this version"
-        BackupPath = $null
-        UpdatedFields = @{}
-        Errors = @("Feature disabled - edit config.json manually or re-run Install-BATCRelayBot")
-        LogPath = $null
-    }
-
-    # Phase 1: Validate Prerequisites
-    Write-Host "Checking prerequisites..." -ForegroundColor Cyan
+    # ---- Phase 1: can we edit at all? -----------------------------------
     $prereq = Confirm-ConfigEditorPrerequisites -InstallPath $InstallPath
 
     if (-not $prereq.Valid) {
-        Write-Host "Prerequisites check failed:" -ForegroundColor Red
-        $prereq.Errors | ForEach-Object { Write-Host "  - $_" -ForegroundColor Red }
-
+        foreach ($problem in $prereq.Errors) {
+            Write-Host "  $problem" -ForegroundColor Red
+        }
+        Write-Host ""
+        Write-Host "  Run Install-BATCRelayBot first." -ForegroundColor Yellow
+        Write-Host ""
         return @{
-            Success       = $false
-            BackupPath    = $null
-            UpdatedFields = @{}
-            Errors        = $prereq.Errors
-            LogPath       = $null
+            Success = $false; BackupPath = $null; UpdatedFields = @{}
+            Errors = @($prereq.Errors)
         }
     }
 
     if ($prereq.BotRunning) {
-        Write-Host "Bot is currently running. Changes will take effect after restart." -ForegroundColor Yellow
-        Read-Host "Press Enter to continue"
+        Write-Host "  The bot is running. Changes take effect after a restart:" -ForegroundColor Yellow
+        Write-Host "    Stop-BATCRelayBot; Start-BATCRelayBot" -ForegroundColor Gray
+        Write-Host ""
     }
 
-    # Phase 2: Show Menu & Get User Selection
-    Write-Host ""
+    # ---- Phase 2: what should change? -----------------------------------
     $menuResult = Show-ConfigEditorMenu -ConfigPath $prereq.ConfigPath
 
     if ($null -eq $menuResult) {
-        Write-Host "Operation cancelled." -ForegroundColor Yellow
         return @{
-            Success       = $false
-            BackupPath    = $null
-            UpdatedFields = @{}
-            Errors        = @("User cancelled operation")
-            LogPath       = $null
+            Success = $false; BackupPath = $null; UpdatedFields = @{}
+            Errors = @("Cancelled by the user")
         }
     }
 
     $field = $menuResult.Field
     $newValue = $menuResult.Value
 
-    # Phase 3: Backup, Update, Write, Verify
+    # ---- Phase 3: back up, write, verify, roll back on failure ----------
     try {
         Write-Host ""
-        Write-Host "Processing change..." -ForegroundColor Cyan
+        Write-Host "  Applying change..." -ForegroundColor Cyan
 
-        # Create backup
         $backup = Backup-ConfigFile -ConfigPath $prereq.ConfigPath
-        Write-Host "Backup created: $(Split-Path $backup -Leaf)"
+        Write-Host "    Backup: $(Split-Path $backup -Leaf)" -ForegroundColor Gray
 
-        # Update JSON
         $newJson = Update-ConfigJson -ConfigPath $prereq.ConfigPath -Field $field -Value $newValue
-        Write-Host "Configuration updated in memory"
+        Write-ConfigFile -ConfigPath $prereq.ConfigPath -JsonContent $newJson | Out-Null
 
-        # Atomic write
-        $written = Write-ConfigFile -ConfigPath $prereq.ConfigPath -JsonContent $newJson
-        Write-Host "Changes written to disk"
+        # The write drops the file's restriction along with the old file, so
+        # reapply it before anything else can read the token.
+        Protect-BotConfigFile -ConfigPath $prereq.ConfigPath | Out-Null
 
-        # Verify
         $verify = Verify-ConfigChange -ConfigPath $prereq.ConfigPath -Field $field -ExpectedValue $newValue
 
         if (-not $verify.Verified) {
-            # Rollback on verification failure
             Copy-Item $backup $prereq.ConfigPath -Force
-            $errors.Add("Verification failed: $($verify.Message). Rolled back to backup.") | Out-Null
-            Write-Host "ERROR: $($verify.Message)" -ForegroundColor Red
-            Write-Host "Rolled back to backup" -ForegroundColor Green
+            Protect-BotConfigFile -ConfigPath $prereq.ConfigPath | Out-Null
+
+            $errors.Add("$($verify.Message). Rolled back to the backup.") | Out-Null
+            Write-Host "    FAILED: $($verify.Message)" -ForegroundColor Red
+            Write-Host "    Rolled back - config.json is unchanged." -ForegroundColor Yellow
+            Write-Host ""
 
             return @{
-                Success       = $false
-                BackupPath    = $backup
-                UpdatedFields = @{}
-                Errors        = $errors
-                LogPath       = $null
+                Success = $false; BackupPath = $backup; UpdatedFields = @{}
+                Errors = @($errors)
             }
         }
 
-        Write-Host "Verification passed"
-
+        $definition = Get-ConfigFieldDefinition -Field $field
         $updatedFields[$field] = $newValue
 
+        Write-Host "    Verified." -ForegroundColor Green
         Write-Host ""
-        Write-Host "SUCCESS: Configuration updated!" -ForegroundColor Green
-        Write-Host "Field: $field"
-        Write-Host "Backup: $(Split-Path $backup -Leaf)"
+        Write-Host "  $($definition.Label) updated." -ForegroundColor Green
 
         if ($prereq.BotRunning) {
-            Write-Host ""
-            Write-Host "Restart the bot for changes to take effect." -ForegroundColor Yellow
+            Write-Host "  Restart the bot to apply it: Stop-BATCRelayBot; Start-BATCRelayBot" -ForegroundColor Yellow
         }
+        Write-Host ""
 
         return @{
-            Success       = $true
-            BackupPath    = $backup
-            UpdatedFields = $updatedFields
-            Errors        = @()
-            LogPath       = $null
+            Success = $true; BackupPath = $backup; UpdatedFields = $updatedFields
+            Errors = @()
         }
     }
     catch {
-        $errors.Add("Error during save: $_") | Out-Null
-        Write-Host "ERROR: $_" -ForegroundColor Red
+        # Sanitised: an exception raised while handling the token can carry it.
+        $message = Remove-SensitiveData -Text $_.Exception.Message
+        $errors.Add("Error while saving: $message") | Out-Null
+        Write-Host "    ERROR: $message" -ForegroundColor Red
 
-        if ($null -ne $backup -and (Test-Path $backup)) {
+        if ($backup -and (Test-Path $backup)) {
             Copy-Item $backup $prereq.ConfigPath -Force -ErrorAction SilentlyContinue
-            Write-Host "Rolled back to backup" -ForegroundColor Green
+            Protect-BotConfigFile -ConfigPath $prereq.ConfigPath | Out-Null
+            Write-Host "    Rolled back - config.json is unchanged." -ForegroundColor Yellow
         }
+        Write-Host ""
 
         return @{
-            Success       = $false
-            BackupPath    = $backup
-            UpdatedFields = @{}
-            Errors        = $errors
-            LogPath       = $null
+            Success = $false; BackupPath = $backup; UpdatedFields = @{}
+            Errors = @($errors)
         }
     }
 }
+
+Export-ModuleMember -Function Edit-BATCRelayBotConfig

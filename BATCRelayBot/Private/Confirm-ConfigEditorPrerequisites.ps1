@@ -46,20 +46,27 @@ function Confirm-ConfigEditorPrerequisites {
 
     # Step 3: Verify read/write permissions
     if ($errors.Count -eq 0) {
+        $probeFile = "$configPath.probe"
         try {
-            $testRead = Get-Content $configPath -Raw -ErrorAction Stop
-            $tempFile = "$configPath.test"
-            [System.IO.File]::WriteAllText($tempFile, "test")
-            Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
+            Get-Content $configPath -Raw -ErrorAction Stop | Out-Null
+            [System.IO.File]::WriteAllText($probeFile, "probe")
         }
         catch {
-            $errors.Add("No read/write permissions: $_") | Out-Null
+            $errors.Add("No read/write access to config.json: $($_.Exception.Message)") | Out-Null
+        }
+        finally {
+            # Always clean up, including when the write itself failed part way.
+            Remove-Item $probeFile -Force -ErrorAction SilentlyContinue
         }
     }
 
-    # Step 4: Detect running bot (python process with bot.py)
-    $botRunning = $null -ne (Get-Process python -ErrorAction SilentlyContinue |
-        Where-Object { $_.CommandLine -match "bot\.py" })
+    # Step 4: Detect running bot.
+    # Not Get-Process: a Process object has no CommandLine property on
+    # Windows PowerShell 5.1, so the old check matched nothing and the
+    # "changes need a restart" warning never appeared. Find-BotProcess reads
+    # Win32_Process and also covers pythonw.exe, which is what
+    # Start-BATCRelayBot launches.
+    $botRunning = @(Find-BotProcess -BotPath $InstallPath).Count -gt 0
 
     # Step 5: Return validation result
     $valid = $errors.Count -eq 0

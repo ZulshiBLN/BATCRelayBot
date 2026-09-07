@@ -40,6 +40,63 @@ Minor rather than patch: the config file schema changed. Existing
   credential entry or the readiness check left no trace. Logging now starts
   before the first thing that can fail.
 
+### Added - the configuration editor works and is enabled again
+
+`Edit-BATCRelayBotConfig` was disabled in v1.3.10 after an audit found it
+wrote `token` while the installer wrote `bot_token`: an edited token went
+into a field nothing read, so the bot silently kept the old credentials. It
+is back, covering the four fields bot.py actually reads - bot token, server
+ID, voice channel ID and audio device.
+
+- **One definition of the field mapping.** `Get-ConfigFieldMap` replaces the
+  copies that `Update-ConfigJson`, `Verify-ConfigChange`, `Test-ConfigValue`
+  and the menu each kept, which is how they drifted apart in the first place.
+  An unknown field now throws instead of writing to nothing.
+- **Edited IDs are written as JSON numbers.** With 1.4.0's schema a channel
+  change would otherwise have been saved as a quoted string, leaving the bot
+  unable to resolve the channel - the editor would have broken a working
+  installation.
+- **The audio device is editable**, chosen from the same filtered ffmpeg list
+  the installer uses. This is the field most likely to need correcting after
+  an install, and it previously required editing JSON by hand.
+- **`output_format` and `bot_activity` are gone from the editor.** bot.py
+  reads neither, so changing them did nothing while appearing to work.
+- **The command no longer crashes on either of its own paths.** `$errors` and
+  `$updatedFields` were referenced without ever being initialised, so the
+  rollback path and the success path both threw.
+- **A new token is verified against the Discord API** before it is saved, as
+  the installer already did, with the option to save anyway when the API is
+  unreachable.
+- **The current token is never displayed**, not even its last four
+  characters, matching the redaction rule applied elsewhere since v1.3.15.
+- **`Confirm-ConfigEditorPrerequisites` can detect a running bot.** It used
+  `Get-Process | Where-Object { $_.CommandLine ... }`, a property that does
+  not exist on PowerShell 5.1, so the "changes need a restart" warning never
+  appeared.
+- The menu no longer calls `Clear-Host`, which wiped whatever the user had on
+  screen on every keystroke.
+
+### Security
+
+- **Config backups are restricted to the current user.** `Backup-ConfigFile`
+  copies `config.json`, token included, and the copy inherited the
+  directory's permissions - leaving up to ten unprotected copies of the token
+  beside the protected original. The restriction is now applied to backups
+  too, and reapplied to `config.json` after every write.
+
+### Fixed - CI never ran the test suite
+
+- The Pester job pointed at `tests/powershell`, which holds 26 module smoke
+  tests. The unit and integration suites - several hundred cases - sat
+  outside that path and had never run in CI. That is how v1.3.16 was released
+  with nine failing tests. The job now runs the whole `tests` tree.
+- The editor's integration test built its own fixtures using the editor's
+  field names, so it agreed with the editor and both disagreed with the
+  installer - the audit named this as the reason the schema bug shipped. It
+  now generates its config with `New-BotConfigFile`, the function the
+  installer uses, and checks the result against the key list parsed from
+  bot.py.
+
 ### Fixed - the recommended audio device was picked at random
 
 - **The installer recommended the wrong VoiceMeeter bus.** It took the first

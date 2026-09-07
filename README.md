@@ -137,15 +137,33 @@ Once the module is imported, these commands are available:
 | `Start-BATCRelayBot` | Starts the bot in the background |
 | `Stop-BATCRelayBot` | Stops the bot cleanly |
 | `Get-BATCRelayBotStatus` | Shows whether the bot is running and its uptime |
-| `Edit-BATCRelayBotConfig` | Not available yet — edit config.json manually, or re-run `Install-BATCRelayBot` |
+| `Edit-BATCRelayBotConfig` | Changes the token, server ID, voice channel or audio device without reinstalling |
 | `Uninstall-BATCRelayBot` | Stops the bot, removes the installation, and optionally uninstalls Python/ffmpeg after separate confirmation |
 
 ---
 
 ## Editing Configuration
 
-**Note:** `Edit-BATCRelayBotConfig` is not available yet. Edit `config.json` manually, or
-re-run `Install-BATCRelayBot` to regenerate it.
+Use `Edit-BATCRelayBotConfig` to change a single setting without reinstalling:
+
+```powershell
+Stop-BATCRelayBot          # optional - the editor tells you if a restart is needed
+Edit-BATCRelayBotConfig
+Start-BATCRelayBot
+```
+
+It edits the four fields the bot reads: **bot token**, **server ID**, **voice
+channel ID** and **audio device**. The audio device comes from the same
+filtered ffmpeg list the installer uses, so you cannot pick a bus the bot
+cannot capture. A new token is checked against the Discord API before it is
+saved.
+
+Every change is backed up first (the last 10 are kept, restricted to your
+account like `config.json` itself), written atomically, then read back and
+verified. If verification fails, the file is rolled back to the backup.
+
+Anything else - the Python, ffmpeg, VoiceMeeter or BeyondATC paths - still
+needs manual editing or a re-run of `Install-BATCRelayBot`.
 
 ### Manual JSON editing
 
@@ -204,10 +222,8 @@ Used by `Start-BATCRelayBot` and `bot.py`, all auto-detected during setup:
 
 ### Interactive editing
 
-`Edit-BATCRelayBotConfig` is still disabled: it returns a notice without
-changing anything. Its underlying helpers were repaired in 1.4.0, but the
-command itself has not been re-audited, so use the manual route above.
-Re-running `Install-BATCRelayBot` also regenerates the configuration.
+`Edit-BATCRelayBotConfig` covers the four fields above; see the section at the
+start of this chapter.
 
 ---
 

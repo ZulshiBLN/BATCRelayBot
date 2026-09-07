@@ -3,21 +3,12 @@
 Describe "Config File Safety Functions" {
 
     BeforeAll {
-        $privatePath = "$PSScriptRoot\..\..\BATCRelayBot\Private"
-
-        $functionFiles = @(
-            "Backup-ConfigFile.ps1",
-            "Update-ConfigJson.ps1",
-            "Write-ConfigFile.ps1",
-            "Verify-ConfigChange.ps1"
-        )
-
-        foreach ($file in $functionFiles) {
-            $path = Join-Path $privatePath $file
-            if (Test-Path $path) {
-                . $path
-            }
-        }
+        # Import the module rather than dot-sourcing individual files, the way
+        # every other test file does. Dot-sourcing broke as soon as these
+        # functions started calling shared helpers - each file would have to
+        # be sourced in dependency order - and it fails outright on any file
+        # containing Export-ModuleMember, which only works inside a module.
+        Import-Module "$PSScriptRoot\..\..\BATCRelayBot\BATCRelayBot.psm1" -Force
     }
 
     Context "Backup-ConfigFile - Create Timestamped Backups" {
@@ -138,10 +129,9 @@ Describe "Config File Safety Functions" {
             New-Item -ItemType Directory -Path $testDir -Force | Out-Null
             $configFile = Join-Path $testDir "config.json"
             $config = @{
-                token = "abc123def456"
-                channel_id = "123456789012345678"
-                output_format = "standard"
-                bot_activity = "Flying sim"
+                bot_token         = "abc123def456"
+                voice_channel_id  = 123456789012345678
+                audio_device_name = "Voicemeeter Out B1 (VB-Audio Voicemeeter VAIO)"
             }
             $config | ConvertTo-Json | Set-Content -Path $configFile -Force
 
@@ -151,7 +141,7 @@ Describe "Config File Safety Functions" {
 
                 # Assert
                 $result | Should -Not -Be $null
-                $result | Should -Match '"token":'
+                $result | Should -Match '"bot_token":'
             }
             finally {
                 Remove-Item -Path $testDir -Recurse -Force -ErrorAction SilentlyContinue
@@ -198,40 +188,39 @@ Describe "Config File Safety Functions" {
             }
         }
 
-        It "Should update output_format field correctly" {
-            # Arrange
+        It "Should refuse fields the bot does not read" {
+            # output_format and bot_activity were editable before 1.4.0 but
+            # appear nowhere in bot.py, so writing them changed nothing while
+            # looking like it had worked. They are rejected outright now.
             $testDir = Join-Path $env:TEMP "ConfigUpdateTest_$([System.Guid]::NewGuid())"
             New-Item -ItemType Directory -Path $testDir -Force | Out-Null
             $configFile = Join-Path $testDir "config.json"
-            @{ output_format = "standard" } | ConvertTo-Json | Set-Content $configFile
+            @{ bot_token = "abc"; voice_channel_id = 123456789012345678 } | ConvertTo-Json | Set-Content $configFile
 
             try {
-                # Act
-                $newJson = Update-ConfigJson -ConfigPath $configFile -Field "Format" -Value "verbose"
-                $parsed = $newJson | ConvertFrom-Json
-
-                # Assert
-                $parsed.output_format | Should -Be "verbose"
+                { Update-ConfigJson -ConfigPath $configFile -Field "Format" -Value "verbose" } | Should -Throw
+                { Update-ConfigJson -ConfigPath $configFile -Field "Activity" -Value "flying" } | Should -Throw
             }
             finally {
                 Remove-Item -Path $testDir -Recurse -Force -ErrorAction SilentlyContinue
             }
         }
 
-        It "Should update bot_activity field correctly" {
-            # Arrange
+        It "Should update audio_device_name field correctly" {
+            # The field most likely to need correcting after an install: it
+            # decides whether anything is heard at all.
             $testDir = Join-Path $env:TEMP "ConfigUpdateTest_$([System.Guid]::NewGuid())"
             New-Item -ItemType Directory -Path $testDir -Force | Out-Null
             $configFile = Join-Path $testDir "config.json"
-            @{ bot_activity = "Old activity" } | ConvertTo-Json | Set-Content $configFile
+            @{ audio_device_name = "Voicemeeter Out B3 (VB-Audio Voicemeeter VAIO)" } |
+                ConvertTo-Json | Set-Content $configFile
 
             try {
-                # Act
-                $newJson = Update-ConfigJson -ConfigPath $configFile -Field "Activity" -Value "New activity"
+                $newJson = Update-ConfigJson -ConfigPath $configFile `
+                    -Field "AudioDevice" -Value "Voicemeeter Out B1 (VB-Audio Voicemeeter VAIO)"
                 $parsed = $newJson | ConvertFrom-Json
 
-                # Assert
-                $parsed.bot_activity | Should -Be "New activity"
+                $parsed.audio_device_name | Should -Be "Voicemeeter Out B1 (VB-Audio Voicemeeter VAIO)"
             }
             finally {
                 Remove-Item -Path $testDir -Recurse -Force -ErrorAction SilentlyContinue
@@ -360,7 +349,7 @@ Describe "Config File Safety Functions" {
 
                 # Assert
                 $result.Verified | Should -Be $false
-                $result.Message | Should -Match "JSON parse error"
+                $result.Message | Should -Match "could not be read back"
             }
             finally {
                 Remove-Item -Path $testDir -Recurse -Force -ErrorAction SilentlyContinue

@@ -32,6 +32,12 @@ function Backup-ConfigFile {
 
     Copy-Item $ConfigPath $backupPath -Force
 
+    # A backup holds the bot token in plaintext exactly like config.json does,
+    # so it needs the same restriction. Copy-Item gives the new file the
+    # directory's inherited permissions, which left up to ten unprotected
+    # copies of the token sitting next to the protected original.
+    Protect-BotConfigFile -ConfigPath $backupPath | Out-Null
+
     $backupDir = Split-Path $ConfigPath
     $backupPattern = "config.json.backup-*"
     $backups = @(Get-ChildItem $backupDir -Filter $backupPattern -ErrorAction SilentlyContinue |
@@ -42,3 +48,5 @@ function Backup-ConfigFile {
 
     return $backupPath
 }
+
+Export-ModuleMember -Function Backup-ConfigFile

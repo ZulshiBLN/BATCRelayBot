@@ -53,9 +53,14 @@ jobs:
       - name: Run Pester tests
         shell: powershell
         run: |
+          # "tests", not "tests/powershell": that subdirectory holds 26 smoke
+          # tests, while the unit and integration suites - several hundred
+          # cases - sat outside the path CI looked at and therefore never ran.
+          # v1.3.16 shipped with nine failing tests because of it.
           $config = New-PesterConfiguration
-          $config.Run.Path = "tests/powershell"
+          $config.Run.Path = "tests"
           $config.Run.Exit = $true
+          $config.Output.Verbosity = "Normal"
           $config.CodeCoverage.Enabled = $false
           Invoke-Pester -Configuration $config
 

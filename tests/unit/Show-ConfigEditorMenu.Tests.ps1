@@ -1,387 +1,346 @@
-#Requires -Modules Pester
+#Requires -Version 5.1
 
-Describe "Config Editor Menu Functions" {
+<#
+.SYNOPSIS
+Tests for the configuration editor.
 
-    BeforeAll {
-        $privatePath = "$PSScriptRoot\..\..\BATCRelayBot\Private"
+.DESCRIPTION
+The editor was disabled from v1.3.10 to v1.4.0 because it wrote `token` while
+the installer wrote `bot_token`: an edited token went into a field nothing
+read, and the bot kept using the old one. The audit that found it also noted
+why the tests had missed it - they built their own config fixtures using the
+editor's own field names, so both sides agreed with each other and disagreed
+with reality.
 
-        # Load all required functions
-        $functionFiles = @(
-            "Get-DiscordToken.ps1",
-            "Get-DiscordChannel.ps1",
-            "Get-OutputFormat.ps1",
-            "Get-BotActivity.ps1",
-            "Test-ConfigValue.ps1",
-            "Show-ConfigEditorMenu.ps1"
+These tests therefore check the editor against what bot.py actually requires,
+not against the editor's own idea of the schema.
+#>
+
+BeforeAll {
+    Import-Module "$PSScriptRoot\..\..\BATCRelayBot\BATCRelayBot.psm1" -Force
+
+    $script:RepoRoot = Resolve-Path "$PSScriptRoot\..\.."
+
+    # The authoritative key list, read from bot.py itself.
+    $botPy = Get-Content (Join-Path $script:RepoRoot "bot.py") -Raw
+    $script:BotRequiredKeys = @()
+    if ($botPy -match 'REQUIRED_KEYS\s*=\s*\[(.*?)\]') {
+        $script:BotRequiredKeys = ([regex]::Matches($Matches[1], '"([^"]+)"') |
+            ForEach-Object { $_.Groups[1].Value })
+    }
+
+    $script:SandboxRoot = Join-Path ([System.IO.Path]::GetTempPath()) "batc-editor-tests"
+
+    function New-EditorSandbox {
+        <# A config as the 1.4.0 installer would actually write it. #>
+        $path = Join-Path $script:SandboxRoot ([guid]::NewGuid().ToString('N'))
+        New-Item -ItemType Directory -Path $path -Force | Out-Null
+        $configPath = Join-Path $path "config.json"
+
+        [ordered]@{
+            bot_token                = "AAAAAAAAAAAAAAAAAAAAAAAA.BBBBBB.CCCCCCCCCCCCCCCCCCCCCCCCCCC"
+            guild_id                 = 123456789012345678
+            voice_channel_id         = 987654321098765432
+            audio_device_name        = "Voicemeeter Out B1 (VB-Audio Voicemeeter VAIO)"
+            python_path              = "C:\Python312\python.exe"
+            ffmpeg_path              = "C:\ffmpeg\bin\ffmpeg.exe"
+            voicemeeter_path         = "C:\Program Files (x86)\VB\Voicemeeter\voicemeeter_x64.exe"
+            voicemeeter_process_name = "voicemeeter_x64"
+            voicemeeter_wait_seconds = 6
+            batc_path                = ""
+            batc_process_name        = ""
+            batc_wait_seconds        = 8
+        } | ConvertTo-Json | Set-Content $configPath -Encoding UTF8
+
+        return $configPath
+    }
+}
+
+AfterAll {
+    if ($script:SandboxRoot -and (Test-Path $script:SandboxRoot)) {
+        Remove-Item $script:SandboxRoot -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
+Describe "Get-ConfigFieldMap" {
+
+    It "offers only fields bot.py actually reads" {
+        # output_format and bot_activity were editable before 1.4.0 and appear
+        # nowhere in bot.py, so editing them changed nothing.
+        $jsonKeys = (Get-ConfigFieldMap).Values | ForEach-Object { $_.Json }
+
+        $jsonKeys | Should -Not -Contain 'output_format'
+        $jsonKeys | Should -Not -Contain 'bot_activity'
+    }
+
+    It "covers every key bot.py requires" {
+        $jsonKeys = (Get-ConfigFieldMap).Values | ForEach-Object { $_.Json }
+        foreach ($key in $script:BotRequiredKeys) {
+            $jsonKeys | Should -Contain $key -Because "bot.py exits without '$key', so it must be fixable"
+        }
+    }
+
+    It "maps the token to bot_token, the name the installer writes" {
+        (Get-ConfigFieldDefinition -Field 'Token').Json | Should -Be 'bot_token'
+    }
+
+    It "declares the Discord IDs as numeric" {
+        (Get-ConfigFieldDefinition -Field 'Guild').Type   | Should -Be 'long'
+        (Get-ConfigFieldDefinition -Field 'Channel').Type | Should -Be 'long'
+    }
+
+    It "throws on an unknown field instead of writing nowhere" {
+        { Get-ConfigFieldDefinition -Field 'Nonsense' } | Should -Throw
+    }
+}
+
+Describe "ConvertTo-ConfigFieldValue" {
+
+    It "converts a Discord ID to a number" {
+        $value = ConvertTo-ConfigFieldValue -Field 'Channel' -Value "987654321098765432"
+        $value | Should -BeOfType [long]
+    }
+
+    It "leaves the token as text" {
+        ConvertTo-ConfigFieldValue -Field 'Token' -Value "abc.def.ghi" | Should -BeOfType [string]
+    }
+
+    It "rejects a non-numeric ID" {
+        { ConvertTo-ConfigFieldValue -Field 'Guild' -Value "not-an-id" } | Should -Throw
+    }
+}
+
+Describe "Test-ConfigValue" {
+
+    It "accepts a plausible token" {
+        (Test-ConfigValue -Field 'Token' -Value ("A" * 60)).Valid | Should -BeTrue
+    }
+
+    It "rejects a short token as probably the client secret" {
+        (Test-ConfigValue -Field 'Token' -Value "tooshort").Valid | Should -BeFalse
+    }
+
+    It "accepts a Discord snowflake" {
+        (Test-ConfigValue -Field 'Channel' -Value "987654321098765432").Valid | Should -BeTrue
+    }
+
+    It "rejects a snowflake of the wrong length" {
+        (Test-ConfigValue -Field 'Guild' -Value "12345").Valid | Should -BeFalse
+    }
+
+    It "rejects an empty value for every field" {
+        foreach ($field in (Get-ConfigFieldMap).Keys) {
+            (Test-ConfigValue -Field $field -Value "").Valid | Should -BeFalse -Because "'$field' must not be blanked"
+        }
+    }
+
+    It "reports an unknown field rather than passing it" {
+        (Test-ConfigValue -Field 'Format' -Value "standard").Valid | Should -BeFalse
+    }
+}
+
+Describe "Update-ConfigJson" {
+
+    It "writes the token to bot_token, not to token" {
+        $configPath = New-EditorSandbox
+        $json = Update-ConfigJson -ConfigPath $configPath -Field 'Token' -Value ("Z" * 60)
+        $parsed = $json | ConvertFrom-Json
+
+        $parsed.bot_token | Should -Be ("Z" * 60)
+        $parsed.PSObject.Properties.Name | Should -Not -Contain 'token'
+    }
+
+    It "writes a changed channel ID as a JSON number" {
+        # A quoted ID leaves discord.py unable to resolve the channel, with
+        # nothing in the log but 'not found'.
+        $configPath = New-EditorSandbox
+        $json = Update-ConfigJson -ConfigPath $configPath -Field 'Channel' -Value "111111111111111111"
+
+        $json | Should -Match '"voice_channel_id"\s*:\s*111111111111111111'
+        $json | Should -Not -Match '"voice_channel_id"\s*:\s*"'
+    }
+
+    It "keeps every other field untouched" {
+        $configPath = New-EditorSandbox
+        $before = Get-Content $configPath -Raw | ConvertFrom-Json
+        $after = (Update-ConfigJson -ConfigPath $configPath -Field 'Guild' -Value "222222222222222222") | ConvertFrom-Json
+
+        $after.bot_token                | Should -Be $before.bot_token
+        $after.voice_channel_id         | Should -Be $before.voice_channel_id
+        $after.audio_device_name        | Should -Be $before.audio_device_name
+        $after.voicemeeter_process_name | Should -Be $before.voicemeeter_process_name
+    }
+
+    It "adds a field that is absent instead of throwing" {
+        # Dot-assignment on a PSCustomObject cannot create a property.
+        $configPath = New-EditorSandbox
+        $stripped = Get-Content $configPath -Raw | ConvertFrom-Json
+        $stripped.PSObject.Properties.Remove('audio_device_name')
+        $stripped | ConvertTo-Json | Set-Content $configPath -Encoding UTF8
+
+        { Update-ConfigJson -ConfigPath $configPath -Field 'AudioDevice' -Value "Voicemeeter Out B1" } |
+            Should -Not -Throw
+    }
+
+    It "refuses a field it cannot save" {
+        $configPath = New-EditorSandbox
+        { Update-ConfigJson -ConfigPath $configPath -Field 'Activity' -Value "flying" } | Should -Throw
+    }
+}
+
+Describe "Verify-ConfigChange" {
+
+    It "confirms a numeric ID written correctly" {
+        $configPath = New-EditorSandbox
+        $json = Update-ConfigJson -ConfigPath $configPath -Field 'Channel' -Value "111111111111111111"
+        Write-ConfigFile -ConfigPath $configPath -JsonContent $json | Out-Null
+
+        (Verify-ConfigChange -ConfigPath $configPath -Field 'Channel' -ExpectedValue "111111111111111111").Verified |
+            Should -BeTrue -Because "the stored number and the entered string are the same ID"
+    }
+
+    It "detects a value that was not written" {
+        $configPath = New-EditorSandbox
+        (Verify-ConfigChange -ConfigPath $configPath -Field 'Guild' -ExpectedValue "999999999999999999").Verified |
+            Should -BeFalse
+    }
+
+    It "never echoes the token in its message" {
+        $configPath = New-EditorSandbox
+        $result = Verify-ConfigChange -ConfigPath $configPath -Field 'Token' -ExpectedValue ("Q" * 60)
+
+        $result.Verified | Should -BeFalse
+        $result.Message  | Should -Not -Match 'Q{10}'
+    }
+
+    It "reports unreadable JSON instead of throwing" {
+        $configPath = New-EditorSandbox
+        Set-Content $configPath -Value "{ invalid json" -Encoding UTF8
+
+        $result = Verify-ConfigChange -ConfigPath $configPath -Field 'Guild' -ExpectedValue "123456789012345678"
+        $result.Verified | Should -BeFalse
+        $result.Message  | Should -Not -BeNullOrEmpty
+    }
+}
+
+Describe "Editing keeps the config loadable by bot.py" {
+
+    It "leaves every required key present and non-empty after each edit" {
+        # The contract that matters: whatever the editor touches, the bot must
+        # still start afterwards.
+        $edits = @(
+            @{ Field = 'Token';       Value = ("Y" * 60) },
+            @{ Field = 'Guild';       Value = "222222222222222222" },
+            @{ Field = 'Channel';     Value = "333333333333333333" },
+            @{ Field = 'AudioDevice'; Value = "Voicemeeter Out B2 (VB-Audio Voicemeeter VAIO)" }
         )
 
-        foreach ($file in $functionFiles) {
-            $path = Join-Path $privatePath $file
-            if (Test-Path $path) {
-                . $path
+        foreach ($edit in $edits) {
+            $configPath = New-EditorSandbox
+            $json = Update-ConfigJson -ConfigPath $configPath -Field $edit.Field -Value $edit.Value
+            Write-ConfigFile -ConfigPath $configPath -JsonContent $json | Out-Null
+
+            $config = Get-Content $configPath -Raw | ConvertFrom-Json
+            foreach ($key in $script:BotRequiredKeys) {
+                $config.$key | Should -Not -BeNullOrEmpty -Because "'$key' must survive editing $($edit.Field)"
             }
         }
     }
 
-    Context "Get-DiscordToken - Token Input Validation" {
+    It "keeps the IDs numeric after an unrelated edit" {
+        $configPath = New-EditorSandbox
+        $json = Update-ConfigJson -ConfigPath $configPath -Field 'Token' -Value ("W" * 60)
+        Write-ConfigFile -ConfigPath $configPath -JsonContent $json | Out-Null
 
-        It "Should accept valid token (long alphanumeric string)" {
-            # Skip interactive input test in non-interactive mode
-            Set-ItResult -Skipped -Because "Requires interactive Read-Host -AsSecureString"
-        }
+        $raw = Get-Content $configPath -Raw
+        $raw | Should -Match '"guild_id"\s*:\s*\d+'
+        $raw | Should -Match '"voice_channel_id"\s*:\s*\d+'
+    }
+}
 
-        It "Should reject empty token" {
-            # Skip interactive input test in non-interactive mode
-            Set-ItResult -Skipped -Because "Requires interactive Read-Host -AsSecureString"
-        }
+Describe "Backup-ConfigFile" {
 
-        It "Should reject token that is too short" {
-            # Discord tokens are typically 50+ characters
-            $shortToken = "abc123"
+    It "restricts the backup the way config.json is restricted" {
+        # A backup holds the token in plaintext; up to ten of them used to sit
+        # next to the protected original with inherited permissions.
+        $configPath = New-EditorSandbox
+        $backup = Backup-ConfigFile -ConfigPath $configPath
 
-            # Validation should fail for short token
-            # This would be tested via mocking in real scenario
-            $shortToken.Length | Should -BeLessThan 24
-        }
-
-        It "Should display last 4 digits of current token" {
-            $currentToken = "****1234"
-
-            # Function should show masked version
-            $currentToken -match '\*{4}' | Should -Be $true
-        }
+        Test-Path $backup | Should -BeTrue
+        (Get-Acl $backup).AreAccessRulesProtected | Should -BeTrue
     }
 
-    Context "Get-DiscordChannel - Channel ID Validation" {
+    It "returns a path that still contains the original content" {
+        $configPath = New-EditorSandbox
+        $backup = Backup-ConfigFile -ConfigPath $configPath
 
-        It "Should accept valid Discord Snowflake (17-21 digits)" {
-            $validChannelId = "123456789012345678"
+        (Get-Content $backup -Raw) | Should -Be (Get-Content $configPath -Raw)
+    }
+}
 
-            # Validate format: 17-21 digits
-            $validChannelId -match '^\d{17,21}$' | Should -Be $true
-        }
+Describe "Show-ConfigEditorMenu" {
 
-        It "Should reject channel ID that is too short (< 17 digits)" {
-            $shortId = "12345678901234"
-
-            # Should not match valid format
-            $shortId -match '^\d{17,21}$' | Should -Be $false
-        }
-
-        It "Should reject channel ID that is too long (> 21 digits)" {
-            $longId = "123456789012345678901234"
-
-            # Should not match valid format
-            $longId -match '^\d{17,21}$' | Should -Be $false
-        }
-
-        It "Should reject non-numeric channel ID" {
-            $alphaId = "12345678901234567A"
-
-            # Should not match numeric-only format
-            $alphaId -match '^\d{17,21}$' | Should -Be $false
-        }
-
-        It "Should return Valid=true for correct format" {
-            $validId = "123456789012345678"
-
-            # Test structure
-            $validId.Length | Should -BeGreaterOrEqual 17
-            $validId.Length | Should -BeLessOrEqual 21
-        }
+    It "labels an unset value rather than printing nothing" {
+        Format-ConfigValue $null | Should -Be "(not set)"
+        Format-ConfigValue ""    | Should -Be "(not set)"
     }
 
-    Context "Get-OutputFormat - Format Selection Menu" {
-
-        It "Should accept valid enum selection (standard)" {
-            $validFormat = "standard"
-
-            # Check if in allowed values
-            @("standard", "compact", "verbose") -contains $validFormat | Should -Be $true
-        }
-
-        It "Should accept valid enum selection (compact)" {
-            $validFormat = "compact"
-
-            @("standard", "compact", "verbose") -contains $validFormat | Should -Be $true
-        }
-
-        It "Should accept valid enum selection (verbose)" {
-            $validFormat = "verbose"
-
-            @("standard", "compact", "verbose") -contains $validFormat | Should -Be $true
-        }
-
-        It "Should reject invalid format selection" {
-            $invalidFormat = "xyz"
-
-            @("standard", "compact", "verbose") -contains $invalidFormat | Should -Be $false
-        }
-
-        It "Should display current selection" {
-            $current = "standard"
-
-            # Should show current value
-            $current | Should -Be "standard"
-        }
+    It "passes a real value through unchanged" {
+        Format-ConfigValue 123456789012345678 | Should -Be "123456789012345678"
     }
 
-    Context "Get-BotActivity - Activity Text Input" {
+    It "returns null when the user quits" {
+        $configPath = New-EditorSandbox
+        Mock -ModuleName BATCRelayBot Read-Host { "q" }
 
-        It "Should accept activity text under 128 characters" {
-            # Validate length constraint - manual check to avoid Pester syntax issues
-            ("Flying sim streaming".Length -le 128) | Should -Be $true
-        }
-
-        It "Should accept activity text at exactly 128 characters" {
-            # Test maximum length boundary
-            ("A" * 128).Length | Should -Be 128
-        }
-
-        It "Should reject activity text over 128 characters" {
-            # Over-limit text
-            ("A" * 129).Length | Should -BeGreaterThan 128
-        }
-
-        It "Should count characters correctly" {
-            # Verify length calculation
-            "Test activity".Length | Should -Be 13
-        }
-
-        It "Should display character count" {
-            # Format should show count/max
-            "20/128" | Should -Match '\d+/128'
-        }
-
-        It "Should allow spaces in activity" {
-            # Spaces are valid
-            "Flying sim streaming with audio".Contains(" ") | Should -Be $true
-        }
-
-        It "Should handle special characters properly" {
-            # Special chars allowed in text
-            "Flying: ATC relay (active)".Length -gt 0 | Should -Be $true
-        }
+        Show-ConfigEditorMenu -ConfigPath $configPath 6>$null | Should -BeNullOrEmpty
     }
 
-    Context "Test-ConfigValue - Pre-Save Validation" {
-
-        It "Should validate token field correctly" {
-            # Token validation should be routed to Get-DiscordToken logic
-            $field = "Token"
-
-            # Function should exist
-            $field | Should -Be "Token"
-        }
-
-        It "Should validate channel field correctly" {
-            $field = "Channel"
-            $validId = "123456789012345678"
-
-            # Channel should be 17-21 digits
-            $validId -match '^\d{17,21}$' | Should -Be $true
-        }
-
-        It "Should validate format field correctly" {
-            $field = "Format"
-            $value = "standard"
-
-            @("standard", "compact", "verbose") -contains $value | Should -Be $true
-        }
-
-        It "Should validate activity field correctly" {
-            # Activity field validation - manual check
-            ("Flying sim streaming".Length -le 128) | Should -Be $true
-        }
-
-        It "Should return Valid=true for correct values" {
-            # Test that valid values pass
-            "standard" -in @("standard", "compact", "verbose") | Should -Be $true
-        }
-
-        It "Should return Valid=false for incorrect values" {
-            # Test that invalid values fail
-            "invalid" -in @("standard", "compact", "verbose") | Should -Be $false
-        }
+    It "reports a missing config instead of throwing" {
+        $absent = Join-Path ([System.IO.Path]::GetTempPath()) "no-such-config-$([guid]::NewGuid()).json"
+        Show-ConfigEditorMenu -ConfigPath $absent -ErrorAction SilentlyContinue 6>$null |
+            Should -BeNullOrEmpty
     }
 
-    Context "Show-ConfigEditorMenu - Main Menu Display" {
+    It "never prints any part of the token" {
+        $source = Get-Content "$PSScriptRoot\..\..\BATCRelayBot\Private\Show-ConfigEditorMenu.ps1" -Raw
+        # The old menu showed the last four characters of the live token.
+        $source | Should -Not -Match 'Substring'
+        $source | Should -Match '\[REDACTED\]'
+    }
+}
 
-        It "Should display menu with current values" {
-            # Menu should show:
-            # 1. Discord Token: [***] (last 4: xxxx)
-            # 2. Channel ID: 123456...
-            # 3. Output Format: standard
-            # 4. Bot Activity: Flying sim streaming
+Describe "Edit-BATCRelayBotConfig" {
 
-            # Placeholder test
-            $true | Should -Be $true
-        }
-
-        It "Should accept selection 1-4" {
-            @(1, 2, 3, 4) | ForEach-Object {
-                $_ -in @(1, 2, 3, 4) | Should -Be $true
-            }
-        }
-
-        It "Should accept 'q' to quit" {
-            $selection = "q"
-
-            $selection | Should -Be "q"
-        }
-
-        It "Should reject invalid selection (not 1-4 or q)" {
-            $selection = "x"
-
-            $selection -in @("1", "2", "3", "4", "q") | Should -Be $false
-        }
-
-        It "Should loop on invalid selection" {
-            # Menu should reprompt, not exit
-            # Test: Invalid selection doesn't return null
-            $invalid = "xyz"
-
-            $invalid -match '^[1-4q]$' | Should -Be $false
-        }
-
-        It "Should return null when user selects 'q'" {
-            # Quit should return null or break loop
-            $selection = "q"
-
-            $selection | Should -Be "q"
-        }
-
-        It "Should return field selection when valid" {
-            # When user selects 1-4, return @{Field=..., Value=...}
-            $selection = "1"
-
-            [int]$selection | Should -BeGreaterOrEqual 1
-            [int]$selection | Should -BeLessOrEqual 4
-        }
+    It "is no longer disabled" {
+        $source = Get-Content "$PSScriptRoot\..\..\BATCRelayBot\Public\Edit-BATCRelayBotConfig.ps1" -Raw
+        $source | Should -Not -Match 'not available'
     }
 
-    Context "Menu Navigation - User Interaction" {
-
-        It "Should display menu title/header" {
-            # Menu should start with title
-            $title = "BATCRelayBot Configuration Editor"
-
-            $title | Should -Match "Config"
-        }
-
-        It "Should show all 4 fields with current values" {
-            # 4 editable fields shown
-            @("Token", "Channel", "Format", "Activity").Count | Should -Be 4
-        }
-
-        It "Should prompt 'Select field (1-4) or q to quit'" {
-            # Standard prompt text
-            $prompt = "Select field to edit (1-4) or 'q' to quit"
-
-            $prompt | Should -Match "1-4"
-        }
-
-        It "Should handle quit gracefully" {
-            $selection = "q"
-
-            # Should not error, just exit
-            $selection | Should -Be "q"
-        }
-
-        It "Should reprompt on invalid selection" {
-            # If user enters invalid, show error and ask again
-            $invalid = "x"
-
-            $invalid -notmatch '^[1-4q]$' | Should -Be $true
-        }
+    It "initialises the collections it writes into" {
+        # $errors.Add and $updatedFields[...] were both used without ever
+        # being created, so the function threw on whichever path it took.
+        $source = Get-Content "$PSScriptRoot\..\..\BATCRelayBot\Public\Edit-BATCRelayBotConfig.ps1" -Raw
+        $source | Should -Match '\$errors\s*=\s*\[System\.Collections\.ArrayList\]'
+        $source | Should -Match '\$updatedFields\s*=\s*@\{\}'
     }
 
-    Context "Confirmation Prompt - Before Save" {
+    It "reports a missing installation without throwing" {
+        $absent = Join-Path ([System.IO.Path]::GetTempPath()) "batc-absent-$([guid]::NewGuid())"
+        $result = Edit-BATCRelayBotConfig -InstallPath $absent 6>$null
 
-        It "Should show field name before save" {
-            $field = "Discord Token"
-
-            # Should display field name
-            $field | Should -Match "Token"
-        }
-
-        It "Should show new value (masked for tokens)" {
-            $value = "[***REDACTED***]"
-
-            # Should not show actual token
-            $value | Should -Match "\*"
-        }
-
-        It "Should ask 'Confirm change? (y/n)'" {
-            $prompt = "Confirm change? (y/n)"
-
-            $prompt | Should -Match "y/n"
-        }
-
-        It "Should accept 'y' confirmation" {
-            $response = "y"
-
-            $response | Should -Be "y"
-        }
-
-        It "Should accept 'n' to cancel" {
-            $response = "n"
-
-            $response | Should -Be "n"
-        }
-
-        It "Should not proceed on 'n'" {
-            # If user says 'n', should return to menu
-            $response = "n"
-
-            $response -ne "y" | Should -Be $true
-        }
-
-        It "Should proceed to save on 'y'" {
-            # If user says 'y', should return field/value for save
-            $response = "y"
-
-            $response -eq "y" | Should -Be $true
-        }
+        $result.Success | Should -BeFalse
+        $result.Errors  | Should -Not -BeNullOrEmpty
     }
 
-    Context "Integration - Full Menu Workflow" {
+    It "returns a cancellation result when the user quits the menu" {
+        $configPath = New-EditorSandbox
+        $installPath = Split-Path $configPath -Parent
+        Mock -ModuleName BATCRelayBot Read-Host { "q" }
 
-        It "Should cycle through menu until quit" {
-            # Simulate: Show menu → Select → Confirm → Return result
-            # Then loop back to menu
+        $result = Edit-BATCRelayBotConfig -InstallPath $installPath 6>$null
 
-            $selections = @("1", "n", "q")
-            $selections.Count | Should -Be 3
-        }
-
-        It "Should handle multiple edits in session" {
-            # Edit field 1, return to menu, edit field 2, etc.
-
-            $edits = @(
-                @{Field = 1; Confirm = "y" },
-                @{Field = 2; Confirm = "y" },
-                @{Field = 3; Confirm = "n" },
-                @{Field = "q"; Confirm = $null }
-            )
-
-            $edits.Count | Should -Be 4
-        }
-
-        It "Should maintain menu state between iterations" {
-            # Show same config values each iteration
-            # (unless changed and saved)
-
-            $true | Should -Be $true
-        }
-
-        It "Should validate input for each field type" {
-            # Token: masked input
-            # Channel: numeric validation
-            # Format: enum validation
-            # Activity: length check
-
-            @("Token", "Channel", "Format", "Activity").Count | Should -Be 4
-        }
+        $result.Success | Should -BeFalse
+        $result.Errors  | Should -Contain "Cancelled by the user"
     }
 }

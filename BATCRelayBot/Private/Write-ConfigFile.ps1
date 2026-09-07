@@ -48,3 +48,5 @@ function Write-ConfigFile {
         throw $_
     }
 }
+
+Export-ModuleMember -Function Write-ConfigFile
