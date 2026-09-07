@@ -181,6 +181,13 @@ Minor rather than patch: the config file schema changed. Existing
   mismatch survived sixteen releases.
 - `Start-Installation` tests no longer run pip for real or write into the
   developer's own installation directory.
+- The uninstaller tests no longer touch the real machine either. One case
+  called `Invoke-SecureUninstall` with no arguments at all, which runs a real
+  removal against `$env:LOCALAPPDATA\BATCRelayBot` - it would have deleted the
+  developer's own installation. It now checks the parameter defaults instead
+  of executing. `Invoke-SecureUninstall` also gained `-LogDirectory`, because
+  every call wrote a timestamped log into the real roaming profile and a suite
+  run left dozens behind.
 - Suite goes from 270 passing / 9 failing to 298 passing / 0 failing.
 
 ## [1.3.16] - 2026-08-31 (HOTFIX)

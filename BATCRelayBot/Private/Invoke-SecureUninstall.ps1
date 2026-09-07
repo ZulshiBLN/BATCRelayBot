@@ -15,11 +15,16 @@ function Invoke-SecureUninstall {
     [OutputType([hashtable])]
     param(
         [string]$BotPath = (Join-Path $env:LOCALAPPDATA "BATCRelayBot"),
-        [hashtable]$DependencyChoices = @{}
+        [hashtable]$DependencyChoices = @{},
+
+        # Overridable so the test suite does not deposit a timestamped log in
+        # the developer's real roaming profile on every run - which is how
+        # ninety-odd stray logs accumulated there.
+        [string]$LogDirectory = (Join-Path $env:APPDATA "BATCRelayBot-Uninstall")
     )
 
     # The log lives outside the installation so it survives the deletion.
-    $logDir = Join-Path $env:APPDATA "BATCRelayBot-Uninstall"
+    $logDir = $LogDirectory
     New-Item -ItemType Directory -Path $logDir -Force -ErrorAction SilentlyContinue | Out-Null
     $logPath = Join-Path $logDir "removal-$(Get-Date -Format 'yyyyMMdd-HHmmss').log"
 
