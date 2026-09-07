@@ -81,6 +81,12 @@ Minor rather than patch: the config file schema changed. Existing
   the process kept rejoining the voice channel. Closing PowerShell or
   uninstalling the module changes nothing - the Python process is independent
   of both. The PID file is now a hint, with the actual process as fallback.
+- **`Get-BATCRelayBotStatus` told the same lie:** it answered purely from
+  bot.pid, so a missing or stale file made it report "NOT RUNNING" while the
+  bot was live and rejoining the channel. It now falls back to process
+  detection and flags the case via `OrphanedFromPidFile`. A non-numeric
+  bot.pid also crashed it with a parameter-binding error instead of falling
+  back.
 - **`!BATCleave` was undone by the watchdog within ten seconds,** so there was
   no chat command that could get the bot out of a channel. It now pauses the
   relay until `!BATCjoin`.

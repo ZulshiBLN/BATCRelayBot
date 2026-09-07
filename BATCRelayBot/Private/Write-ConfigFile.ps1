@@ -1,7 +1,7 @@
 function Write-ConfigFile {
     <#
     .SYNOPSIS
-    Writes JSON content to config file (temp file write → atomic replace).
+    Writes JSON content to config file (temp file write -> atomic replace).
 
     .DESCRIPTION
     Safely writes JSON content to config file using temp file + Move-Item pattern.

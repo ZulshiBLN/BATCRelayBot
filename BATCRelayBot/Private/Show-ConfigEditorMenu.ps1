@@ -63,7 +63,7 @@ function Show-ConfigEditorMenu {
                     }
                 }
                 else {
-                    Write-Host "❌ $($result.Message)" -ForegroundColor Red
+                    Write-Host "ERROR: $($result.Message)" -ForegroundColor Red
                     Read-Host "Press Enter to continue"
                 }
             }
@@ -80,7 +80,7 @@ function Show-ConfigEditorMenu {
                     }
                 }
                 else {
-                    Write-Host "❌ $($result.Message)" -ForegroundColor Red
+                    Write-Host "ERROR: $($result.Message)" -ForegroundColor Red
                     Read-Host "Press Enter to continue"
                 }
             }
@@ -97,7 +97,7 @@ function Show-ConfigEditorMenu {
                     }
                 }
                 else {
-                    Write-Host "❌ $($result.Message)" -ForegroundColor Red
+                    Write-Host "ERROR: $($result.Message)" -ForegroundColor Red
                     Read-Host "Press Enter to continue"
                 }
             }
@@ -114,7 +114,7 @@ function Show-ConfigEditorMenu {
                     }
                 }
                 else {
-                    Write-Host "❌ $($result.Message)" -ForegroundColor Red
+                    Write-Host "ERROR: $($result.Message)" -ForegroundColor Red
                     Read-Host "Press Enter to continue"
                 }
             }
