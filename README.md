@@ -209,20 +209,31 @@ Once the bot is in your server, these text commands are available in any channel
 
 | Command | Effect |
 |---|---|
-| `!status` | Shows whether the bot is connected and streaming, and whether the relay is paused |
-| `!restart_stream` | Restarts the audio stream without leaving the channel |
-| `!leave` | Disconnects and **stays out** until `!join` |
-| `!join` | Resumes relaying after `!leave` |
-| `!shutdown` | Stops the bot process entirely (requires Administrator permission) |
+| `!BATCjoin` | Joins the configured voice channel and starts relaying |
+| `!BATCleave` | Disconnects and **stays out** until `!BATCjoin` |
+| `!BATCstatus` | Shows whether the bot is connected and streaming |
+| `!BATCrestart` | Restarts the audio stream without leaving the channel |
+| `!BATCshutdown` | Stops the bot process entirely (requires Administrator permission) |
+| `!BATChelp` | Lists the commands |
 
-`!leave` pauses the watchdog as well as disconnecting. Without that the
+Command names are case-insensitive, so `!batcjoin` works too. Everything is
+`BATC`-prefixed so this bot cannot collide with other bots in the same server.
+
+### Starting the bot does not join a channel
+
+`Start-BATCRelayBot` only brings the bot **online** in Discord — it stands by
+without entering a voice channel. Relaying starts when someone types
+`!BATCjoin`. That way the bot can run permanently (or start with Windows)
+without sitting in the channel when nobody is flying.
+
+`!BATCleave` pauses the relay as well as disconnecting. Without that the
 watchdog reconnects within ten seconds, which is why `!leave` appeared to do
 nothing before 1.4.0.
 
-Use `!shutdown` if the bot is running in the background and `Stop-BATCRelayBot`
+Use `!BATCshutdown` if the bot runs in the background and `Stop-BATCRelayBot`
 cannot reach it — for example after `bot.pid` was lost. The Python process is
 independent of the PowerShell module, so closing the terminal or uninstalling
-the module does not stop it.
+the module does **not** stop it.
 
 ---
 

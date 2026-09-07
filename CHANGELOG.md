@@ -81,13 +81,28 @@ Minor rather than patch: the config file schema changed. Existing
   the process kept rejoining the voice channel. Closing PowerShell or
   uninstalling the module changes nothing - the Python process is independent
   of both. The PID file is now a hint, with the actual process as fallback.
-- **`!leave` was undone by the watchdog within ten seconds,** so there was no
-  chat command that could get the bot out of a channel. `!leave` now pauses
-  the relay until `!join`.
-- **New `!shutdown` command** stops the bot process from chat, for exactly the
-  case where the PowerShell side can no longer reach it. Requires the
+- **`!BATCleave` was undone by the watchdog within ten seconds,** so there was
+  no chat command that could get the bot out of a channel. It now pauses the
+  relay until `!BATCjoin`.
+- **New `!BATCshutdown` command** stops the bot process from chat, for exactly
+  the case where the PowerShell side can no longer reach it. Requires the
   Administrator permission.
-- `!status` reports whether the relay is paused.
+- `!BATCstatus` reports whether the relay is paused.
+
+### Changed - chat commands and startup behaviour
+
+- **Starting the bot no longer joins a voice channel.** The process comes
+  online and stands by; relaying begins on an explicit `!BATCjoin`. This lets
+  the bot run permanently, or start with Windows, without occupying the
+  channel when nobody is flying. Previously the watchdog joined within ten
+  seconds of startup with no way to prevent it.
+- **All commands are now `BATC`-prefixed** so they cannot collide with other
+  bots in the same server: `!BATCjoin`, `!BATCleave`, `!BATCstatus`,
+  `!BATCrestart`, `!BATCshutdown`, `!BATChelp`. Names are case-insensitive,
+  and `!BATCrestart_stream` remains as an alias.
+- Command replies read the configured guild's voice state rather than
+  whichever server the command was typed in, so running a command from a
+  second server no longer reports the wrong state.
 
 ### Security
 

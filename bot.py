@@ -6,13 +6,27 @@ Windows recording device (e.g. "VoiceMeeter Output") into that channel.
 Intended as an automated replacement for the manual "second browser
 account" trick used to bring BATC/BeyondATC radio traffic into Discord.
 
+Starting this process only brings the bot online in Discord - it stands by
+without joining anything. Relaying begins on an explicit !BATCjoin, so having
+the bot start with Windows does not put it in a voice channel.
+
+Chat commands (all prefixed with BATC so they cannot collide with other bots
+in the same server; command names are case-insensitive):
+
+  !BATCjoin      join the configured channel and start relaying
+  !BATCleave     leave and stay out until !BATCjoin
+  !BATCstatus    connection and stream state
+  !BATCrestart   restart the stream without leaving
+  !BATCshutdown  stop this process (Administrator only)
+  !BATChelp      list the commands
+
 Requirements:
   - Python 3.10+
   - pip install -r requirements.txt
-  - ffmpeg.exe must be on PATH (https://ffmpeg.org/download.html)
+  - ffmpeg.exe, either on PATH or given as ffmpeg_path in config.json
   - A Discord bot token (see README.md)
   - The exact device name of your VoiceMeeter output as seen by ffmpeg
-    (see README.md, "Find audio device" step)
+    (Install-BATCRelayBot picks it from a list)
 
 Configuration: config.json (see config.example.json)
 """
@@ -60,7 +74,15 @@ for key in REQUIRED_KEYS:
 intents = discord.Intents.default()
 intents.message_content = True  # only needed if you want the text commands below
 
-bot = commands.Bot(command_prefix="!", intents=intents)
+# Every command carries a BATC prefix so this bot cannot collide with other
+# bots in the same server, and case_insensitive lets !batcjoin work too.
+# The built-in help is renamed for the same reason.
+bot = commands.Bot(
+    command_prefix="!",
+    intents=intents,
+    case_insensitive=True,
+    help_command=commands.DefaultHelpCommand(command_attrs={"name": "BATChelp"}),
+)
 
 
 def make_audio_source() -> discord.FFmpegPCMAudio:
@@ -86,6 +108,18 @@ def make_audio_source() -> discord.FFmpegPCMAudio:
         before_options=before_options,
         options="-vn",
     )
+
+
+def configured_voice_client():
+    """
+    The voice client for the configured guild.
+
+    The bot only ever relays into the one channel from config.json, so state
+    is read from that guild rather than from wherever a command was typed -
+    otherwise running a command in a second server reports the wrong state.
+    """
+    guild = bot.get_guild(CONFIG["guild_id"])
+    return guild.voice_client if guild else None
 
 
 async def connect_and_stream():
@@ -114,10 +148,13 @@ async def connect_and_stream():
         log.info("Audio stream started (device: %s)", CONFIG["audio_device_name"])
 
 
-# Set by !leave, cleared by !join. Without this the watchdog below undoes
-# !leave within ten seconds, which left no way to get the bot out of a
-# channel from chat.
-relay_paused = False
+# Starts paused on purpose: launching the bot from PowerShell only brings it
+# online in Discord, it does not join a voice channel. Joining is an explicit
+# !BATCjoin, so starting the bot at boot does not put it in the channel.
+#
+# !BATCleave sets this again. Without it the watchdog below would undo the
+# leave within ten seconds, which left no way to get the bot out from chat.
+relay_paused = True
 
 
 @tasks.loop(seconds=10)
@@ -138,9 +175,10 @@ async def watchdog():
 @tasks.loop(seconds=1)
 async def shutdown_watcher():
     """
-    Checks every second whether a stop.signal file has been created (by
-    stop_bot.ps1). If so: leave the voice channel cleanly, close the bot
-    connection, and exit the process instead of just being force-killed.
+    Checks every second whether a stop.signal file has been created, by
+    either Stop-BATCRelayBot or !BATCshutdown. If so: leave the voice channel
+    cleanly, close the bot connection, and exit the process instead of just
+    being force-killed.
     """
     if not STOP_SIGNAL_PATH.exists():
         return
@@ -168,77 +206,91 @@ async def shutdown_watcher():
 @bot.event
 async def on_ready():
     log.info("Logged in as %s", bot.user)
+    log.info("Standing by - use !BATCjoin in Discord to join the voice channel.")
     if not watchdog.is_running():
         watchdog.start()
     if not shutdown_watcher.is_running():
         shutdown_watcher.start()
 
 
-@bot.command(name="status")
-async def status(ctx: commands.Context):
-    vc = ctx.guild.voice_client if ctx.guild else None
+@bot.command(name="BATCstatus")
+async def batc_status(ctx: commands.Context):
+    """Show whether the bot is connected and streaming."""
+    vc = configured_voice_client()
     if vc and vc.is_connected():
         state = "streaming" if vc.is_playing() else "connected, but no active stream"
-        suffix = " (relay paused, use `!join`)" if relay_paused else ""
+        suffix = " (relay paused, `!BATCjoin` to resume)" if relay_paused else ""
         await ctx.send(f"Connected to **{vc.channel.name}** - {state}{suffix}.")
     elif relay_paused:
-        await ctx.send("Not connected - relay is paused. Use `!join` to resume.")
+        await ctx.send("Standing by - not in a channel. Use `!BATCjoin` to start relaying.")
     else:
-        await ctx.send("Not connected to a voice channel.")
+        await ctx.send("Not connected to a voice channel - reconnecting shortly.")
 
 
-@bot.command(name="restart_stream")
-async def restart_stream(ctx: commands.Context):
-    vc = ctx.guild.voice_client if ctx.guild else None
+@bot.command(name="BATCjoin")
+async def batc_join(ctx: commands.Context):
+    """Join the configured voice channel and start relaying."""
+    global relay_paused
+    relay_paused = False
+
+    try:
+        await connect_and_stream()
+    except Exception:
+        log.exception("!BATCjoin failed")
+        await ctx.send("Could not join the voice channel - see the bot log for details.")
+        return
+
+    vc = configured_voice_client()
+    if vc and vc.is_connected():
+        await ctx.send(f"Relaying into **{vc.channel.name}**.")
+    else:
+        await ctx.send("Could not join the configured voice channel - check guild_id and voice_channel_id.")
+
+
+@bot.command(name="BATCleave")
+async def batc_leave(ctx: commands.Context):
+    """Leave the channel and stay out until !BATCjoin."""
+    global relay_paused
+    relay_paused = True
+
+    vc = configured_voice_client()
+    if vc:
+        await vc.disconnect()
+        await ctx.send("Left the voice channel. Standing by - `!BATCjoin` to resume.")
+    else:
+        await ctx.send("Wasn't connected. Standing by - `!BATCjoin` to resume.")
+
+
+@bot.command(name="BATCrestart", aliases=["BATCrestart_stream"])
+async def batc_restart(ctx: commands.Context):
+    """Restart the audio stream without leaving the channel."""
+    if relay_paused:
+        await ctx.send("The relay is paused. Use `!BATCjoin` first.")
+        return
+
+    vc = configured_voice_client()
     if vc:
         vc.stop()
     await connect_and_stream()
     await ctx.send("Stream restarted.")
 
 
-@bot.command(name="leave")
-async def leave(ctx: commands.Context):
-    """Leave the channel and stay out until !join."""
-    global relay_paused
-    relay_paused = True
-
-    vc = ctx.guild.voice_client if ctx.guild else None
-    if vc:
-        await vc.disconnect()
-        await ctx.send("Left the voice channel. The relay is paused - `!join` to resume.")
-    else:
-        await ctx.send("Wasn't connected. The relay is now paused - `!join` to resume.")
-
-
-@bot.command(name="join")
-async def join(ctx: commands.Context):
-    """Resume relaying after !leave."""
-    global relay_paused
-    relay_paused = False
-
-    await connect_and_stream()
-    await ctx.send("Relay resumed.")
-
-
-@bot.command(name="shutdown")
+@bot.command(name="BATCshutdown")
 @commands.has_permissions(administrator=True)
-async def shutdown(ctx: commands.Context):
-    """
-    Stop the bot process entirely from chat.
-
-    Writes the same stop.signal that Stop-BATCRelayBot uses, so the shutdown
-    path is the one already exercised elsewhere: leave the channel cleanly,
-    close the connection, exit the process. Exists because a bot started in
-    the background and orphaned from its PID file was otherwise unreachable.
-    """
+async def batc_shutdown(ctx: commands.Context):
+    """Stop the bot process entirely (Administrator only)."""
+    # Writes the same stop.signal that Stop-BATCRelayBot uses, so the shutdown
+    # path is the one already exercised elsewhere: leave the channel cleanly,
+    # close the connection, exit the process. Exists because a bot started in
+    # the background and orphaned from its PID file was otherwise unreachable.
     await ctx.send("Shutting down - leaving the channel and stopping the process.")
     STOP_SIGNAL_PATH.touch()
 
 
-@shutdown.error
-async def shutdown_error(ctx: commands.Context, error):
+@batc_shutdown.error
+async def batc_shutdown_error(ctx: commands.Context, error):
     if isinstance(error, commands.MissingPermissions):
-        await ctx.send("`!shutdown` requires the Administrator permission.")
+        await ctx.send("`!BATCshutdown` requires the Administrator permission.")
     else:
         raise error
 
