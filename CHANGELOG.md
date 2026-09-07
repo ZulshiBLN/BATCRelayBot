@@ -40,6 +40,31 @@ Minor rather than patch: the config file schema changed. Existing
   credential entry or the readiness check left no trace. Logging now starts
   before the first thing that can fail.
 
+### Fixed - the recommended audio device was picked at random
+
+- **The installer recommended the wrong VoiceMeeter bus.** It took the first
+  device whose name contained "Voicemeeter" and "Out", and ffmpeg enumerates
+  in no useful order - on a real machine that landed on **B3** while README
+  step 3 had routed audio to **B1**. The bot connected and streamed the wrong
+  bus, and config.json had to be corrected by hand.
+
+  The names carry meaning the old logic ignored: `B1`-`B3` are virtual buses,
+  which exist precisely so other software can capture them, while `A1`-`A5`
+  are physical buses feeding speakers and headphones. Only a B bus is now
+  recommendable, ordered B1, B2, B3; the list is grouped and labelled so the
+  difference is visible; and choosing a non-virtual device asks for
+  confirmation first.
+
+- **With no VoiceMeeter present the installer preselected device number one,**
+  which on a typical machine is a live microphone - one keystroke away from
+  relaying someone's microphone into a voice channel. There is now no default
+  in that case; a number must be entered.
+
+- `Sort-Object -Property 'Rank'` does not sort hashtables: a bare property
+  name resolves against the PSObject adapter, which exposes Count/Keys/Values
+  rather than the keys, so the ranking silently did nothing. Fixed with
+  script-block properties.
+
 ### Fixed - prerequisite detection
 
 - Python installed for all users (HKLM only) was never found: only HKCU was

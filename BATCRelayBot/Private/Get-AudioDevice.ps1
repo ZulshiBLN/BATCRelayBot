@@ -10,6 +10,23 @@ device name spelled exactly as ffmpeg reports it. Asking the user to type it
 is how you get a bot that connects to Discord and then silently streams
 nothing, so the name is read back from the same ffmpeg binary that will
 later use it.
+
+Picking the right one out of the list matters just as much. A VoiceMeeter
+install exposes a recording device per bus, and they are not
+interchangeable:
+
+  B1, B2, B3   virtual buses. Nothing is wired to them physically; they exist
+               so other software can capture what VoiceMeeter mixes. This is
+               what the bot needs, and README step 3 tells users to enable B1
+               on the Virtual Input strip.
+
+  A1 ... A5    physical buses, feeding speakers or headphones. Capturing one
+               is not what the routing instructions set up.
+
+ffmpeg lists devices in no useful order, so choosing "the first one that says
+Voicemeeter and Out" picks whichever the enumeration happened to return
+first - on the machine this was found on, that was B3 while the routing
+guide had set up B1.
 #>
 
 function Get-DshowAudioDevice {
@@ -68,16 +85,126 @@ function Get-DshowAudioDevice {
     return $devices.ToArray()
 }
 
+function Get-AudioDeviceInfo {
+    <#
+    .SYNOPSIS
+    Classifies one device name into what it is good for.
+
+    .DESCRIPTION
+    Recognises both VoiceMeeter naming schemes:
+
+      current   "Voicemeeter Out B1 (VB-Audio Voicemeeter VAIO)"
+      older     "VoiceMeeter Output"      -> B1
+                "VoiceMeeter Aux Output"  -> B2
+                "VoiceMeeter VAIO3 Output"-> B3
+
+    Rank orders the candidates; only virtual buses are ever recommendable.
+
+    .OUTPUTS
+    Hashtable with Name, IsVoiceMeeter, Bus, IsVirtual, Rank, Note.
+    #>
+    [OutputType([hashtable])]
+    param(
+        [Parameter(Mandatory = $true)][string]$Name
+    )
+
+    $info = @{
+        Name          = $Name
+        IsVoiceMeeter = $false
+        Bus           = $null
+        IsVirtual     = $false
+        Rank          = 99
+        Note          = "not a VoiceMeeter bus"
+    }
+
+    if ($Name -notmatch 'Voicemeeter') { return $info }
+    $info.IsVoiceMeeter = $true
+
+    # Current scheme: an explicit bus label.
+    if ($Name -match 'Out\s+([AB])(\d+)') {
+        $letter = $Matches[1].ToUpper()
+        $number = [int]$Matches[2]
+        $info.Bus = "$letter$number"
+
+        if ($letter -eq 'B') {
+            $info.IsVirtual = $true
+            # B1 first: that is the bus README step 3 sets up.
+            $info.Rank = if ($number -le 3) { $number } else { 4 }
+            $info.Note = "virtual bus - can be captured"
+        } else {
+            $info.Rank = 90
+            $info.Note = "physical output (speakers/headphones)"
+        }
+        return $info
+    }
+
+    # Older scheme: check the qualified names before the bare one.
+    if ($Name -match 'Aux\s+Output') {
+        $info.Bus = 'B2'; $info.IsVirtual = $true; $info.Rank = 2
+        $info.Note = "virtual bus - can be captured"
+        return $info
+    }
+    if ($Name -match 'VAIO3\s+Output') {
+        $info.Bus = 'B3'; $info.IsVirtual = $true; $info.Rank = 3
+        $info.Note = "virtual bus - can be captured"
+        return $info
+    }
+    if ($Name -match 'Output') {
+        $info.Bus = 'B1'; $info.IsVirtual = $true; $info.Rank = 1
+        $info.Note = "virtual bus - can be captured"
+        return $info
+    }
+
+    $info.Rank = 95
+    $info.Note = "VoiceMeeter device of unknown type"
+    return $info
+}
+
+function Get-RankedAudioDevice {
+    <#
+    .SYNOPSIS
+    Orders devices so the capturable VoiceMeeter buses come first.
+
+    .DESCRIPTION
+    ffmpeg's own order is arbitrary, so the list is rebuilt: virtual buses in
+    bus order, then everything else in the order ffmpeg reported it.
+
+    .OUTPUTS
+    Array of the hashtables from Get-AudioDeviceInfo, best candidate first.
+    #>
+    [OutputType([hashtable[]])]
+    param([string[]]$Devices)
+
+    $annotated = @()
+    $index = 0
+    foreach ($device in $Devices) {
+        $info = Get-AudioDeviceInfo -Name $device
+        $info.Order = $index++
+        $annotated += $info
+    }
+
+    # Script blocks, not property names: Sort-Object resolves a bare property
+    # name against the PSObject adapter, and for a hashtable that exposes
+    # Count/Keys/Values - not the keys themselves. Sorting by 'Rank' silently
+    # did nothing and left the list in enumeration order.
+    return @($annotated | Sort-Object -Property { $_.Rank }, { $_.Order })
+}
+
 function Select-AudioDevice {
     <#
     .SYNOPSIS
     Prompts the user to choose the recording device to stream from.
 
     .DESCRIPTION
-    Presents the enumerated devices as a numbered list with the most likely
-    VoiceMeeter output preselected. Falls back to manual entry when ffmpeg is
+    Presents the capturable VoiceMeeter buses first, with B1 preselected, and
+    everything else below. Falls back to manual entry when ffmpeg is
     unavailable or reports nothing, so a missing device list slows the user
     down instead of stopping the install.
+
+    When no virtual bus exists there is deliberately no default: the
+    alternative would be to preselect whatever happened to be first, which on
+    a typical machine is a live microphone - and silently relaying someone's
+    microphone into a voice channel is the one wrong answer worth ruling out.
 
     .OUTPUTS
     The chosen device name, or $null if the user aborted.
@@ -101,7 +228,7 @@ function Select-AudioDevice {
         Write-Host "  Could not read the device list from ffmpeg." -ForegroundColor Yellow
         Write-Host "  Make sure VoiceMeeter is running, then enter the name manually." -ForegroundColor Yellow
         Write-Host "  It must match exactly what ffmpeg reports, for example:" -ForegroundColor Gray
-        Write-Host "    VoiceMeeter Output (VB-Audio VoiceMeeter VAIO)" -ForegroundColor Gray
+        Write-Host "    Voicemeeter Out B1 (VB-Audio Voicemeeter VAIO)" -ForegroundColor Gray
         Write-Host ""
         Write-InstallLog "Audio device enumeration returned nothing; falling back to manual entry" -LogPath $LogPath
 
@@ -110,45 +237,87 @@ function Select-AudioDevice {
         return $manual.Trim()
     }
 
-    # VoiceMeeter's own outputs are what this bot exists to relay, so surface
-    # them first as the default.
-    $preferred = 0
-    for ($i = 0; $i -lt $devices.Count; $i++) {
-        if ($devices[$i] -match 'Voicemeeter' -and $devices[$i] -match 'Out') { $preferred = $i; break }
-        if ($devices[$i] -match 'Voicemeeter' -and $preferred -eq 0) { $preferred = $i }
+    $ordered = @(Get-RankedAudioDevice -Devices $devices)
+    $virtual = @($ordered | Where-Object { $_.IsVirtual })
+    $others = @($ordered | Where-Object { -not $_.IsVirtual })
+
+    if ($virtual.Count -gt 0) {
+        Write-Host "  VoiceMeeter virtual buses - what the bot should capture:" -ForegroundColor Gray
+        Write-Host ""
+        for ($i = 0; $i -lt $virtual.Count; $i++) {
+            $marker = if ($i -eq 0) { "   <- recommended" } else { "" }
+            $color = if ($i -eq 0) { "Green" } else { "Gray" }
+            Write-Host ("    [{0}] {1}{2}" -f ($i + 1), $virtual[$i].Name, $marker) -ForegroundColor $color
+        }
+        Write-Host ""
+        Write-Host "  B1 is the bus the setup guide routes audio to (README step 3)." -ForegroundColor DarkGray
+        Write-Host ""
+    } else {
+        Write-Host "  No VoiceMeeter virtual bus found." -ForegroundColor Yellow
+        Write-Host "  Start VoiceMeeter and run the installer again, or pick manually below." -ForegroundColor Yellow
+        Write-Host ""
     }
 
-    Write-Host "  Recording devices reported by ffmpeg:" -ForegroundColor Gray
-    Write-Host ""
-    for ($i = 0; $i -lt $devices.Count; $i++) {
-        $marker = if ($i -eq $preferred) { " (recommended)" } else { "" }
-        $color = if ($i -eq $preferred) { "Green" } else { "Gray" }
-        Write-Host ("    [{0}] {1}{2}" -f ($i + 1), $devices[$i], $marker) -ForegroundColor $color
+    if ($others.Count -gt 0) {
+        Write-Host "  Other inputs - A buses feed speakers, the rest are live microphones:" -ForegroundColor DarkGray
+        Write-Host ""
+        for ($i = 0; $i -lt $others.Count; $i++) {
+            Write-Host ("    [{0}] {1}" -f ($virtual.Count + $i + 1), $others[$i].Name) -ForegroundColor DarkGray
+        }
+        Write-Host ""
     }
-    Write-Host ""
+
+    $all = @($virtual) + @($others)
+    $hasDefault = ($virtual.Count -gt 0)
 
     while ($true) {
-        $answer = Read-Host ("Select device (1-{0}), [Enter] for {1}" -f $devices.Count, ($preferred + 1))
+        $prompt = if ($hasDefault) {
+            "Select device (1-{0}), [Enter] for 1" -f $all.Count
+        } else {
+            "Select device (1-{0})" -f $all.Count
+        }
+
+        $answer = Read-Host $prompt
 
         if ([string]::IsNullOrWhiteSpace($answer)) {
-            $selected = $devices[$preferred]
-            Write-InstallLog "Audio device selected (default): $selected" -LogPath $LogPath
+            if (-not $hasDefault) {
+                Write-Host "  Please pick a number - there is no safe default here." -ForegroundColor Red
+                continue
+            }
+            $selected = $all[0].Name
+            Write-InstallLog "Audio device selected (default, $($all[0].Bus)): $selected" -LogPath $LogPath
             Write-Host "  Selected: $selected" -ForegroundColor Green
             Write-Host ""
             return $selected
         }
 
         $index = 0
-        if ([int]::TryParse($answer.Trim(), [ref]$index) -and $index -ge 1 -and $index -le $devices.Count) {
-            $selected = $devices[$index - 1]
-            Write-InstallLog "Audio device selected: $selected" -LogPath $LogPath
-            Write-Host "  Selected: $selected" -ForegroundColor Green
+        if ([int]::TryParse($answer.Trim(), [ref]$index) -and $index -ge 1 -and $index -le $all.Count) {
+            $choice = $all[$index - 1]
+
+            if (-not $choice.IsVirtual) {
+                Write-Host "  Note: $($choice.Note)." -ForegroundColor Yellow
+                Write-Host "  That is usually not what you want to relay into Discord." -ForegroundColor Yellow
+                $confirm = Read-Host "  Use it anyway? (y/N)"
+                if ($confirm -notmatch '^(y|yes|j|ja)$') {
+                    Write-Host ""
+                    continue
+                }
+            }
+
+            Write-InstallLog "Audio device selected: $($choice.Name)" -LogPath $LogPath
+            Write-Host "  Selected: $($choice.Name)" -ForegroundColor Green
             Write-Host ""
-            return $selected
+            return $choice.Name
         }
 
-        Write-Host "  Please enter a number between 1 and $($devices.Count)." -ForegroundColor Red
+        Write-Host "  Please enter a number between 1 and $($all.Count)." -ForegroundColor Red
     }
 }
 
-Export-ModuleMember -Function @('Get-DshowAudioDevice', 'Select-AudioDevice')
+Export-ModuleMember -Function @(
+    'Get-DshowAudioDevice',
+    'Get-AudioDeviceInfo',
+    'Get-RankedAudioDevice',
+    'Select-AudioDevice'
+)
