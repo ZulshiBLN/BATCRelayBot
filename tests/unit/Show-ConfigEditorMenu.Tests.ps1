@@ -298,8 +298,9 @@ Describe "Show-ConfigEditorMenu" {
 
     It "reports a missing config instead of throwing" {
         $absent = Join-Path ([System.IO.Path]::GetTempPath()) "no-such-config-$([guid]::NewGuid()).json"
-        Show-ConfigEditorMenu -ConfigPath $absent -ErrorAction SilentlyContinue 6>$null |
-            Should -BeNullOrEmpty
+
+        { Show-ConfigEditorMenu -ConfigPath $absent 6>$null } | Should -Not -Throw
+        Show-ConfigEditorMenu -ConfigPath $absent 6>$null | Should -BeNullOrEmpty
     }
 
     It "never prints any part of the token" {

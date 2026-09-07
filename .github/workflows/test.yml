@@ -98,4 +98,8 @@ jobs:
       - name: Run mypy type checking
         shell: bash
         run: |
-          mypy bot.py --ignore-missing-imports --exit-code 0 || exit 0
+          # --exit-code 0 is not a mypy option; mypy rejected the arguments and
+          # exited before checking anything, so this step has never type-checked
+          # the file. The trailing "|| true" keeps the step advisory, as the
+          # other lint steps are.
+          mypy bot.py --ignore-missing-imports || true

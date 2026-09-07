@@ -286,11 +286,14 @@ Describe "Config File Safety Functions" {
         }
 
         It "Should handle write errors gracefully" {
-            # Arrange - use read-only path
-            $readOnlyPath = "C:\Windows\System32\test_readonly_config.json"
+            # A path inside a directory that does not exist fails the same way
+            # for every caller. The previous version targeted
+            # C:\Windows\System32, which only fails when the process is not
+            # elevated - on the CI runner it is, so the write succeeded, the
+            # test failed, and it left a file behind in System32.
+            $unwritablePath = Join-Path $env:TEMP "no-such-dir-$([guid]::NewGuid())\config.json"
 
-            # Act & Assert
-            { Write-ConfigFile -ConfigPath $readOnlyPath -JsonContent '{}' } | Should -Throw
+            { Write-ConfigFile -ConfigPath $unwritablePath -JsonContent '{}' } | Should -Throw
         }
     }
 

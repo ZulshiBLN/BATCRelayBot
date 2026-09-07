@@ -30,7 +30,11 @@ function Show-ConfigEditorMenu {
     )
 
     if (-not (Test-Path $ConfigPath)) {
-        Write-Error "Config file not found: $ConfigPath"
+        # Write-Host, not Write-Error: this is an expected, handled condition
+        # that the caller already reports. Writing to the error stream made
+        # the outcome depend on the host's $ErrorActionPreference - the same
+        # call passed locally and failed on the CI runner.
+        Write-Host "  config.json not found: $ConfigPath" -ForegroundColor Red
         return $null
     }
 
