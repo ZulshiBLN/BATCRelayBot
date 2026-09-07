@@ -36,7 +36,10 @@ function Write-ConfigFile {
     $tempPath = "$ConfigPath.tmp"
 
     try {
-        [System.IO.File]::WriteAllText($tempPath, $JsonContent, [System.Text.Encoding]::UTF8)
+        # UTF8Encoding($false) - [System.Text.Encoding]::UTF8 emits a BOM, which
+        # contradicts the documented behaviour above and trips strict readers.
+        $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+        [System.IO.File]::WriteAllText($tempPath, $JsonContent, $utf8NoBom)
         Move-Item $tempPath $ConfigPath -Force
         return $true
     }

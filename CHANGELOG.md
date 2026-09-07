@@ -5,6 +5,91 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-09-07
+
+Minor rather than patch: the config file schema changed. Existing
+`config.json` files are migrated automatically on the next install.
+
+### Fixed (CRITICAL) - the installed bot could never start
+
+- **config.json did not match what bot.py reads.** The installer wrote
+  `server_id` and `channel_id`; bot.py requires `guild_id` and
+  `voice_channel_id`. `audio_device_name` - the recording device the bot
+  streams from - was never written or even asked for. Every installation
+  since v1.0.0 produced a config that bot.py rejected at startup. The
+  installer now writes the schema its consumers actually read.
+- **Discord IDs were written as JSON strings.** discord.py matches guilds and
+  channels on int, so a quoted ID resolved to nothing and the bot logged
+  "not found" and idled. They are now written as numbers.
+- **`Start-BATCRelayBot` never received the fields it requires.**
+  `voicemeeter_process_name`, `batc_path` and `batc_process_name` were absent
+  from every generated config, and `voicemeeter_path` pointed at a directory
+  where an executable was expected.
+- **Auto-install could never satisfy the readiness check.** The Phase 4b
+  handler ran winget and returned without re-detecting anything, so the check
+  that followed still saw the tool as missing and refused to install - after
+  the user had already entered their token, server ID and channel ID. There
+  was a second, working copy of the same logic sitting unreachable inside
+  `Start-Installation`. There is now one implementation, and success is
+  decided by detection rather than by winget's exit code.
+- **`exit` inside module functions terminated the whole PowerShell session,**
+  closing the window before any error could be read. v1.3.16 pauses before
+  the exit; the exits themselves are now `return`.
+- **No log existed for the most common failures.** The log directory was
+  created in installation step 1, so anything that failed during detection,
+  credential entry or the readiness check left no trace. Logging now starts
+  before the first thing that can fail.
+
+### Fixed - prerequisite detection
+
+- Python installed for all users (HKLM only) was never found: only HKCU was
+  searched. HKLM, WOW6432Node and the `py` launcher are now included.
+- The Microsoft Store alias at `WindowsApps\python.exe` - a zero-byte stub
+  that opens the Store - could be reported as a working interpreter. Every
+  candidate is now verified by running it, and interpreters older than 3.10
+  are reported with the version that was found.
+- BeyondATC was only looked for under `Program Files` and LocalLow, missing
+  any install on another drive. The uninstall registry entries are now read.
+- VoiceMeeter detection returns the executable and process name, not just the
+  directory, so the launcher can actually start it.
+- `Write-ConfigFile` wrote a UTF-8 BOM despite documenting that it did not.
+
+### Changed
+
+- **Phase order.** Prerequisites are resolved before any credentials are
+  requested, so a missing tool can no longer discard what was just typed.
+- **VoiceMeeter no longer blocks the installation.** It has to come from
+  VB-Audio's own installer, so the installer explains what to do and lets the
+  user decide whether to continue. BeyondATC is informational only: it is
+  optional, commercial software, and `Start-BATCRelayBot` no longer refuses
+  to run without it.
+- **The audio device is chosen from a list** produced by the same ffmpeg the
+  bot will use, instead of being typed by hand.
+- `Show-PrerequisitesInfo` takes the detection results instead of running a
+  second, independent detection pass.
+- Discord User-Agent follows the documented `DiscordBot ($url, $version)`
+  format.
+- `Start-BATCRelayBot` no longer changes the caller's working directory.
+- bot.py passes `ffmpeg_path` to discord.py instead of relying on ffmpeg
+  being on PATH.
+
+### Security
+
+- The bot token is redacted from all log output and never partially printed.
+- `SecureString` conversion frees its unmanaged buffer, which previously left
+  the token in memory for the life of the session.
+
+### Tests
+
+- New `ConfigContract.Tests.ps1` verifies the installer's output against the
+  keys bot.py and `Start-BATCRelayBot` actually declare, reading both lists
+  from their source so the two cannot drift apart again. The previous
+  `Start-Installation` test asserted the broken schema, which is why the
+  mismatch survived sixteen releases.
+- `Start-Installation` tests no longer run pip for real or write into the
+  developer's own installation directory.
+- Suite goes from 270 passing / 9 failing to 298 passing / 0 failing.
+
 ## [1.3.16] - 2026-08-31 (HOTFIX)
 
 ### Fixed (CRITICAL)

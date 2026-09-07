@@ -31,7 +31,7 @@
 
     if (-not (Test-Path $pidFile)) {
         Write-Host "No bot.pid found - bot is not running or was not started with Start-BATCRelayBot." -ForegroundColor Yellow
-        exit 0
+        return
     }
 
     $botPid = Get-Content $pidFile -ErrorAction SilentlyContinue
@@ -39,7 +39,7 @@
     if (-not ($botPid -and (Get-Process -Id $botPid -ErrorAction SilentlyContinue))) {
         Write-Host "Process PID $botPid is not running." -ForegroundColor Yellow
         Remove-Item $pidFile -ErrorAction SilentlyContinue
-        exit 0
+        return
     }
 
     Write-Host "Sending stop signal to bot (PID $botPid) - waiting for graceful shutdown..." -ForegroundColor Cyan

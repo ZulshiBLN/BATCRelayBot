@@ -47,23 +47,36 @@ Install-Module BATCRelayBot -Repository PSGallery
 Install-BATCRelayBot
 ```
 
-This will automatically:
-- Create bot directory in `$env:USERPROFILE\AppData\Local\BATCRelayBot`
-- Install Python 3.10+ (via winget)
-- Install ffmpeg (via winget)
-- Install VoiceMeeter (via winget)
-- **Auto-detect VoiceMeeter installation path** (no prompt if already installed)
-- Install required Python packages
-- Auto-detect your VoiceMeeter output device
-- Prompt you for:
-  - Discord bot token
-  - Discord server ID (guild_id)
-  - Discord voice channel ID
-  - Path to BeyondATC.exe (if using BeyondATC)
-  - Path to VoiceMeeter (only if auto-detection failed)
-- Write configuration to `config.json`
+The installer runs in six phases and resolves every prerequisite *before*
+asking for anything, so a missing tool can never discard credentials you have
+already typed:
 
-**Note:** VoiceMeeter installation may require a **system restart** to fully activate. If the setup completes but VoiceMeeter isn't working, restart Windows.
+1. **Detect** Python, ffmpeg, VoiceMeeter and BeyondATC (silent)
+2. **Report** what was found and what is missing
+3. **Resolve** what is missing:
+   - Python and ffmpeg can be installed for you via winget, per-user, without
+     admin rights
+   - VoiceMeeter and BeyondATC are only checked. Both must be installed with
+     their vendor's own installer - VoiceMeeter because it ships audio
+     drivers, BeyondATC because it is commercial software with no winget
+     package. You get a link and a short guide instead.
+4. **Configure** — you are prompted for:
+   - Discord bot token (validated against the Discord API before it is accepted)
+   - Discord server ID (`guild_id`)
+   - Discord voice channel ID
+   - The recording device to stream, **chosen from a list** that ffmpeg
+     reports, so the name always matches exactly
+5. **Confirm** the summary
+6. **Install** — Python packages, `bot.py` and `config.json` into
+   `$env:LOCALAPPDATA\BATCRelayBot`, then verify that the generated config
+   satisfies everything `bot.py` requires
+
+Everything is logged to `install.log` in the installation directory from the
+first step onwards, including any failure.
+
+**Note:** VoiceMeeter requires a **system restart** after installation before
+its virtual audio devices appear. Start VoiceMeeter before running the
+installer, otherwise its outputs will be missing from the device list.
 
 ### 3. Configure VoiceMeeter audio routing (manual step)
 
@@ -146,12 +159,33 @@ Start-BATCRelayBot
 
 The `config.json` file contains these fields (you can edit all of them):
 
+Required by `bot.py` — the bot exits at startup if any is missing or empty:
+
 - **`bot_token`**: Discord bot authentication token (secret — treat like a password)
-- **`server_id`**: Discord server/guild ID
-- **`voice_channel_id`**: Discord voice channel ID where the bot will stream
-- **`voicemeeter_path`**: Path to voicemeeter_x64.exe (auto-detected during setup)
-- **`ffmpeg_path`**: Path to ffmpeg.exe (auto-detected during setup)
-- **`python_path`**: Path to python.exe (auto-detected during setup)
+- **`guild_id`**: Discord server ID, as a **number, not a string**
+- **`voice_channel_id`**: Discord voice channel ID, likewise a number
+- **`audio_device_name`**: The recording device to stream, spelled exactly as
+  ffmpeg reports it, e.g. `VoiceMeeter Output (VB-Audio Voicemeeter VAIO)`.
+  List the available names with:
+  ```powershell
+  ffmpeg -list_devices true -f dshow -i dummy
+  ```
+
+Used by `Start-BATCRelayBot` and `bot.py`, all auto-detected during setup:
+
+- **`python_path`**: Path to python.exe (required to start the bot)
+- **`ffmpeg_path`**: Path to ffmpeg.exe
+- **`voicemeeter_path`** / **`voicemeeter_process_name`**: Executable and
+  process name, used to start VoiceMeeter if it is not already running
+- **`batc_path`** / **`batc_process_name`**: The same for BeyondATC. Leave
+  empty if you do not use it — the bot works without it.
+- **`voicemeeter_wait_seconds`** / **`batc_wait_seconds`**: How long to wait
+  after starting each one (defaults: 6 and 8)
+
+> **Upgrading from 1.3.x:** the fields were previously named `server_id` and
+> `channel_id`, and `audio_device_name` was never written. Running
+> `Install-BATCRelayBot` migrates the names automatically; the audio device
+> cannot be guessed and is asked for.
 
 ### Important Notes
 
@@ -160,9 +194,12 @@ The `config.json` file contains these fields (you can edit all of them):
 - **Backup your config**: Before major edits, manually copy config.json to config.json.backup
 - **JSON syntax matters**: Make sure your JSON is valid after editing (use a JSON validator if unsure)
 
-### Coming in v1.3.11
+### Interactive editing
 
-The interactive `Edit-BATCRelayBotConfig` function will let you update settings without manual JSON editing. See [CONFIG-EDITOR-BUGS-ANALYSIS.md](plans/todo/CONFIG-EDITOR-BUGS-ANALYSIS.md) for why it's not available yet.
+`Edit-BATCRelayBotConfig` is still disabled: it returns a notice without
+changing anything. Its underlying helpers were repaired in 1.4.0, but the
+command itself has not been re-audited, so use the manual route above.
+Re-running `Install-BATCRelayBot` also regenerates the configuration.
 
 ---
 

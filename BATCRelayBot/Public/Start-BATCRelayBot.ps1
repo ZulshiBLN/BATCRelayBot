@@ -1,4 +1,4 @@
-﻿function Start-BATCRelayBot {
+function Start-BATCRelayBot {
     <#
     .SYNOPSIS
     Starts the BATC Relay Bot in the background.
@@ -24,37 +24,52 @@
     )
 
     $ErrorActionPreference = "Stop"
-    Set-Location $BotPath
+
+    # No Set-Location: this is a module function, and moving the caller's
+    # working directory is a side effect they did not ask for. Start-Process
+    # gets -WorkingDirectory instead.
 
     $configPath = Join-Path $BotPath "config.json"
     if (-not (Test-Path $configPath)) {
         Write-Host "ERROR: config.json not found at $configPath" -ForegroundColor Red
         Write-Host "Run Install-BATCRelayBot first or copy config.example.json to config.json" -ForegroundColor Red
-        exit 1
+        return
     }
 
     try {
         $config = Get-Content $configPath -Raw | ConvertFrom-Json
     } catch {
         Write-Host "ERROR: config.json is invalid JSON: $($_.Exception.Message)" -ForegroundColor Red
-        exit 1
+        return
     }
 
-    $requiredFields = @("python_path", "voicemeeter_path", "voicemeeter_process_name", "batc_path", "batc_process_name")
+    # Only python_path is genuinely required to start the bot. VoiceMeeter and
+    # BeyondATC are launched if configured and skipped with a warning if not:
+    # BeyondATC is optional commercial software, and treating it as mandatory
+    # meant a perfectly valid installation refused to start without it.
+    $requiredFields = @("python_path")
     foreach ($field in $requiredFields) {
         if (-not $config.$field) {
             Write-Host "ERROR: field '$field' is missing in config.json" -ForegroundColor Red
-            exit 1
+            Write-Host "Run Install-BATCRelayBot to regenerate the configuration." -ForegroundColor Yellow
+            return
         }
     }
 
-    function Ensure-Running {
+    function Start-ComponentIfNeeded {
         param(
             [string]$DisplayName,
             [string]$ExePath,
             [string]$ProcessName,
             [int]$WaitSecondsAfterStart
         )
+
+        # Not configured at all - the component is optional or was skipped
+        # during installation.
+        if ([string]::IsNullOrWhiteSpace($ExePath) -or [string]::IsNullOrWhiteSpace($ProcessName)) {
+            Write-Host "$DisplayName is not configured - skipping." -ForegroundColor DarkGray
+            return
+        }
 
         $running = Get-Process -Name $ProcessName -ErrorAction SilentlyContinue
         if ($running) {
@@ -81,9 +96,9 @@
     $batcWait = if ($config.batc_wait_seconds) { $config.batc_wait_seconds } else { 8 }
 
     Write-Host "=== Checking prerequisites ===" -ForegroundColor Cyan
-    Ensure-Running -DisplayName "VoiceMeeter" -ExePath $config.voicemeeter_path `
+    Start-ComponentIfNeeded -DisplayName "VoiceMeeter" -ExePath $config.voicemeeter_path `
         -ProcessName $config.voicemeeter_process_name -WaitSecondsAfterStart $voicemeeterWait
-    Ensure-Running -DisplayName "BeyondATC" -ExePath $config.batc_path `
+    Start-ComponentIfNeeded -DisplayName "BeyondATC" -ExePath $config.batc_path `
         -ProcessName $config.batc_process_name -WaitSecondsAfterStart $batcWait
 
     Write-Host ""
@@ -91,7 +106,8 @@
 
     if (-not (Test-Path $config.python_path)) {
         Write-Host "ERROR: python_path in config.json does not exist: $($config.python_path)" -ForegroundColor Red
-        exit 1
+        Write-Host "Run Install-BATCRelayBot again to re-detect Python." -ForegroundColor Yellow
+        return
     }
 
     $pythonDir = Split-Path -Parent $config.python_path
@@ -115,7 +131,7 @@
         $oldPid = Get-Content $pidFile -ErrorAction SilentlyContinue
         if ($oldPid -and (Get-Process -Id $oldPid -ErrorAction SilentlyContinue)) {
             Write-Host "Bot is already running (PID $oldPid). Stop it first with Stop-BATCRelayBot." -ForegroundColor Yellow
-            exit 0
+            return
         }
     }
 

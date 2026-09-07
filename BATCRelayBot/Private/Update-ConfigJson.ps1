@@ -50,7 +50,19 @@ function Update-ConfigJson {
     }
 
     $jsonField = $fieldMap[$Field]
-    $config.$jsonField = $Value
+    if (-not $jsonField) {
+        throw "Unknown field '$Field'. Expected one of: $($fieldMap.Keys -join ', ')"
+    }
+
+    # ConvertFrom-Json yields a PSCustomObject, and dot-assignment on one can
+    # only overwrite an existing property - it throws for a new one. A config
+    # that has never had this field (output_format and bot_activity are not
+    # written by the installer) therefore needs Add-Member instead.
+    if ($config.PSObject.Properties.Name -contains $jsonField) {
+        $config.$jsonField = $Value
+    } else {
+        $config | Add-Member -NotePropertyName $jsonField -NotePropertyValue $Value -Force
+    }
 
     $json = $config | ConvertTo-Json -Depth 10
 

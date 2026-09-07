@@ -30,24 +30,27 @@ function Edit-BATCRelayBotConfig {
         [string]$InstallPath = "$env:USERPROFILE\AppData\Local\BATCRelayBot"
     )
 
-    # Feature disabled for v1.3.10 - critical bugs identified during audit
-    # See plans/todo/CONFIG-EDITOR-BUGS-ANALYSIS.md for details
-    # Will be fully implemented in v1.3.11
+    # Still disabled. The helper functions it builds on (Update-ConfigJson,
+    # Verify-ConfigChange, Write-ConfigFile) were fixed in 1.4.0, but this
+    # command has not been re-audited against the current config schema, so it
+    # stays off rather than shipping half-verified. Everything below this
+    # return is therefore unreachable by design.
     Write-Host ""
     Write-Host "================================================================" -ForegroundColor Yellow
-    Write-Host "  Edit-BATCRelayBotConfig is not yet available in v1.3.10      " -ForegroundColor Yellow
-    Write-Host "  This feature has critical bugs and will be fixed in v1.3.11   " -ForegroundColor Yellow
-    Write-Host "  For now, edit config.json manually or wait for the next       " -ForegroundColor Yellow
-    Write-Host "  release.                                                      " -ForegroundColor Yellow
+    Write-Host "  Edit-BATCRelayBotConfig is not available yet.                 " -ForegroundColor Yellow
+    Write-Host "                                                                " -ForegroundColor Yellow
+    Write-Host "  Edit config.json directly, or re-run Install-BATCRelayBot to   " -ForegroundColor Yellow
+    Write-Host "  regenerate it:                                                " -ForegroundColor Yellow
+    Write-Host "    notepad `$env:LOCALAPPDATA\BATCRelayBot\config.json          " -ForegroundColor Yellow
     Write-Host "================================================================" -ForegroundColor Yellow
     Write-Host ""
 
     return @{
         Success = $false
-        Message = "Edit-BATCRelayBotConfig is not yet available in this version"
+        Message = "Edit-BATCRelayBotConfig is not available in this version"
         BackupPath = $null
         UpdatedFields = @{}
-        Errors = @("Feature disabled for v1.3.10 - will be implemented in v1.3.11")
+        Errors = @("Feature disabled - edit config.json manually or re-run Install-BATCRelayBot")
         LogPath = $null
     }
 

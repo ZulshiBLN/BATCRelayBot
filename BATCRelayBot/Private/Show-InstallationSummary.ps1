@@ -1,122 +1,88 @@
 #Requires -Version 5.1
 
+<#
+.SYNOPSIS
+Shows what is about to be installed and whether it can proceed.
+
+.DESCRIPTION
+VoiceMeeter is no longer a hard gate here. It cannot be installed
+automatically, and the user has already been shown the consequences and
+chosen to continue in phase 3 - blocking again at this point would only
+discard the credentials they just entered.
+
+Returns BlockingReason alongside CanProceed so the caller can report *why*
+rather than printing a generic "cannot proceed".
+#>
+
 function Show-InstallationSummary {
+    [OutputType([hashtable])]
     param(
         [Parameter(Mandatory = $true)]
         [hashtable]$Prerequisites,
+
         [Parameter(Mandatory = $true)]
-        [hashtable]$DiscordConfig
+        [hashtable]$DiscordConfig,
+
+        [string]$InstallPath = (Join-Path $env:LOCALAPPDATA "BATCRelayBot")
     )
 
     Write-Host ""
-    Write-Host "===================================================" -ForegroundColor Cyan
-    Write-Host "   Installation Summary - Review Before Proceed   " -ForegroundColor Cyan
-    Write-Host "===================================================" -ForegroundColor Cyan
+    Write-Host "  Target        $InstallPath" -ForegroundColor Gray
     Write-Host ""
+    Write-Host "  Python        $($Prerequisites.Python.Path)" -ForegroundColor Gray
+    Write-Host "  FFmpeg        $($Prerequisites.FFmpeg.Path)" -ForegroundColor Gray
 
-    # Prerequisites Section
-    Write-Host "Prerequisites Status:" -ForegroundColor White -BackgroundColor DarkBlue
-    Write-Host ""
-    Write-Host "  Python Installation:" -ForegroundColor Gray
-    if ($Prerequisites.Python.Found) {
-        Write-Host "    Path: $($Prerequisites.Python.Path)" -ForegroundColor Green
-        Write-Host "    Version: $($Prerequisites.Python.Version)" -ForegroundColor Green
-    } else {
-        Write-Host "    Status: NOT FOUND" -ForegroundColor Red
-    }
-    Write-Host ""
-
-    Write-Host "  FFmpeg Installation:" -ForegroundColor Gray
-    if ($Prerequisites.FFmpeg.Found) {
-        Write-Host "    Path: $($Prerequisites.FFmpeg.Path)" -ForegroundColor Green
-    } else {
-        Write-Host "    Status: NOT FOUND" -ForegroundColor Red
-    }
-    Write-Host ""
-
-    Write-Host "  VoiceMeeter Installation:" -ForegroundColor Gray
     if ($Prerequisites.VoiceMeeter.Found) {
-        Write-Host "    Path: $($Prerequisites.VoiceMeeter.Path)" -ForegroundColor Green
+        Write-Host "  VoiceMeeter   $($Prerequisites.VoiceMeeter.ExePath)" -ForegroundColor Gray
     } else {
-        Write-Host "    Status: NOT FOUND (Required)" -ForegroundColor Red
+        Write-Host "  VoiceMeeter   not installed - audio will not work yet" -ForegroundColor Yellow
+    }
+
+    if ($Prerequisites.BeyondATC.Found -and $Prerequisites.BeyondATC.ExePath) {
+        Write-Host "  BeyondATC     $($Prerequisites.BeyondATC.ExePath)" -ForegroundColor Gray
+    } else {
+        Write-Host "  BeyondATC     not configured (optional)" -ForegroundColor DarkGray
+    }
+
+    Write-Host ""
+    # Never print any part of the token: the console scrollback outlives the
+    # installer and often ends up pasted into a bug report.
+    Write-Host "  Bot token     [REDACTED]" -ForegroundColor Gray
+    Write-Host "  Server ID     $($DiscordConfig.GuildId)" -ForegroundColor Gray
+    Write-Host "  Voice channel $($DiscordConfig.VoiceChannelId)" -ForegroundColor Gray
+
+    if ([string]::IsNullOrWhiteSpace($DiscordConfig.AudioDeviceName)) {
+        Write-Host "  Audio device  not set - the bot will stream silence" -ForegroundColor Yellow
+    } else {
+        Write-Host "  Audio device  $($DiscordConfig.AudioDeviceName)" -ForegroundColor Gray
     }
     Write-Host ""
 
-    Write-Host "  BeyondATC Installation:" -ForegroundColor Gray
-    if ($Prerequisites.BeyondATC.Found) {
-        Write-Host "    Status: INSTALLED (optional)" -ForegroundColor Green
-    } else {
-        Write-Host "    Status: NOT INSTALLED (optional, can skip)" -ForegroundColor Gray
-    }
-    Write-Host ""
+    $blocking = @()
+    if (-not $Prerequisites.Python.Found) { $blocking += "Python is missing" }
+    if (-not $Prerequisites.FFmpeg.Found) { $blocking += "FFmpeg is missing" }
+    if ([string]::IsNullOrWhiteSpace($DiscordConfig.BotToken)) { $blocking += "the bot token is missing" }
+    if ([string]::IsNullOrWhiteSpace($DiscordConfig.GuildId)) { $blocking += "the server ID is missing" }
+    if ([string]::IsNullOrWhiteSpace($DiscordConfig.VoiceChannelId)) { $blocking += "the voice channel ID is missing" }
 
-    # Discord Configuration Section
-    Write-Host "Discord Configuration:" -ForegroundColor White -BackgroundColor DarkBlue
-    Write-Host ""
-    Write-Host "  Bot Token:" -ForegroundColor Gray
-    if ($DiscordConfig.BotToken) {
-        Write-Host "    Token: [REDACTED] (length: $($DiscordConfig.BotToken.Length) chars)" -ForegroundColor Green
-    } else {
-        Write-Host "    Token: NOT PROVIDED" -ForegroundColor Red
-    }
-    Write-Host ""
-
-    Write-Host "  Server ID:" -ForegroundColor Gray
-    if ($DiscordConfig.ServerId) {
-        Write-Host "    ID: $($DiscordConfig.ServerId)" -ForegroundColor Green
-    } else {
-        Write-Host "    ID: NOT PROVIDED" -ForegroundColor Red
-    }
-    Write-Host ""
-
-    Write-Host "  Channel ID:" -ForegroundColor Gray
-    if ($DiscordConfig.ChannelId) {
-        Write-Host "    ID: $($DiscordConfig.ChannelId)" -ForegroundColor Green
-    } else {
-        Write-Host "    ID: NOT PROVIDED" -ForegroundColor Red
-    }
-    Write-Host ""
-
-    # Installation Location
-    Write-Host "Installation Location:" -ForegroundColor White -BackgroundColor DarkBlue
-    Write-Host ""
-    $installPath = "$env:USERPROFILE\AppData\Local\BATCRelayBot"
-    Write-Host "  Path: $installPath" -ForegroundColor Cyan
-    Write-Host ""
-
-    # Readiness Check
-    $pythonOk = $Prerequisites.Python.Found
-    $ffmpegOk = $Prerequisites.FFmpeg.Found
-    $voicemeterOk = $Prerequisites.VoiceMeeter.Found
-    $discordOk = -not [string]::IsNullOrEmpty($DiscordConfig.BotToken) -and `
-                 -not [string]::IsNullOrEmpty($DiscordConfig.ServerId) -and `
-                 -not [string]::IsNullOrEmpty($DiscordConfig.ChannelId)
-
-    Write-Host "Readiness Check:" -ForegroundColor White -BackgroundColor DarkBlue
-    Write-Host ""
-
-    if ($pythonOk -and $ffmpegOk -and $voicemeterOk -and $discordOk) {
-        Write-Host "  ✓ All prerequisites met" -ForegroundColor Green
-        Write-Host "  ✓ All Discord configuration provided" -ForegroundColor Green
+    if ($blocking.Count -gt 0) {
+        Write-Host "  Cannot proceed: $($blocking -join ', ')" -ForegroundColor Red
         Write-Host ""
-        Write-Host "  Status: READY TO INSTALL" -ForegroundColor Green -BackgroundColor DarkGreen
-        $canProceed = $true
-    } else {
-        Write-Host "  ✗ Missing requirements:" -ForegroundColor Red
-        if (-not $pythonOk) { Write-Host "    - Python not found" -ForegroundColor Red }
-        if (-not $ffmpegOk) { Write-Host "    - FFmpeg not found" -ForegroundColor Red }
-        if (-not $voicemeterOk) { Write-Host "    - VoiceMeeter not found" -ForegroundColor Red }
-        if (-not $discordOk) { Write-Host "    - Discord configuration incomplete" -ForegroundColor Red }
-        Write-Host ""
-        Write-Host "  Status: CANNOT PROCEED" -ForegroundColor Red -BackgroundColor DarkRed
-        $canProceed = $false
+        return @{
+            CanProceed     = $false
+            BlockingReason = ($blocking -join ', ')
+            InstallPath    = $InstallPath
+        }
     }
+
+    Write-Host "  Ready to install." -ForegroundColor Green
     Write-Host ""
 
     return @{
-        CanProceed = $canProceed
-        InstallPath = $installPath
+        CanProceed     = $true
+        BlockingReason = $null
+        InstallPath    = $InstallPath
     }
 }
 
-Export-ModuleMember -Function Show-InstallationSummary
+Export-ModuleMember -Function 'Show-InstallationSummary'

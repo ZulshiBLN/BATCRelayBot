@@ -50,9 +50,12 @@ Describe "Token Validation - User-Agent Compliance" {
         $content | Should -Match 'User-Agent.*DiscordBot'
     }
 
-    It "User-Agent includes application name and version" {
+    It "User-Agent follows the format Discord documents: DiscordBot (url, version)" {
+        # Discord specifies "DiscordBot ($url, $versionNumber)". The prefix is
+        # what stops Cloudflare rejecting the request; the URL and version are
+        # required by the same section of the API documentation.
         $content = Get-Content -Path "$PSScriptRoot\..\..\BATCRelayBot\Private\Get-DiscordConfiguration.ps1" -Raw
-        $content | Should -Match 'DiscordBot \(BATCRelayBot/[\d.]+\)'
+        $content | Should -Match 'DiscordBot \(https://[^,]+, '
     }
 }
 

@@ -1,394 +1,257 @@
 #Requires -Version 5.1
 
+<#
+.SYNOPSIS
+Performs the installation itself, once everything has been resolved.
+
+.DESCRIPTION
+By the time this runs, prerequisites are present and the configuration has
+been collected and confirmed. It only writes files.
+
+The winget auto-install that used to live here has moved to phase 3 of
+Install-BATCRelayBot. Keeping it here duplicated the copy in the public
+function and ran after the readiness check that it was supposed to satisfy.
+#>
+
 function Start-Installation {
+    [OutputType([hashtable])]
     param(
         [Parameter(Mandatory = $true)]
         [hashtable]$Prerequisites,
+
         [Parameter(Mandatory = $true)]
-        [hashtable]$DiscordConfig
-    )
+        [hashtable]$DiscordConfig,
 
-    $installPath = "$env:USERPROFILE\AppData\Local\BATCRelayBot"
-    $logPath = Join-Path $installPath "install.log"
+        [string]$InstallPath = (Join-Path $env:LOCALAPPDATA "BATCRelayBot"),
 
-    Write-Host ""
-    Write-Host "Starting Installation..." -ForegroundColor Green
-    Write-Host ""
-
-    # PHASE 0b: Migrate existing configuration (apply ACL security to existing configs)
-    $existingConfigPath = Join-Path $installPath "config.json"
-    if (Test-Path $existingConfigPath) {
-        Write-Host "[0b/6] Securing existing configuration..." -ForegroundColor Cyan
-        try {
-            $acl = Get-Acl -Path $existingConfigPath
-            $acl.SetAccessRuleProtection($true, $false)
-
-            $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().User
-            if ($currentUser) {
-                $rule = New-Object System.Security.AccessControl.FileSystemAccessRule(
-                    $currentUser,
-                    'FullControl',
-                    'Allow'
-                )
-                $acl.SetAccessRule($rule)
-                Set-Acl -Path $existingConfigPath -AclObject $acl -ErrorAction Stop
-                Log-Message "MIGRATION: Applied ACL security to existing config.json" -LogPath $logPath
-                Write-Host "      DONE - Configuration secured for v1.3.16" -ForegroundColor Green
-            }
-        } catch {
-            Log-Message "MIGRATION-WARNING: Could not apply ACL to existing config: $_" -LogPath $logPath
-            Write-Host "      WARNING: Existing config permissions unchanged (non-critical)" -ForegroundColor Yellow
-        }
-        Write-Host ""
-    }
-
-    # Create installation directory
-    Write-Host "[1/6] Creating installation directory..." -ForegroundColor Cyan
-    try {
-        if (-not (Test-Path $installPath)) {
-            New-Item -ItemType Directory -Path $installPath -Force | Out-Null
-            Log-Message "Created installation directory: $installPath" -LogPath $logPath
-        }
-        Write-Host "      DONE" -ForegroundColor Green
-    } catch {
-        Log-Message "ERROR: Could not create installation directory: $_" -LogPath $logPath
-        Write-Host "      FAILED: $_" -ForegroundColor Red
-        return @{ Success = $false; Error = "Directory creation failed" }
-    }
-
-    # Auto-install missing prerequisites
-    Write-Host "[2/6] Ensuring required tools are installed..." -ForegroundColor Cyan
-    try {
-        if (-not $Prerequisites.Python.Found) {
-            Write-Host "      Installing Python 3.12..." -ForegroundColor Gray
-            winget install Python.Python.3.12 --silent 2>&1 | Out-Null
-
-            if ($LASTEXITCODE -ne 0) {
-                Log-Message "WARNING: Python installation returned exit code $LASTEXITCODE" -LogPath $logPath
-                Write-Host "      WARNING: Python install failed" -ForegroundColor Yellow
-            } else {
-                Log-Message "Python.Python.3.12 install command completed" -LogPath $logPath
-            }
-
-            # Wait for installation to complete and registry to update
-            Start-Sleep -Seconds 2
-
-            # Refresh PowerShell PATH from system registry (winget updates system PATH only)
-            $env:PATH = [System.Environment]::GetEnvironmentVariable('PATH','Machine') + ';' + [System.Environment]::GetEnvironmentVariable('PATH','User')
-
-            # Re-detect Python after installation
-            $pythonCheck = & {
-                # Level 1: Check winget default location (AppData)
-                try {
-                    $pythonDir = Get-ChildItem -Path "$env:LOCALAPPDATA\Programs\Python\*\python.exe" -ErrorAction SilentlyContinue |
-                                 Select-Object -First 1
-                    if ($pythonDir) {
-                        return @{Found = $true; Path = $pythonDir.FullName}
-                    }
-                } catch {}
-
-                # Level 2: Check Program Files (for machine-scope or manual installs)
-                try {
-                    $pythonDir = Get-ChildItem -Path "C:\Program Files\Python*\python.exe" -ErrorAction SilentlyContinue |
-                                 Select-Object -First 1
-                    if ($pythonDir) {
-                        return @{Found = $true; Path = $pythonDir.FullName}
-                    }
-                } catch {}
-
-                # Level 3: Fallback to Get-Command (if PATH was updated)
-                try {
-                    $pythonExe = (Get-Command python.exe -ErrorAction Stop).Source
-                    return @{Found = $true; Path = $pythonExe}
-                } catch {
-                    return @{Found = $false; Path = $null}
-                }
-            }
-            if ($pythonCheck.Found) {
-                $Prerequisites.Python = @{Found = $true; Path = $pythonCheck.Path}
-                Log-Message "Python installed and detected: $($pythonCheck.Path)" -LogPath $logPath
-            } else {
-                Log-Message "ERROR: Python installation completed but executable not found in expected locations" -LogPath $logPath
-                Write-Host "      ERROR: Python not detected after installation" -ForegroundColor Red
-            }
-        }
-
-        if (-not $Prerequisites.FFmpeg.Found) {
-            Write-Host "      Installing FFmpeg..." -ForegroundColor Gray
-            winget install Gyan.FFmpeg --silent 2>&1 | Out-Null
-
-            if ($LASTEXITCODE -ne 0) {
-                Log-Message "WARNING: FFmpeg installation returned exit code $LASTEXITCODE" -LogPath $logPath
-                Write-Host "      WARNING: FFmpeg install failed" -ForegroundColor Yellow
-            } else {
-                Log-Message "Gyan.FFmpeg install command completed" -LogPath $logPath
-            }
-
-            # Wait for installation to complete and registry to update
-            Start-Sleep -Seconds 2
-
-            # Refresh PowerShell PATH from system registry (winget updates system PATH only)
-            $env:PATH = [System.Environment]::GetEnvironmentVariable('PATH','Machine') + ';' + [System.Environment]::GetEnvironmentVariable('PATH','User')
-
-            # Re-detect FFmpeg after installation
-            $ffmpegCheck = & {
-                # Level 1: Check winget default location (AppData) - has nested version directory
-                try {
-                    $ffmpegExe = Get-ChildItem -Path "$env:LOCALAPPDATA\Microsoft\WinGet\Packages\Gyan.FFmpeg*\*\bin\ffmpeg.exe" -ErrorAction SilentlyContinue |
-                                 Select-Object -First 1
-                    if ($ffmpegExe) {
-                        return @{Found = $true; Path = $ffmpegExe.FullName}
-                    }
-                } catch {}
-
-                # Level 2: Check Program Files (for machine-scope installs)
-                try {
-                    $ffmpegExe = Get-ChildItem -Path "C:\Program Files\WinGet\Packages\Gyan.FFmpeg*\*\bin\ffmpeg.exe" -ErrorAction SilentlyContinue |
-                                 Select-Object -First 1
-                    if ($ffmpegExe) {
-                        return @{Found = $true; Path = $ffmpegExe.FullName}
-                    }
-                } catch {}
-
-                # Level 3: Fallback to Get-Command (if PATH was updated)
-                try {
-                    $ffmpegExe = (Get-Command ffmpeg.exe -ErrorAction Stop).Source
-                    return @{Found = $true; Path = $ffmpegExe}
-                } catch {
-                    return @{Found = $false; Path = $null}
-                }
-            }
-            if ($ffmpegCheck.Found) {
-                $Prerequisites.FFmpeg = @{Found = $true; Path = $ffmpegCheck.Path}
-                Log-Message "FFmpeg installed and detected: $($ffmpegCheck.Path)" -LogPath $logPath
-            } else {
-                Log-Message "ERROR: FFmpeg installation completed but executable not found in expected locations" -LogPath $logPath
-                Write-Host "      ERROR: FFmpeg not detected after installation" -ForegroundColor Red
-            }
-        }
-
-        Write-Host "      DONE" -ForegroundColor Green
-    } catch {
-        Log-Message "WARNING: Auto-install of prerequisites had issues: $_" -LogPath $logPath
-        Write-Host "      WARNING: $_" -ForegroundColor Yellow
-    }
-
-    # Install Python dependencies
-    Write-Host "[3/6] Installing Python dependencies..." -ForegroundColor Cyan
-    try {
-        if ($Prerequisites.Python.Found) {
-            $pythonPath = $Prerequisites.Python.Path
-            $requirementsPath = Get-RequirementsPath
-
-            if (Test-Path $requirementsPath) {
-                & $pythonPath -m pip install -r $requirementsPath -q
-                Log-Message "Python dependencies installed successfully" -LogPath $logPath
-                Write-Host "      DONE" -ForegroundColor Green
-            } else {
-                Log-Message "WARNING: requirements.txt not found at $requirementsPath" -LogPath $logPath
-                Write-Host "      SKIPPED (requirements.txt not found)" -ForegroundColor Yellow
-            }
-        } else {
-            Write-Host "      SKIPPED (Python not available)" -ForegroundColor Yellow
-        }
-    } catch {
-        Log-Message "ERROR: Python dependency installation failed: $_" -LogPath $logPath
-        Write-Host "      FAILED: $_" -ForegroundColor Red
-        return @{ Success = $false; Error = "Dependency installation failed" }
-    }
-
-    # Create configuration file
-    Write-Host "[4/6] Creating configuration file..." -ForegroundColor Cyan
-    try {
-        $configPath = Join-Path $installPath "config.json"
-        $configContent = @{
-            bot_token = $DiscordConfig.BotToken
-            server_id = $DiscordConfig.ServerId
-            channel_id = $DiscordConfig.ChannelId
-            voicemeeter_path = $Prerequisites.VoiceMeeter.Path
-            ffmpeg_path = $Prerequisites.FFmpeg.Path
-            python_path = $Prerequisites.Python.Path
-        }
-
-        $configJson = $configContent | ConvertTo-Json
-        $configJson | Set-Content -Path $configPath -Force -Encoding UTF8
-
-        # Restrict config.json to current user only (CRITICAL: S2 fix)
-        try {
-            $acl = Get-Acl -Path $configPath
-            $acl.SetAccessRuleProtection($true, $false)
-
-            $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().User
-            if ($currentUser) {
-                $rule = New-Object System.Security.AccessControl.FileSystemAccessRule(
-                    $currentUser,
-                    'FullControl',
-                    'Allow'
-                )
-                $acl.SetAccessRule($rule)
-                Set-Acl -Path $configPath -AclObject $acl -ErrorAction Stop
-                Log-Message "Config file permissions restricted to current user" -LogPath $logPath
-            }
-        } catch {
-            Log-Message "WARNING: Could not restrict config file permissions: $_" -LogPath $logPath
-        }
-
-        Log-Message "Configuration file created: $configPath" -LogPath $logPath
-        Write-Host "      DONE" -ForegroundColor Green
-    } catch {
-        Log-Message "ERROR: Configuration file creation failed: $_" -LogPath $logPath
-        Write-Host "      FAILED: $_" -ForegroundColor Red
-        return @{ Success = $false; Error = "Config creation failed" }
-    }
-
-    # Copy bot files
-    Write-Host "[5/6] Copying bot files..." -ForegroundColor Cyan
-    try {
-        $botSource = Get-BotFilesPath
-        if ($botSource -and (Test-Path $botSource)) {
-            Copy-Item -Path (Join-Path $botSource "bot.py") -Destination $installPath -Force -ErrorAction Stop
-            Log-Message "Bot files copied to: $installPath" -LogPath $logPath
-            Write-Host "      DONE" -ForegroundColor Green
-        } else {
-            Write-Host "      SKIPPED (bot.py not found)" -ForegroundColor Yellow
-        }
-    } catch {
-        Log-Message "WARNING: Bot file copy failed (non-critical): $_" -LogPath $logPath
-        Write-Host "      WARNING: $_" -ForegroundColor Yellow
-    }
-
-    # Final verification (R3: Prerequisites Verification)
-    Write-Host "[6/6] Verifying installation..." -ForegroundColor Cyan
-    try {
-        $configExists = Test-Path $configPath
-        $pythonOk = $Prerequisites.Python.Found
-        $ffmpegOk = $Prerequisites.FFmpeg.Found
-        $voicemeterOk = $Prerequisites.VoiceMeeter.Found
-
-        if (-not $configExists) {
-            throw "Config file not created"
-        }
-
-        if (-not $pythonOk) {
-            throw "Python not detected after installation"
-        }
-
-        if (-not $ffmpegOk) {
-            throw "FFmpeg not detected after installation"
-        }
-
-        if (-not $voicemeterOk) {
-            throw "VoiceMeeter not detected - required for audio routing"
-        }
-
-        Log-Message "Installation verification: SUCCESS" -LogPath $logPath
-        Write-Host "      DONE" -ForegroundColor Green
-    } catch {
-        Log-Message "ERROR: Installation verification failed: $_" -LogPath $logPath
-        Write-Host "      FAILED: $_" -ForegroundColor Red
-        Write-Host ""
-        Write-Host "Missing prerequisites:" -ForegroundColor Red
-        if (-not $configExists) { Write-Host "  - Configuration file" -ForegroundColor Red }
-        if (-not $pythonOk) { Write-Host "  - Python 3.12 (get from https://www.python.org)" -ForegroundColor Red }
-        if (-not $ffmpegOk) { Write-Host "  - FFmpeg (get from https://ffmpeg.org)" -ForegroundColor Red }
-        if (-not $voicemeterOk) { Write-Host "  - VoiceMeeter (get from https://vb-audio.com/Voicemeeter/)" -ForegroundColor Red }
-        return @{ Success = $false; Error = "Prerequisites verification failed" }
-    }
-
-    Write-Host ""
-    Write-Host "Installation completed successfully!" -ForegroundColor Green -BackgroundColor DarkGreen
-    Log-Message "Installation completed successfully" -LogPath $logPath
-    Write-Host ""
-    Write-Host "Next steps:" -ForegroundColor Cyan
-    Write-Host "1. Start the bot: python $installPath\bot.py" -ForegroundColor Gray
-    Write-Host "2. Bot will connect to Discord channel: $($DiscordConfig.ChannelId)" -ForegroundColor Gray
-    Write-Host "3. View logs: $logPath" -ForegroundColor Gray
-    Write-Host ""
-
-    return @{
-        Success = $true
-        InstallPath = $installPath
-        ConfigPath = $configPath
-        LogPath = $logPath
-    }
-}
-
-function Log-Message {
-    param(
-        [string]$Message,
         [string]$LogPath
     )
 
-    if (-not $LogPath) { return }
+    if (-not $LogPath) { $LogPath = Join-Path $InstallPath "install.log" }
+    $configPath = Join-Path $InstallPath "config.json"
 
-    $logDir = Split-Path -Parent $LogPath
-    if (-not (Test-Path $logDir)) {
-        try {
-            New-Item -ItemType Directory -Path $logDir -Force -ErrorAction Stop | Out-Null
-        } catch {
-            return
+    Write-Host ""
+
+    # ---- 1: directory ---------------------------------------------------
+    Write-Host "  [1/4] Installation directory" -ForegroundColor Gray
+    try {
+        if (-not (Test-Path $InstallPath)) {
+            New-Item -ItemType Directory -Path $InstallPath -Force -ErrorAction Stop | Out-Null
         }
+        Write-InstallLog "Installation directory ready: $InstallPath" -LogPath $LogPath
+        Write-Host "        OK  $InstallPath" -ForegroundColor Green
+    } catch {
+        $message = Remove-SensitiveData -Text $_.Exception.Message
+        Write-InstallLog "Could not create $($InstallPath): $message" -LogPath $LogPath -Level ERROR
+        Write-Host "        FAILED: $message" -ForegroundColor Red
+        return @{ Success = $false; Error = "Could not create the installation directory" }
     }
 
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    $logEntry = "[$timestamp] $Message"
+    # ---- 2: python dependencies -----------------------------------------
+    Write-Host "  [2/4] Python dependencies" -ForegroundColor Gray
+    $requirementsPath = Get-RequirementsPath
+    if (-not $requirementsPath) {
+        Write-InstallLog "requirements.txt not found in any known location" -LogPath $LogPath -Level ERROR
+        Write-Host "        FAILED: requirements.txt not found" -ForegroundColor Red
+        return @{ Success = $false; Error = "requirements.txt not found" }
+    }
 
     try {
-        Add-Content -Path $LogPath -Value $logEntry -Encoding UTF8 -ErrorAction SilentlyContinue
+        Write-InstallLog "pip install -r $requirementsPath" -LogPath $LogPath
+        $pipOutput = & $Prerequisites.Python.Path -m pip install -r $requirementsPath --disable-pip-version-check 2>&1 |
+            ForEach-Object { "$_" }
+
+        if ($LASTEXITCODE -ne 0) {
+            foreach ($line in ($pipOutput | Select-Object -Last 10)) {
+                Write-InstallLog "pip: $line" -LogPath $LogPath -Level ERROR
+            }
+            Write-Host "        FAILED: pip exited with code $LASTEXITCODE" -ForegroundColor Red
+            Write-Host "        See the log for pip's output: $LogPath" -ForegroundColor Yellow
+            return @{ Success = $false; Error = "Installing Python dependencies failed" }
+        }
+
+        Write-InstallLog "Python dependencies installed" -LogPath $LogPath
+        Write-Host "        OK  discord.py and dependencies installed" -ForegroundColor Green
     } catch {
-        # Silently fail if log write fails
+        $message = Remove-SensitiveData -Text $_.Exception.Message
+        Write-InstallLog "pip failed: $message" -LogPath $LogPath -Level ERROR
+        Write-Host "        FAILED: $message" -ForegroundColor Red
+        return @{ Success = $false; Error = "Installing Python dependencies failed" }
+    }
+
+    # ---- 3: bot files ---------------------------------------------------
+    Write-Host "  [3/4] Bot files" -ForegroundColor Gray
+    $botSource = Get-BotFilesPath
+    if (-not $botSource) {
+        Write-InstallLog "bot.py not found in any known location" -LogPath $LogPath -Level ERROR
+        Write-Host "        FAILED: bot.py not found" -ForegroundColor Red
+        return @{ Success = $false; Error = "bot.py not found" }
+    }
+
+    try {
+        Copy-Item -Path (Join-Path $botSource "bot.py") -Destination $InstallPath -Force -ErrorAction Stop
+        Write-InstallLog "bot.py copied from $botSource" -LogPath $LogPath
+        Write-Host "        OK  bot.py" -ForegroundColor Green
+    } catch {
+        $message = Remove-SensitiveData -Text $_.Exception.Message
+        Write-InstallLog "Copying bot.py failed: $message" -LogPath $LogPath -Level ERROR
+        Write-Host "        FAILED: $message" -ForegroundColor Red
+        return @{ Success = $false; Error = "Could not copy bot.py" }
+    }
+
+    # ---- 4: configuration -----------------------------------------------
+    Write-Host "  [4/4] Configuration" -ForegroundColor Gray
+    try {
+        New-BotConfigFile -ConfigPath $configPath `
+            -Prerequisites $Prerequisites -DiscordConfig $DiscordConfig | Out-Null
+
+        Write-InstallLog "config.json written to $configPath" -LogPath $LogPath
+        Write-Host "        OK  config.json (readable only by you)" -ForegroundColor Green
+    } catch {
+        $message = Remove-SensitiveData -Text $_.Exception.Message
+        Write-InstallLog "Writing config.json failed: $message" -LogPath $LogPath -Level ERROR
+        Write-Host "        FAILED: $message" -ForegroundColor Red
+        return @{ Success = $false; Error = "Could not write config.json" }
+    }
+
+    # ---- verification ---------------------------------------------------
+    # Verify what was produced, not what was intended: this is the check that
+    # would have caught the config schema mismatch years ago.
+    $verification = Test-InstallationResult -InstallPath $InstallPath -ConfigPath $configPath
+    if (-not $verification.Valid) {
+        foreach ($problem in $verification.Problems) {
+            Write-InstallLog "Verification failed: $problem" -LogPath $LogPath -Level ERROR
+            Write-Host "        $problem" -ForegroundColor Red
+        }
+        return @{ Success = $false; Error = "Verification of the installed files failed" }
+    }
+
+    Write-InstallLog "Verification passed" -LogPath $LogPath
+
+    return @{
+        Success     = $true
+        InstallPath = $InstallPath
+        ConfigPath  = $configPath
+        LogPath     = $LogPath
     }
 }
 
-function Get-RequirementsPath {
-    # Multi-level resolution: module root → current → parent
-    $path = "requirements.txt"
+function Test-InstallationResult {
+    <#
+    .SYNOPSIS
+    Checks that the files on disk are actually usable by the bot.
 
-    # Level 1: Try module root (preferred)
+    .DESCRIPTION
+    Re-reads config.json and confirms every key bot.py declares in
+    REQUIRED_KEYS is present and non-empty, reading the list from the
+    installed bot.py so the two cannot drift apart.
+    #>
+    [OutputType([hashtable])]
+    param(
+        [Parameter(Mandatory = $true)][string]$InstallPath,
+        [Parameter(Mandatory = $true)][string]$ConfigPath
+    )
+
+    $problems = @()
+
+    $botPath = Join-Path $InstallPath "bot.py"
+    if (-not (Test-Path $botPath)) { $problems += "bot.py is missing from $InstallPath" }
+    if (-not (Test-Path $ConfigPath)) { $problems += "config.json is missing from $InstallPath" }
+
+    if ($problems.Count -gt 0) {
+        return @{ Valid = $false; Problems = $problems }
+    }
+
+    $config = $null
     try {
-        $moduleRoot = (Get-Module BATCRelayBot).ModuleBase
-        if ($moduleRoot) {
-            $modulePath = Join-Path $moduleRoot "requirements.txt"
-            if (Test-Path $modulePath) { return $modulePath }
+        $config = Get-Content $ConfigPath -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+    } catch {
+        return @{ Valid = $false; Problems = @("config.json is not valid JSON: $($_.Exception.Message)") }
+    }
+
+    $requiredKeys = @('bot_token', 'guild_id', 'voice_channel_id', 'audio_device_name')
+    try {
+        $botSource = Get-Content $botPath -Raw -ErrorAction Stop
+        if ($botSource -match 'REQUIRED_KEYS\s*=\s*\[(.*?)\]') {
+            $parsed = [regex]::Matches($Matches[1], '"([^"]+)"') | ForEach-Object { $_.Groups[1].Value }
+            if ($parsed) { $requiredKeys = $parsed }
+        }
+    } catch {
+        # Fall back to the hardcoded list above.
+    }
+
+    foreach ($key in $requiredKeys) {
+        if (-not ($config.PSObject.Properties.Name -contains $key)) {
+            $problems += "config.json is missing the key '$key' that bot.py requires"
+        } elseif ([string]::IsNullOrWhiteSpace([string]$config.$key)) {
+            $problems += "config.json has an empty value for '$key', which bot.py rejects"
+        }
+    }
+
+    return @{ Valid = ($problems.Count -eq 0); Problems = $problems }
+}
+
+function Get-RequirementsPath {
+    <#
+    .SYNOPSIS
+    Locates requirements.txt for both PSGallery and repository layouts.
+    #>
+    [OutputType([string])]
+    param()
+
+    $candidates = @()
+
+    try {
+        $moduleBase = (Get-Module BATCRelayBot).ModuleBase
+        if ($moduleBase) {
+            $candidates += Join-Path $moduleBase "requirements.txt"
+            $candidates += Join-Path (Split-Path -Parent $moduleBase) "requirements.txt"
         }
     } catch {}
 
-    # Level 2: Try current directory
-    if (Test-Path $path) {
-        return (Resolve-Path $path).Path
-    }
+    $candidates += "requirements.txt"
+    $candidates += (Join-Path ".." "requirements.txt")
 
-    # Level 3: Try parent directory
-    $parentPath = Join-Path ".." $path
-    if (Test-Path $parentPath) {
-        return (Resolve-Path $parentPath).Path
+    foreach ($candidate in $candidates) {
+        if ($candidate -and (Test-Path $candidate)) {
+            return (Resolve-Path $candidate).Path
+        }
     }
-
     return $null
 }
 
 function Get-BotFilesPath {
-    # Multi-level resolution: module root → current → parent
-    # Level 1: Try module root (preferred)
+    <#
+    .SYNOPSIS
+    Locates the directory containing bot.py.
+    #>
+    [OutputType([string])]
+    param()
+
+    $candidates = @()
+
     try {
-        $moduleRoot = (Get-Module BATCRelayBot).ModuleBase
-        if ($moduleRoot) {
-            $botPath = Join-Path $moduleRoot "bot.py"
-            if (Test-Path $botPath) { return $moduleRoot }
+        $moduleBase = (Get-Module BATCRelayBot).ModuleBase
+        if ($moduleBase) {
+            $candidates += $moduleBase
+            $candidates += (Split-Path -Parent $moduleBase)
         }
     } catch {}
 
-    # Level 2: Try current directory
-    if (Test-Path "bot.py") {
-        return (Resolve-Path ".").Path
-    }
+    $candidates += "."
+    $candidates += ".."
 
-    # Level 3: Try parent directory
-    if (Test-Path "..\bot.py") {
-        return (Resolve-Path "..").Path
+    foreach ($candidate in $candidates) {
+        if ($candidate -and (Test-Path (Join-Path $candidate "bot.py"))) {
+            return (Resolve-Path $candidate).Path
+        }
     }
-
     return $null
 }
 
-Export-ModuleMember -Function Start-Installation
+Export-ModuleMember -Function @(
+    'Start-Installation',
+    'Test-InstallationResult',
+    'Get-RequirementsPath',
+    'Get-BotFilesPath'
+)

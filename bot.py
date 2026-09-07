@@ -71,10 +71,18 @@ def make_audio_source() -> discord.FFmpegPCMAudio:
     """
     device = CONFIG["audio_device_name"]
     before_options = "-f dshow"
+    # Use the ffmpeg the installer actually found. Without this discord.py
+    # falls back to plain "ffmpeg" and needs it on PATH, which is not the case
+    # for a manual extraction to e.g. C:\ffmpeg.
+    executable = CONFIG.get("ffmpeg_path") or "ffmpeg"
+    if executable != "ffmpeg" and not pathlib.Path(executable).exists():
+        log.warning("ffmpeg_path %s does not exist, falling back to PATH", executable)
+        executable = "ffmpeg"
     # -re not needed (this is a live input, not a file replay, so it's
     # already real-time)
     return discord.FFmpegPCMAudio(
         source=f"audio={device}",
+        executable=executable,
         before_options=before_options,
         options="-vn",
     )

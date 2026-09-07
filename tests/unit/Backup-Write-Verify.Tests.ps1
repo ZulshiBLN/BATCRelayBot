@@ -163,7 +163,7 @@ Describe "Config File Safety Functions" {
             $testDir = Join-Path $env:TEMP "ConfigUpdateTest_$([System.Guid]::NewGuid())"
             New-Item -ItemType Directory -Path $testDir -Force | Out-Null
             $configFile = Join-Path $testDir "config.json"
-            @{ token = "oldtoken"; channel_id = "123456789012345678" } | ConvertTo-Json | Set-Content $configFile
+            @{ bot_token = "oldtoken"; voice_channel_id = "123456789012345678" } | ConvertTo-Json | Set-Content $configFile
 
             try {
                 # Act
@@ -171,19 +171,19 @@ Describe "Config File Safety Functions" {
                 $parsed = $newJson | ConvertFrom-Json
 
                 # Assert
-                $parsed.token | Should -Be "newtoken456"
+                $parsed.bot_token | Should -Be "newtoken456"
             }
             finally {
                 Remove-Item -Path $testDir -Recurse -Force -ErrorAction SilentlyContinue
             }
         }
 
-        It "Should update channel_id field correctly" {
+        It "Should update voice_channel_id field correctly" {
             # Arrange
             $testDir = Join-Path $env:TEMP "ConfigUpdateTest_$([System.Guid]::NewGuid())"
             New-Item -ItemType Directory -Path $testDir -Force | Out-Null
             $configFile = Join-Path $testDir "config.json"
-            @{ token = "abc"; channel_id = "111111111111111111" } | ConvertTo-Json | Set-Content $configFile
+            @{ bot_token = "abc"; voice_channel_id = "111111111111111111" } | ConvertTo-Json | Set-Content $configFile
 
             try {
                 # Act
@@ -191,7 +191,7 @@ Describe "Config File Safety Functions" {
                 $parsed = $newJson | ConvertFrom-Json
 
                 # Assert
-                $parsed.channel_id | Should -Be "999999999999999999"
+                $parsed.voice_channel_id | Should -Be "999999999999999999"
             }
             finally {
                 Remove-Item -Path $testDir -Recurse -Force -ErrorAction SilentlyContinue
@@ -312,7 +312,7 @@ Describe "Config File Safety Functions" {
             $testDir = Join-Path $env:TEMP "ConfigVerifyTest_$([System.Guid]::NewGuid())"
             New-Item -ItemType Directory -Path $testDir -Force | Out-Null
             $configFile = Join-Path $testDir "config.json"
-            @{ token = "newtoken123" } | ConvertTo-Json | Set-Content $configFile
+            @{ bot_token = "newtoken123" } | ConvertTo-Json | Set-Content $configFile
 
             try {
                 # Act
@@ -332,7 +332,7 @@ Describe "Config File Safety Functions" {
             $testDir = Join-Path $env:TEMP "ConfigVerifyTest_$([System.Guid]::NewGuid())"
             New-Item -ItemType Directory -Path $testDir -Force | Out-Null
             $configFile = Join-Path $testDir "config.json"
-            @{ token = "wrong_value" } | ConvertTo-Json | Set-Content $configFile
+            @{ bot_token = "wrong_value" } | ConvertTo-Json | Set-Content $configFile
 
             try {
                 # Act
@@ -432,7 +432,7 @@ Describe "Config File Safety Functions" {
 
             try {
                 # Act - Write wrong value
-                @{ token = "wrong_value" } | ConvertTo-Json | Set-Content $configFile
+                @{ bot_token = "wrong_value" } | ConvertTo-Json | Set-Content $configFile
 
                 # Verify should fail
                 $verify = Verify-ConfigChange -ConfigPath $configFile -Field "Token" -ExpectedValue "expected"
