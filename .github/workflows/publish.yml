@@ -31,14 +31,47 @@ jobs:
       - name: Install Pester
         shell: powershell
         run: |
-          Install-Module Pester -MinimumVersion 5.0 -Force -SkipPublisherCheck
+          # The runner image normally ships Pester 5, so only reach for
+          # PSGallery when it does not. A bare Install-Module has failed on a
+          # runner with "No match was found ... module name 'Pester'", which
+          # is PSGallery being unreachable, untrusted, or the NuGet provider
+          # missing - and it took the whole test job down with it.
+          $existing = Get-Module -ListAvailable Pester |
+            Where-Object { $_.Version -ge [version]'5.0' } |
+            Sort-Object Version -Descending | Select-Object -First 1
+
+          if ($existing) {
+            Write-Host "Using preinstalled Pester $($existing.Version)"
+            return
+          }
+
+          [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+          Get-PackageProvider -Name NuGet -ForceBootstrap | Out-Null
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+
+          for ($attempt = 1; $attempt -le 3; $attempt++) {
+            try {
+              Install-Module Pester -MinimumVersion 5.0 -Force -SkipPublisherCheck -ErrorAction Stop
+              break
+            } catch {
+              if ($attempt -eq 3) { throw }
+              Write-Host "Attempt ${attempt} failed: $($_.Exception.Message)"
+              Start-Sleep -Seconds 15
+            }
+          }
 
       - name: Run Pester tests
         shell: powershell
         run: |
+          # The gate in front of a PSGallery publish has to be at least as
+          # strict as the one on every push. This ran "tests/powershell" - 26
+          # module smoke tests - so a release could pass it with the whole
+          # unit and integration suite failing.
+          Import-Module Pester -MinimumVersion 5.0 -Force
           $config = New-PesterConfiguration
-          $config.Run.Path = "tests/powershell"
+          $config.Run.Path = "tests"
           $config.Run.Exit = $true
+          $config.Output.Verbosity = "Normal"
           Invoke-Pester -Configuration $config
 
   publish-psgallery:

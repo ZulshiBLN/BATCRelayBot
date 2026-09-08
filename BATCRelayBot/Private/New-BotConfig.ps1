@@ -86,7 +86,9 @@ function Protect-BotConfigFile {
     )
 
     try {
-        $acl = Get-Acl -Path $ConfigPath
+        # -ErrorAction Stop so a missing file is handled by the catch instead
+        # of writing a Get-Acl error into the caller's error stream.
+        $acl = Get-Acl -Path $ConfigPath -ErrorAction Stop
         $acl.SetAccessRuleProtection($true, $false)
 
         $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().User

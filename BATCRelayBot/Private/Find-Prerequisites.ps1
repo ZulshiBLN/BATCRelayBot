@@ -37,15 +37,17 @@ function Test-PythonCandidate {
     if ([string]::IsNullOrWhiteSpace($Path)) {
         return @{ Ok = $false; Version = $null; Reason = "no path" }
     }
-    if (-not (Test-Path $Path)) {
-        return @{ Ok = $false; Version = $null; Reason = "path does not exist" }
-    }
 
     # Microsoft Store app-execution aliases are zero-byte reparse points.
-    # Executing one opens the Store and blocks, so filter by path *before*
-    # running anything.
+    # Executing one opens the Store and blocks, so rule them out by path
+    # before touching the filesystem at all - not even Test-Path should be
+    # asked about a reparse point we will never use.
     if ($Path -like "*\WindowsApps\*") {
         return @{ Ok = $false; Version = $null; Reason = "Windows Store alias, not a real interpreter" }
+    }
+
+    if (-not (Test-Path $Path)) {
+        return @{ Ok = $false; Version = $null; Reason = "path does not exist" }
     }
     try {
         if ((Get-Item $Path -ErrorAction Stop).Length -eq 0) {
@@ -508,5 +510,7 @@ Export-ModuleMember -Function @(
     'Find-BeyondATC',
     'Test-PythonCandidate',
     'Test-FFmpegCandidate',
+    'Get-PythonCandidatePath',
+    'Get-FFmpegCandidatePath',
     'Resolve-VoiceMeeterExecutable'
 )
