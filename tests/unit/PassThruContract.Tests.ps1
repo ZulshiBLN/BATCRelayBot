@@ -169,6 +169,93 @@ Describe "-PassThru contract" {
             }
         }
 
+        # -PassThru gates the return statement, and nothing else. A helper
+        # called as a bare statement writes its own return value into the
+        # command's output just as effectively.
+        #
+        # Show-PostInstallationMessage did exactly that: it returned a hashtable
+        # nothing used and was called without Out-Null, so an install printed
+        # two objects. The dump in the test notes shows every key twice, which
+        # is what two hashtables look like.
+        It "no helper leaks its return value into a command's output" {
+            $emits = @{}
+            foreach ($file in Get-ChildItem $ModuleRoot -Filter *.ps1 -Recurse) {
+                $tree = [System.Management.Automation.Language.Parser]::ParseFile($file.FullName, [ref]$null, [ref]$null)
+                foreach ($function in $tree.FindAll({
+                    param($node)
+                    $node -is [System.Management.Automation.Language.FunctionDefinitionAst]
+                }, $true)) {
+                    $valueReturn = $function.FindAll({
+                        param($node)
+                        $node -is [System.Management.Automation.Language.ReturnStatementAst] -and
+                        $null -ne $node.Pipeline
+                    }, $true)
+                    if ($valueReturn.Count -gt 0) { $emits[$function.Name] = $true }
+                }
+            }
+
+            foreach ($command in $Exported) {
+                $file = Join-Path $ModuleRoot "Public\$command.ps1"
+                $tree = [System.Management.Automation.Language.Parser]::ParseFile($file, [ref]$null, [ref]$null)
+
+                $public = $tree.Find({
+                    param($node)
+                    $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and
+                    $node.Name -eq $command
+                }, $true)
+
+                foreach ($call in $public.FindAll({
+                    param($node)
+                    $node -is [System.Management.Automation.Language.CommandAst]
+                }, $true)) {
+
+                    # Only a bare statement reaches the caller's output.
+                    #
+                    # One level of parent is not enough to tell: "$x = @(Find-
+                    # BotProcess ...)" puts a statement block inside the
+                    # assignment, so a shallow check called that bare and
+                    # reported an assignment as a leak. The whole chain up to
+                    # the function has to be statement containers - anything
+                    # else on the way consumes the value.
+                    $pipeline = $call.Parent
+                    if ($pipeline -isnot [System.Management.Automation.Language.PipelineAst]) { continue }
+
+                    # Piped onward: only the last element writes to the output.
+                    $elements = $pipeline.PipelineElements
+                    if ($elements[$elements.Count - 1] -ne $call) { continue }
+
+                    # ScriptBlockAst belongs here: a function body is one, and
+                    # the chain reaches it before the function itself. Leaving
+                    # it out made this whole test vacuous - every call broke out
+                    # of the walk and nothing was ever checked. It was caught by
+                    # putting the leak back into Show-PostInstallationMessage
+                    # and watching this test stay green.
+                    #
+                    # A script block passed as an argument is still caught: its
+                    # parent is a ScriptBlockExpressionAst, which is not here.
+                    $containers = @(
+                        'PipelineAst', 'StatementBlockAst', 'NamedBlockAst', 'ScriptBlockAst',
+                        'IfStatementAst', 'SwitchStatementAst', 'TryStatementAst',
+                        'CatchClauseAst', 'ForEachStatementAst', 'ForStatementAst',
+                        'WhileStatementAst', 'DoWhileStatementAst', 'DoUntilStatementAst'
+                    )
+
+                    $node = $pipeline
+                    $bare = $true
+                    while ($node -and $node -isnot [System.Management.Automation.Language.FunctionDefinitionAst]) {
+                        if ($containers -notcontains $node.GetType().Name) { $bare = $false; break }
+                        $node = $node.Parent
+                    }
+                    if (-not $bare) { continue }
+
+                    $name = $call.GetCommandName()
+                    if ($name -and $emits.ContainsKey($name)) {
+                        throw "$command calls $name as a bare statement at line $($call.Extent.StartLineNumber); its return value would be printed. Assign it or pipe it to Out-Null."
+                    }
+                }
+            }
+        }
+
         It "Start- and Stop-BATCRelayBot need no switch, and have none" {
             foreach ($command in 'Start-BATCRelayBot', 'Stop-BATCRelayBot') {
                 (Get-ValueReturn -Command $command).Count | Should -Be 0

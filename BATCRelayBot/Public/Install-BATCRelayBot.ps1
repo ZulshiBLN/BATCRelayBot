@@ -70,7 +70,7 @@ function Install-BATCRelayBot {
     # earlier versions left no trace of the failures users actually hit.
     $logPath = Initialize-InstallLog -InstallPath $BotPath -Version $version
     if ($logPath) {
-        Write-Host "Log file: $logPath" -ForegroundColor DarkGray
+        Write-Host "Logfile created under $logPath" -ForegroundColor DarkGray
         Write-Host ""
     }
 
@@ -120,22 +120,9 @@ function Install-BATCRelayBot {
         $prerequisites = Resolve-MissingTool -Prerequisites $prerequisites -LogPath $logPath
 
         if (-not ($prerequisites.Python.Found -and $prerequisites.FFmpeg.Found)) {
-            $stillMissing = @()
-            if (-not $prerequisites.Python.Found) { $stillMissing += "Python" }
-            if (-not $prerequisites.FFmpeg.Found) { $stillMissing += "FFmpeg" }
-
-            $verb = if ($stillMissing.Count -eq 1) { "is" } else { "are" }
-            Write-Host "$($stillMissing -join ' and ') $verb required and still missing." -ForegroundColor Red
-            Write-Host ""
-            if (-not $prerequisites.Python.Found) {
-                Write-Host "  Python : https://www.python.org/downloads/  (tick 'Add python.exe to PATH')" -ForegroundColor Yellow
-                Write-Host "           $($prerequisites.Python.Reason)" -ForegroundColor DarkGray
-            }
-            if (-not $prerequisites.FFmpeg.Found) {
-                Write-Host "  FFmpeg : winget install Gyan.FFmpeg  -  or https://ffmpeg.org/download.html" -ForegroundColor Yellow
-            }
-            Write-Host ""
-            Write-Host "Install what is missing, then run Install-BATCRelayBot again." -ForegroundColor Yellow
+            # The only place the links appear. Phase 3 used to print them too,
+            # so declining the winget offer produced the same block twice.
+            Show-ManualInstallLinks -Prerequisites $prerequisites
             Write-InstallLog "Aborted: required tools still missing after phase 3" -LogPath $logPath -Level ERROR
             return (Stop-Installation -Reason "Required tools missing" `
                 -LogPath $logPath -PassThru:$PassThru)
@@ -150,8 +137,6 @@ function Install-BATCRelayBot {
                     -LogPath $logPath -PassThru:$PassThru)
             }
         }
-
-        Show-BeyondATCNotice -BeyondATC $prerequisites.BeyondATC
 
         # ---- Phase 4: configuration --------------------------------------
         Write-Host "[4/6] Configuration" -ForegroundColor Cyan
@@ -286,39 +271,50 @@ function Resolve-MissingTool {
         return $Prerequisites
     }
 
-    Write-Host "  Missing: $($missing -join ', ')" -ForegroundColor Yellow
-    if ($Prerequisites.Python.Reason -and -not $Prerequisites.Python.Found) {
-        Write-Host "  Python: $($Prerequisites.Python.Reason)" -ForegroundColor DarkGray
-    }
-    Write-Host ""
-    Write-Host "    [1] Install them now with winget (per-user, no admin rights)" -ForegroundColor Gray
-    Write-Host "    [2] I will install them myself - show the links" -ForegroundColor Gray
-    Write-Host "    [3] Continue without installing" -ForegroundColor Gray
-    Write-Host ""
-
-    $choice = Read-Host "  Choice (1/2/3), [Enter] for 1"
-    if ([string]::IsNullOrWhiteSpace($choice)) { $choice = "1" }
-    Write-InstallLog "Missing-tool choice: $choice (missing: $($missing -join ', '))" -LogPath $LogPath
+    # What is missing was already stated, with the reason, in phase 2. Saying
+    # it again here is the phase's own heading repeated in longer words.
+    #
+    # There is no third option. Continuing without Python or FFmpeg produces an
+    # installation that cannot run, and the failure then arrives later and
+    # further from its cause.
+    $answer = Read-Host "  Install $($missing -join ' and ') now with winget? (Y/n)"
+    $install = [string]::IsNullOrWhiteSpace($answer) -or $answer -match '^(y|yes|j|ja)$'
+    Write-InstallLog "Winget offer for $($missing -join ', '): $(if ($install) { 'accepted' } else { 'declined' })" -LogPath $LogPath
     Write-Host ""
 
-    switch ($choice.Trim()) {
-        "2" {
-            Write-Host "  Python : https://www.python.org/downloads/" -ForegroundColor Yellow
-            Write-Host "           During setup, tick 'Add python.exe to PATH'." -ForegroundColor Gray
-            Write-Host "  FFmpeg : winget install Gyan.FFmpeg" -ForegroundColor Yellow
-            Write-Host "           or https://ffmpeg.org/download.html" -ForegroundColor Gray
-            Write-Host ""
-            Write-Host "  Run Install-BATCRelayBot again once they are installed." -ForegroundColor Yellow
-            Write-Host ""
-            return $Prerequisites
-        }
-        "3" {
-            return $Prerequisites
-        }
-        default {
-            return (Install-MissingPrerequisite -Prerequisites $Prerequisites -LogPath $LogPath)
-        }
+    if (-not $install) {
+        # Deliberately silent: the caller finds the tools still missing and
+        # prints the links, so they appear exactly once either way.
+        return $Prerequisites
     }
+
+    return (Install-MissingPrerequisite -Prerequisites $Prerequisites -LogPath $LogPath)
+}
+
+function Show-ManualInstallLinks {
+    <#
+    .SYNOPSIS
+    Says where to get whatever is still missing, and stops.
+
+    .DESCRIPTION
+    The single place these links are printed. They used to live here and in
+    the declined-offer branch of Resolve-MissingTool, which is why declining
+    the offer showed the same four lines twice in a row.
+    #>
+    [OutputType([void])]
+    param([hashtable]$Prerequisites)
+
+    Write-Host ""
+    if (-not $Prerequisites.Python.Found) {
+        Write-Host "  Python : https://www.python.org/downloads/" -ForegroundColor Yellow
+        Write-Host "           During setup, tick 'Add python.exe to PATH'." -ForegroundColor Gray
+    }
+    if (-not $Prerequisites.FFmpeg.Found) {
+        Write-Host "  FFmpeg : winget install Gyan.FFmpeg" -ForegroundColor Yellow
+        Write-Host "           or https://ffmpeg.org/download.html" -ForegroundColor Gray
+    }
+    Write-Host ""
+    Write-Host "  Run Install-BATCRelayBot again once they are installed." -ForegroundColor Yellow
 }
 
 function Confirm-ContinueWithoutVoiceMeeter {
@@ -363,30 +359,10 @@ function Confirm-ContinueWithoutVoiceMeeter {
     return $continue
 }
 
-function Show-BeyondATCNotice {
-    <#
-    .SYNOPSIS
-    Reports BeyondATC status. Informational only - it is optional and paid.
-    #>
-    param([hashtable]$BeyondATC)
-
-    if ($BeyondATC.Found -and $BeyondATC.ExePath) {
-        Write-Host "  BeyondATC found: $($BeyondATC.ExePath)" -ForegroundColor Green
-        Write-Host "  It will be started automatically with the bot." -ForegroundColor Gray
-    } elseif ($BeyondATC.Found) {
-        Write-Host "  BeyondATC configuration found, but not the executable." -ForegroundColor Yellow
-        Write-Host "  Add batc_path to config.json manually if you want it auto-started." -ForegroundColor Gray
-    } else {
-        Write-Host "  BeyondATC not installed - optional, the bot works without it." -ForegroundColor Gray
-        Write-Host "  It is commercial software: https://beyondatc.net/" -ForegroundColor DarkGray
-    }
-    Write-Host ""
-}
-
 Export-ModuleMember -Function @(
     'Install-BATCRelayBot',
     'Resolve-MissingTool',
     'Confirm-ContinueWithoutVoiceMeeter',
-    'Show-BeyondATCNotice',
+    'Show-ManualInstallLinks',
     'Stop-Installation'
 )

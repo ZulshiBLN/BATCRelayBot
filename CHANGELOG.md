@@ -34,6 +34,29 @@ see the commit that made it.
   $result = Install-BATCRelayBot -PassThru
   ```
 
+- **The installer says each thing once.** Success was announced three times over
+  - a banner, a heading and a sentence - and the closing message ran to 98 lines
+  including four troubleshooting recipes that belong in the documentation. It
+  now ends with one green line, the three paths, the commands the user has and
+  where each is explained, and links to the guides.
+
+- **Download links appear where they are needed, not everywhere.** The
+  prerequisite status in phase 2 listed a link under each component, and phase 3
+  printed them again beside whatever was actually missing. Phase 2 reports
+  status only; the links are printed once, by whichever path stops the install.
+
+- **VoiceMeeter now reports its version.** It was read from the registry alone,
+  so an installation found through the filesystem showed a bare `FOUND` while
+  BeyondATC beside it showed a version. The executable is asked when the
+  registry has nothing.
+
+### Removed
+
+- **"Continue without installing" is gone** from the missing-tool prompt. The
+  bot cannot run without Python or FFmpeg, so continuing only moved the failure
+  further from its cause. The choice is now a single question that defaults to
+  installing; declining shows the links and stops.
+
 ## [1.4.1] - 2026-09-08
 
 A hotfix for a release that could not be installed.
