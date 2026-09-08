@@ -266,7 +266,14 @@ async def test_connect_and_stream_already_connected():
 
     voice_client = AsyncMock()
     voice_client.channel.id = channel.id
-    voice_client.is_playing.return_value = False
+
+    # is_playing() and play() are synchronous in discord.py. Left as AsyncMock
+    # attributes they return coroutines, and a coroutine is always truthy - so
+    # "if not voice_client.is_playing()" was always false and the streaming
+    # branch was never reached, whatever return_value said. That is what the
+    # "coroutine was never awaited" warning in every test run was reporting.
+    voice_client.is_playing = Mock(return_value=False)
+    voice_client.play = Mock()
 
     guild.get_channel = Mock(return_value=channel)
     guild.voice_client = voice_client
@@ -274,8 +281,34 @@ async def test_connect_and_stream_already_connected():
     with patch.object(bot.bot, "get_guild", return_value=guild):
         with patch("bot.make_audio_source", return_value=MagicMock()):
             await bot.connect_and_stream()
-            # Verify voice client methods were called appropriately
-            assert voice_client.get_channel is not None or voice_client.is_playing.called
+
+            # The previous assertion was "get_channel is not None or
+            # is_playing.called". A mock creates attributes on access, so the
+            # left side is true for any mock and the test could not fail.
+            voice_client.is_playing.assert_called_once()
+            voice_client.play.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_connect_and_stream_does_not_restart_a_running_stream():
+    """The other half: already playing means play() must not be called again."""
+    guild = MagicMock()
+    channel = MagicMock(spec=discord.VoiceChannel)
+    channel.id = bot.CONFIG["voice_channel_id"]
+    channel.name = "Test Channel"
+
+    voice_client = AsyncMock()
+    voice_client.channel.id = channel.id
+    voice_client.is_playing = Mock(return_value=True)
+    voice_client.play = Mock()
+
+    guild.get_channel = Mock(return_value=channel)
+    guild.voice_client = voice_client
+
+    with patch.object(bot.bot, "get_guild", return_value=guild):
+        with patch("bot.make_audio_source", return_value=MagicMock()):
+            await bot.connect_and_stream()
+            voice_client.play.assert_not_called()
 
 
 def test_watchdog_task_loop_exists():
