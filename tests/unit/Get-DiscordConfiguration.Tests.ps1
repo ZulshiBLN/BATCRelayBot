@@ -60,27 +60,70 @@ Describe "Token Validation - User-Agent Compliance" {
 }
 
 Describe "Token Validation - Error Classification" {
-    It "Classifies 401 unauthorized error" -Skip {
-        # Requires mock Discord API endpoint returning 401
-        # Mock: Invoke-WebRequest throws 401 Unauthorized
-        # Expected: Error contains "Token expired or invalid"
+    # These four sat here as empty -Skip shells for months, each describing a
+    # test nobody wrote. Their comments guessed at wordings the code does not
+    # use ("Token expired or invalid" against the actual "Discord rejected the
+    # token"), which is what a fixture written from memory rather than from the
+    # source looks like. They assert the real messages now.
+    #
+    # What is being checked is what a user sees when their token does not work.
+    # The 404 case is the one that earns its keep: it is the difference between
+    # "something went wrong" and "you copied the wrong token from the wrong tab".
+
+    BeforeAll {
+        function New-HttpError {
+            param([int]$StatusCode)
+            $response = [pscustomobject]@{ StatusCode = $StatusCode }
+            $exception = [System.Net.WebException]::new("The remote server returned an error: ($StatusCode).")
+            $exception | Add-Member -NotePropertyName Response -NotePropertyValue $response -Force
+            [System.Management.Automation.ErrorRecord]::new($exception, 'HttpError', 'ProtocolError', $null)
+        }
     }
 
-    It "Classifies 403 forbidden error" -Skip {
-        # Requires mock Discord API endpoint returning 403
-        # Mock: Invoke-WebRequest throws 403 Forbidden
-        # Expected: Error contains "lacks required permissions"
+    It "Classifies 401 as a rejected token, pointing at the developer portal" {
+        Mock -ModuleName BATCRelayBot Invoke-WebRequest { throw (New-HttpError -StatusCode 401) }
+        $result = Test-DiscordBotToken -Token ('A' * 30)
+        $result.Valid | Should -Be $false
+        $result.Error | Should -Match 'Discord rejected the token'
     }
 
-    It "Classifies 404 not found error" -Skip {
-        # Requires mock Discord API endpoint returning 404
-        # Mock: Invoke-WebRequest throws 404 Not Found
-        # Expected: Error contains "BOT token, not USER"
+    It "Classifies 403 as valid but unpermitted" {
+        Mock -ModuleName BATCRelayBot Invoke-WebRequest { throw (New-HttpError -StatusCode 403) }
+        $result = Test-DiscordBotToken -Token ('A' * 30)
+        $result.Error | Should -Match 'lacks permission'
     }
 
-    It "Classifies network timeout error" -Skip {
-        # Requires mock Discord API endpoint timeout
-        # Mock: Invoke-WebRequest throws timeout exception
-        # Expected: Error contains "Cannot reach Discord API"
+    It "Classifies 404 as the wrong kind of token, not a missing endpoint" {
+        Mock -ModuleName BATCRelayBot Invoke-WebRequest { throw (New-HttpError -StatusCode 404) }
+        $result = Test-DiscordBotToken -Token ('A' * 30)
+        $result.Error | Should -Match 'Not a bot token'
+    }
+
+    It "Classifies a timeout as unreachable, not as a bad token" {
+        Mock -ModuleName BATCRelayBot Invoke-WebRequest {
+            throw [System.Net.WebException]::new("The operation has timed out.")
+        }
+        $result = Test-DiscordBotToken -Token ('A' * 30)
+        $result.Valid | Should -Be $false
+        $result.Error | Should -Match 'Could not reach the Discord API'
+    }
+
+    # The code classifies six codes; the shells covered three. These are the
+    # ones that tell a user to wait rather than to change anything.
+    It "Classifies 429 and the 5xx codes as transient" {
+        foreach ($pair in @(@{ Code = 429; Match = 'rate limiting' },
+                            @{ Code = 500; Match = 'server error' },
+                            @{ Code = 503; Match = 'temporarily unavailable' })) {
+            Mock -ModuleName BATCRelayBot Invoke-WebRequest { throw (New-HttpError -StatusCode $pair.Code) }
+            (Test-DiscordBotToken -Token ('A' * 30)).Error | Should -Match $pair.Match
+        }
+    }
+
+    It "Never echoes the token back in an error message" {
+        $token = 'A' * 30
+        Mock -ModuleName BATCRelayBot Invoke-WebRequest {
+            throw [System.Net.WebException]::new("Auth failed for Bot $token")
+        }
+        (Test-DiscordBotToken -Token $token).Error | Should -Not -Match ([regex]::Escape($token))
     }
 }

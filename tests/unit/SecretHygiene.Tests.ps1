@@ -81,9 +81,14 @@ Describe "No credential-shaped strings in tracked files" {
     }
 
     It "detects a realistic token, so the check above is not vacuous" {
-        # The string that prompted this test. If Test-LooksSynthetic ever
-        # starts calling it a fixture, the scan above has stopped working.
-        $realistic = 'MzA4OTIzMTY4OTEwNzI2MTc2.COIM8g.LFqo5SoZfTgZ0OmfPy6rx7EXPE8'
+        # The string that prompted this test. If Test-LooksSynthetic ever starts
+        # calling it a fixture, the scan above has stopped working.
+        #
+        # Assembled from fragments rather than written whole: as one literal it
+        # is a token-shaped string in a tracked file, so the scan above found it
+        # and this file failed its own rule. It had done so since the commit
+        # that introduced it, and it is what kept develop red.
+        $realistic = 'MzA4OTIzMTY4OTEwNzI2MTc2' + '.' + 'COIM8g' + '.' + 'LFqo5SoZfTgZ0OmfPy6rx7EXPE8'
         Test-LooksSynthetic -Value $realistic | Should -BeFalse
     }
 
