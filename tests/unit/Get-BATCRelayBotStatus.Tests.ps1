@@ -34,7 +34,7 @@ Describe "Get-BATCRelayBotStatus" {
 
     It "reports not running for a path with no installation" {
         $absent = Join-Path ([System.IO.Path]::GetTempPath()) "batc-absent-$([guid]::NewGuid())"
-        $status = Get-BATCRelayBotStatus -BotPath $absent 6>$null
+        $status = Get-BATCRelayBotStatus -BotPath $absent -PassThru 6>$null
 
         $status.IsRunning | Should -BeFalse
         $status.ProcessId | Should -BeNullOrEmpty
@@ -47,7 +47,7 @@ Describe "Get-BATCRelayBotStatus" {
 
         { Get-BATCRelayBotStatus -BotPath $sandbox 6>$null } | Should -Not -Throw
 
-        $status = Get-BATCRelayBotStatus -BotPath $sandbox 6>$null
+        $status = Get-BATCRelayBotStatus -BotPath $sandbox -PassThru 6>$null
         $status.IsRunning | Should -BeFalse
     }
 
@@ -60,7 +60,7 @@ Describe "Get-BATCRelayBotStatus" {
 
     It "exposes OrphanedFromPidFile so a rediscovered bot is visible" {
         $sandbox = New-StatusSandbox
-        $status = Get-BATCRelayBotStatus -BotPath $sandbox 6>$null
+        $status = Get-BATCRelayBotStatus -BotPath $sandbox -PassThru 6>$null
 
         $status.PSObject.Properties.Name | Should -Contain "OrphanedFromPidFile"
     }

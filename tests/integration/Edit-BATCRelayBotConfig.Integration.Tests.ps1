@@ -165,7 +165,7 @@ Describe "Edit-BATCRelayBotConfig end to end" {
             return $answer
         }
 
-        $result = Edit-BATCRelayBotConfig -InstallPath $env.InstallPath 6>$null
+        $result = Edit-BATCRelayBotConfig -InstallPath $env.InstallPath -PassThru 6>$null
 
         $result.Success | Should -BeTrue -Because ($result.Errors -join '; ')
         $result.UpdatedFields.Keys | Should -Contain 'Channel'
@@ -186,7 +186,7 @@ Describe "Edit-BATCRelayBotConfig end to end" {
             return $answer
         }
 
-        $result = Edit-BATCRelayBotConfig -InstallPath $env.InstallPath 6>$null
+        $result = Edit-BATCRelayBotConfig -InstallPath $env.InstallPath -PassThru 6>$null
 
         $result.BackupPath | Should -Not -BeNullOrEmpty
         Test-Path $result.BackupPath | Should -BeTrue
@@ -205,7 +205,7 @@ Describe "Edit-BATCRelayBotConfig end to end" {
             return $answer
         }
 
-        $result = Edit-BATCRelayBotConfig -InstallPath $env.InstallPath 6>$null
+        $result = Edit-BATCRelayBotConfig -InstallPath $env.InstallPath -PassThru 6>$null
 
         $result.Success | Should -BeFalse
         (Get-Content $env.ConfigPath -Raw) | Should -Be $before

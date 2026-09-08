@@ -10,19 +10,26 @@ function Get-BATCRelayBotStatus {
     Path to the bot installation directory.
     Defaults to $env:LOCALAPPDATA\BATCRelayBot
 
+    .PARAMETER PassThru
+    Returns the status object. Without it the status is only printed, so a
+    plain call does not dump the object's fields to the screen underneath the
+    report it just wrote.
+
     .EXAMPLE
     Get-BATCRelayBotStatus
 
     .EXAMPLE
-    Get-BATCRelayBotStatus -BotPath "D:\MyBot\BATCRelayBot"
+    $status = Get-BATCRelayBotStatus -PassThru
+    if ($status.IsRunning) { "PID $($status.ProcessId)" }
 
     .OUTPUTS
-    PSCustomObject with properties: IsRunning, ProcessId, PidFile, Uptime,
-    OrphanedFromPidFile, LogFile, ErrorLogFile, ProcessInfo
+    With -PassThru, a PSCustomObject with properties: IsRunning, ProcessId,
+    PidFile, Uptime, OrphanedFromPidFile, LogFile, ErrorLogFile, ProcessInfo.
     #>
 
     param(
-        [string]$BotPath = (Join-Path $env:LOCALAPPDATA "BATCRelayBot")
+        [string]$BotPath = (Join-Path $env:LOCALAPPDATA "BATCRelayBot"),
+        [switch]$PassThru
     )
 
     $pidFile = Join-Path $BotPath "bot.pid"
@@ -92,6 +99,6 @@ function Get-BATCRelayBotStatus {
     Write-Host "  Output log: $($status.LogFile)" -ForegroundColor Cyan
     Write-Host "  Error log: $($status.ErrorLogFile)" -ForegroundColor Cyan
 
-    return $status
+    return (Out-CommandResult -Result $status -PassThru:$PassThru)
 }
 

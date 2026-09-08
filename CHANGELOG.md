@@ -3,7 +3,7 @@ title: Changelog
 description: Release history for the BATCRelayBot PowerShell module and Discord bot.
 document_type: history
 audience: users
-applies_to: BATCRelayBot 1.4.0
+applies_to: BATCRelayBot 1.4.1
 updated: 2026-09-08
 ---
 
@@ -14,6 +14,25 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 Entries describe what changed for users. For the reasoning behind a change,
 see the commit that made it.
+
+## [Unreleased]
+
+### Changed
+
+- **The commands no longer print their result object.** `Install-BATCRelayBot`,
+  `Uninstall-BATCRelayBot`, `Edit-BATCRelayBotConfig` and
+  `Get-BATCRelayBotStatus` returned a result that nothing consumed, so
+  PowerShell dumped it to the screen as a `Name / Value` table underneath the
+  report the command had just written - install paths listed a second time,
+  `Success` in the middle of the output, and quitting the config editor shown
+  as a table saying "Cancelled by the user".
+
+  Pass **`-PassThru`** to get the object back for scripting. This is a breaking
+  change for anything that captured a return value:
+
+  ```powershell
+  $result = Install-BATCRelayBot -PassThru
+  ```
 
 ## [1.4.1] - 2026-09-08
 

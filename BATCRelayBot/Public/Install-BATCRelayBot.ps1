@@ -31,20 +31,31 @@ function Install-BATCRelayBot {
     Skips audio device selection and leaves audio_device_name empty. The bot
     will not start until it is filled in - intended for unattended testing.
 
+    .PARAMETER PassThru
+    Returns the result object. Without it nothing is written to the pipeline,
+    so the installation ends with its closing message and not with the install
+    paths listed a second time as a table.
+
     .EXAMPLE
     Install-BATCRelayBot
 
     .EXAMPLE
     Install-BATCRelayBot -BotPath "D:\MyBot"
 
+    .EXAMPLE
+    $result = Install-BATCRelayBot -PassThru
+    if ($result.Success) { $result.ConfigPath }
+
     .OUTPUTS
-    Hashtable with Success, and on success InstallPath, ConfigPath, LogPath.
+    With -PassThru, a hashtable with Success, and on success InstallPath,
+    ConfigPath, LogPath.
     #>
     [CmdletBinding()]
     [OutputType([hashtable])]
     param(
         [string]$BotPath = (Join-Path $env:LOCALAPPDATA "BATCRelayBot"),
-        [switch]$SkipAudioDevice
+        [switch]$SkipAudioDevice,
+        [switch]$PassThru
     )
 
     $version = Get-ModuleVersion
@@ -126,7 +137,8 @@ function Install-BATCRelayBot {
             Write-Host ""
             Write-Host "Install what is missing, then run Install-BATCRelayBot again." -ForegroundColor Yellow
             Write-InstallLog "Aborted: required tools still missing after phase 3" -LogPath $logPath -Level ERROR
-            return (Stop-Installation -Reason "Required tools missing" -LogPath $logPath)
+            return (Stop-Installation -Reason "Required tools missing" `
+                -LogPath $logPath -PassThru:$PassThru)
         }
 
         # VoiceMeeter has to come from VB-Audio's own installer, so the most
@@ -134,7 +146,8 @@ function Install-BATCRelayBot {
         if (-not $prerequisites.VoiceMeeter.Found) {
             if (-not (Confirm-ContinueWithoutVoiceMeeter -Detail $prerequisites.VoiceMeeter.Reason -LogPath $logPath)) {
                 Write-InstallLog "User aborted at the VoiceMeeter warning" -LogPath $logPath
-                return (Stop-Installation -Reason "Cancelled - VoiceMeeter missing" -LogPath $logPath)
+                return (Stop-Installation -Reason "Cancelled - VoiceMeeter missing" `
+                    -LogPath $logPath -PassThru:$PassThru)
             }
         }
 
@@ -148,7 +161,8 @@ function Install-BATCRelayBot {
         if (-not $discordConfig) {
             Write-Host "Discord configuration was not completed." -ForegroundColor Red
             Write-InstallLog "Aborted: Discord configuration incomplete" -LogPath $logPath -Level ERROR
-            return (Stop-Installation -Reason "Discord configuration incomplete" -LogPath $logPath)
+            return (Stop-Installation -Reason "Discord configuration incomplete" `
+                -LogPath $logPath -PassThru:$PassThru)
         }
 
         if ($SkipAudioDevice) {
@@ -159,7 +173,8 @@ function Install-BATCRelayBot {
             if (-not $device) {
                 Write-Host "No audio device selected - the bot would join the channel but stream silence." -ForegroundColor Red
                 Write-InstallLog "Aborted: no audio device selected" -LogPath $logPath -Level ERROR
-                return (Stop-Installation -Reason "No audio device selected" -LogPath $logPath)
+                return (Stop-Installation -Reason "No audio device selected" `
+                    -LogPath $logPath -PassThru:$PassThru)
             }
             $discordConfig.AudioDeviceName = $device
         }
@@ -172,7 +187,8 @@ function Install-BATCRelayBot {
         if (-not $summary.CanProceed) {
             Write-Host "Installation cannot proceed: $($summary.BlockingReason)" -ForegroundColor Red
             Write-InstallLog "Aborted at summary: $($summary.BlockingReason)" -LogPath $logPath -Level ERROR
-            return (Stop-Installation -Reason $summary.BlockingReason -LogPath $logPath)
+            return (Stop-Installation -Reason $summary.BlockingReason `
+                -LogPath $logPath -PassThru:$PassThru)
         }
 
         # ---- Phase 6: install --------------------------------------------
@@ -184,7 +200,8 @@ function Install-BATCRelayBot {
             Write-Host ""
             Write-Host "Installation failed: $($installResult.Error)" -ForegroundColor Red
             Write-InstallLog "Installation failed: $($installResult.Error)" -LogPath $logPath -Level ERROR
-            return (Stop-Installation -Reason $installResult.Error -LogPath $logPath)
+            return (Stop-Installation -Reason $installResult.Error `
+                -LogPath $logPath -PassThru:$PassThru)
         }
 
         Show-PostInstallationMessage `
@@ -193,7 +210,7 @@ function Install-BATCRelayBot {
             -LogPath $installResult.LogPath
 
         Write-InstallLog "Installation completed successfully" -LogPath $logPath
-        return $installResult
+        return (Out-CommandResult -Result $installResult -PassThru:$PassThru)
 
     } catch {
         # Nothing below this point may call exit: exit inside a module
@@ -209,7 +226,8 @@ function Install-BATCRelayBot {
         Write-InstallLog "Unhandled exception: $message" -LogPath $logPath -Level ERROR
         Write-InstallLog "At: $($_.ScriptStackTrace)" -LogPath $logPath -Level ERROR
 
-        return (Stop-Installation -Reason $message -LogPath $logPath)
+        return (Stop-Installation -Reason $message `
+            -LogPath $logPath -PassThru:$PassThru)
     }
 }
 
@@ -222,11 +240,15 @@ function Stop-Installation {
     Points the user at the log and pauses, so a double-clicked shortcut does
     not close before the message can be read. The pause is skipped when the
     session is non-interactive, otherwise automated runs would hang forever.
+
+    Every failing exit of Install-BATCRelayBot goes through here, so -PassThru
+    is honoured in one place rather than at each of the seven return points.
     #>
     [OutputType([hashtable])]
     param(
         [string]$Reason,
-        [string]$LogPath
+        [string]$LogPath,
+        [switch]$PassThru
     )
 
     Write-Host ""
@@ -239,7 +261,8 @@ function Stop-Installation {
         Read-Host "Press Enter to close" | Out-Null
     }
 
-    return @{ Success = $false; Error = $Reason; LogPath = $LogPath }
+    return (Out-CommandResult -PassThru:$PassThru `
+        -Result @{ Success = $false; Error = $Reason; LogPath = $LogPath })
 }
 
 function Resolve-MissingTool {

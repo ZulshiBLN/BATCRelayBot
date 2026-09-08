@@ -328,7 +328,7 @@ Describe "Edit-BATCRelayBotConfig" {
 
     It "reports a missing installation without throwing" {
         $absent = Join-Path ([System.IO.Path]::GetTempPath()) "batc-absent-$([guid]::NewGuid())"
-        $result = Edit-BATCRelayBotConfig -InstallPath $absent 6>$null
+        $result = Edit-BATCRelayBotConfig -InstallPath $absent -PassThru 6>$null
 
         $result.Success | Should -BeFalse
         $result.Errors  | Should -Not -BeNullOrEmpty
@@ -339,7 +339,7 @@ Describe "Edit-BATCRelayBotConfig" {
         $installPath = Split-Path $configPath -Parent
         Mock -ModuleName BATCRelayBot Read-Host { "q" }
 
-        $result = Edit-BATCRelayBotConfig -InstallPath $installPath 6>$null
+        $result = Edit-BATCRelayBotConfig -InstallPath $installPath -PassThru 6>$null
 
         $result.Success | Should -BeFalse
         $result.Errors  | Should -Contain "Cancelled by the user"

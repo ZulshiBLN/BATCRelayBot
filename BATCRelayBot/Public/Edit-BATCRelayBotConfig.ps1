@@ -19,20 +19,26 @@ function Edit-BATCRelayBotConfig {
     .PARAMETER InstallPath
     Installation directory. Defaults to $env:LOCALAPPDATA\BATCRelayBot.
 
+    .PARAMETER PassThru
+    Returns the result object. Without it nothing is written to the pipeline,
+    so quitting the menu no longer prints "Cancelled by the user" as a table.
+
     .EXAMPLE
     Edit-BATCRelayBotConfig
 
     .EXAMPLE
-    $result = Edit-BATCRelayBotConfig
+    $result = Edit-BATCRelayBotConfig -PassThru
     if ($result.Success) { "Changed: $($result.UpdatedFields.Keys)" }
 
     .OUTPUTS
-    Hashtable with Success, BackupPath, UpdatedFields, Errors.
+    With -PassThru, a hashtable with Success, BackupPath, UpdatedFields,
+    Errors.
     #>
     [CmdletBinding()]
     [OutputType([hashtable])]
     param(
-        [string]$InstallPath = (Join-Path $env:LOCALAPPDATA "BATCRelayBot")
+        [string]$InstallPath = (Join-Path $env:LOCALAPPDATA "BATCRelayBot"),
+        [switch]$PassThru
     )
 
     # Initialised up front. Both of these used to be referenced without ever
@@ -56,10 +62,10 @@ function Edit-BATCRelayBotConfig {
         Write-Host ""
         Write-Host "  Run Install-BATCRelayBot first." -ForegroundColor Yellow
         Write-Host ""
-        return @{
+        return (Out-CommandResult -PassThru:$PassThru -Result @{
             Success = $false; BackupPath = $null; UpdatedFields = @{}
             Errors = @($prereq.Errors)
-        }
+        })
     }
 
     if ($prereq.BotRunning) {
@@ -72,10 +78,10 @@ function Edit-BATCRelayBotConfig {
     $menuResult = Show-ConfigEditorMenu -ConfigPath $prereq.ConfigPath
 
     if ($null -eq $menuResult) {
-        return @{
+        return (Out-CommandResult -PassThru:$PassThru -Result @{
             Success = $false; BackupPath = $null; UpdatedFields = @{}
             Errors = @("Cancelled by the user")
-        }
+        })
     }
 
     $field = $menuResult.Field
@@ -107,10 +113,10 @@ function Edit-BATCRelayBotConfig {
             Write-Host "    Rolled back - config.json is unchanged." -ForegroundColor Yellow
             Write-Host ""
 
-            return @{
+            return (Out-CommandResult -PassThru:$PassThru -Result @{
                 Success = $false; BackupPath = $backup; UpdatedFields = @{}
                 Errors = @($errors)
-            }
+            })
         }
 
         $definition = Get-ConfigFieldDefinition -Field $field
@@ -125,10 +131,10 @@ function Edit-BATCRelayBotConfig {
         }
         Write-Host ""
 
-        return @{
+        return (Out-CommandResult -PassThru:$PassThru -Result @{
             Success = $true; BackupPath = $backup; UpdatedFields = $updatedFields
             Errors = @()
-        }
+        })
     }
     catch {
         # Sanitised: an exception raised while handling the token can carry it.
@@ -143,10 +149,10 @@ function Edit-BATCRelayBotConfig {
         }
         Write-Host ""
 
-        return @{
+        return (Out-CommandResult -PassThru:$PassThru -Result @{
             Success = $false; BackupPath = $backup; UpdatedFields = @{}
             Errors = @($errors)
-        }
+        })
     }
 }
 
