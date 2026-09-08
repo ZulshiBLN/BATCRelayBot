@@ -1,6 +1,6 @@
-@{
+﻿@{
     RootModule            = 'BATCRelayBot.psm1'
-    ModuleVersion         = '1.4.0'
+    ModuleVersion         = '1.4.1'
     GUID                  = '12345678-1234-1234-1234-123456789012'
     Author                = 'Michel Brosche'
     CompanyName           = ''
@@ -29,7 +29,7 @@
             ProjectUri = 'https://github.com/ZulshiBLN/BATCRelayBot'
             # Shown on the PSGallery package page. Keep this current with the
             # version above - it still described 1.0.0 at 1.3.16.
-            ReleaseNotes = 'Repairs the config.json contract between installer and bot: installations before 1.4.0 produced a configuration the bot could not load. Also re-enables Edit-BATCRelayBotConfig, prefixes the Discord commands with BATC, and fixes prerequisite detection and the uninstaller. See CHANGELOG.md.'
+            ReleaseNotes = '1.4.0 could not be installed from PSGallery: the package was missing bot.py, requirements.txt and config.example.json, so the installer stopped before writing anything. They are packaged now. Also stops the install log recording Discord server and channel IDs. See CHANGELOG.md.'
         }
     }
 }
