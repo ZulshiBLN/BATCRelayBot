@@ -138,6 +138,28 @@ jobs:
             exit 1
           }
 
+          # Publish-Module packages the module folder and nothing above it, so
+          # bot.py, requirements.txt and config.example.json - which live in the
+          # repository root - were absent from every package up to and including
+          # 1.4.0. Install-BATCRelayBot then stopped with "requirements.txt not
+          # found" before writing anything, and the version was unusable from the
+          # gallery. Local runs never showed it: the installer's relative-path
+          # fallbacks find the files in a checkout.
+          #
+          # They are copied in here rather than moved in the repository, because
+          # the installer already searches its own module directory and moving
+          # them would touch paths in tests, docs and the bot's working
+          # directory. Keep this list in step with Test-InstallerPayload.
+          $payload = 'bot.py', 'requirements.txt', 'config.example.json'
+          foreach ($file in $payload) {
+            if (-not (Test-Path $file)) {
+              Write-Error "$file is missing from the repository root - the package would be unusable"
+              exit 1
+            }
+            Copy-Item -Path $file -Destination $modulePath -Force
+            Write-Host "  packaged $file"
+          }
+
           Publish-Module -Path $modulePath -NuGetApiKey $apiKey -Force
           Write-Host "Successfully published version ${{ steps.get-version.outputs.VERSION }} to PSGallery" -ForegroundColor Green
 

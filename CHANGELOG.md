@@ -15,6 +15,28 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Entries describe what changed for users. For the reasoning behind a change,
 see the commit that made it.
 
+## [1.4.1] - 2026-09-08
+
+A hotfix for a release that could not be installed.
+
+### Fixed
+
+- **1.4.0 could not be installed from PSGallery.** The package was missing
+  `bot.py`, `requirements.txt` and `config.example.json`, so
+  `Install-BATCRelayBot` stopped with "requirements.txt not found in any known
+  location" before writing anything. `Publish-Module` packages the module
+  folder, and those three live above it. `BATCRelayBot.nuspec` declared them and
+  looked like the safeguard against exactly this - `Publish-Module` never reads
+  a nuspec. Nothing caught it because every test ran in a checkout, where the
+  installer finds the files through its relative-path fallbacks.
+
+### Security
+
+- **The install log no longer records Discord server and channel IDs.** They
+  were written in plain text beside the redacted token, while the same rule
+  covers both. Every message written to the log is redacted, so a value added
+  later is covered without anyone having to remember.
+
 ## [1.4.0] - 2026-09-08
 
 Minor rather than patch: `config.json` changed shape. Existing files are

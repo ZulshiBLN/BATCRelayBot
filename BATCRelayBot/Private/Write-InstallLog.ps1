@@ -85,12 +85,22 @@ function Write-InstallLog {
 function Remove-SensitiveData {
     <#
     .SYNOPSIS
-    Redacts bot tokens before anything reaches the log or the console.
+    Redacts bot tokens and Discord IDs before anything reaches the log or the
+    console.
 
     .DESCRIPTION
     Discord bot tokens are three base64url segments separated by dots. The
     first segment is the bot's user ID and is not secret, but the remainder
     is, so the whole value is replaced rather than partially shown.
+
+    Server, channel and user IDs are redacted too. The rule that forbids
+    logging a token forbids logging these in the same sentence, and until
+    1.4.1 the installer wrote both to install.log in plain text - a file that
+    travels into bug reports, screenshots and support threads.
+
+    Every message written by Write-InstallLog passes through here, so a value
+    added to the log later is covered without anyone remembering to think
+    about it.
     #>
     [OutputType([string])]
     param([string]$Text)
@@ -104,6 +114,11 @@ function Remove-SensitiveData {
 
     # Also catch a token that appears behind an Authorization header.
     $redacted = [regex]::Replace($redacted, '(?i)(Bot\s+)[A-Za-z0-9_\-\.]{30,}', '$1[REDACTED-TOKEN]')
+
+    # Snowflakes: 17 to 20 digits, not part of a longer number and not a path
+    # or version. Timestamps in this log are formatted with separators, so a
+    # bare run of that length is an ID.
+    $redacted = [regex]::Replace($redacted, '(?<![\d.\\/])\d{17,20}(?![\d.])', '[REDACTED-ID]')
 
     return $redacted
 }
