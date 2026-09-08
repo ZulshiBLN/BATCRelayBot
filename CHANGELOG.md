@@ -1,536 +1,161 @@
+---
+title: Changelog
+description: Release history for the BATCRelayBot PowerShell module and Discord bot.
+document_type: history
+audience: users
+applies_to: BATCRelayBot 1.4.0
+updated: 2026-09-08
+---
+
 # Changelog
 
-All notable changes to this project will be documented in this file.
+Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+Entries describe what changed for users. For the reasoning behind a change,
+see the commit that made it.
 
-## [1.4.0] - 2026-09-07
+## [1.4.0] - 2026-09-08
 
-Minor rather than patch: the config file schema changed. Existing
-`config.json` files are migrated automatically on the next install.
+Minor rather than patch: `config.json` changed shape. Existing files are
+migrated automatically on the next `Install-BATCRelayBot`, except
+`audio_device_name`, which cannot be guessed and is asked for.
 
-### Fixed (CRITICAL) - the installed bot could never start
+### Added
 
-- **config.json did not match what bot.py reads.** The installer wrote
-  `server_id` and `channel_id`; bot.py requires `guild_id` and
-  `voice_channel_id`. `audio_device_name` - the recording device the bot
-  streams from - was never written or even asked for. Every installation
-  since v1.0.0 produced a config that bot.py rejected at startup. The
-  installer now writes the schema its consumers actually read.
-- **Discord IDs were written as JSON strings.** discord.py matches guilds and
-  channels on int, so a quoted ID resolved to nothing and the bot logged
-  "not found" and idled. They are now written as numbers.
-- **`Start-BATCRelayBot` never received the fields it requires.**
-  `voicemeeter_process_name`, `batc_path` and `batc_process_name` were absent
-  from every generated config, and `voicemeeter_path` pointed at a directory
-  where an executable was expected.
-- **Auto-install could never satisfy the readiness check.** The Phase 4b
-  handler ran winget and returned without re-detecting anything, so the check
-  that followed still saw the tool as missing and refused to install - after
-  the user had already entered their token, server ID and channel ID. There
-  was a second, working copy of the same logic sitting unreachable inside
-  `Start-Installation`. There is now one implementation, and success is
-  decided by detection rather than by winget's exit code.
-- **`exit` inside module functions terminated the whole PowerShell session,**
-  closing the window before any error could be read. v1.3.16 pauses before
-  the exit; the exits themselves are now `return`.
-- **No log existed for the most common failures.** The log directory was
-  created in installation step 1, so anything that failed during detection,
-  credential entry or the readiness check left no trace. Logging now starts
-  before the first thing that can fail.
-
-### Added - the configuration editor works and is enabled again
-
-`Edit-BATCRelayBotConfig` was disabled in v1.3.10 after an audit found it
-wrote `token` while the installer wrote `bot_token`: an edited token went
-into a field nothing read, so the bot silently kept the old credentials. It
-is back, covering the four fields bot.py actually reads - bot token, server
-ID, voice channel ID and audio device.
-
-- **One definition of the field mapping.** `Get-ConfigFieldMap` replaces the
-  copies that `Update-ConfigJson`, `Verify-ConfigChange`, `Test-ConfigValue`
-  and the menu each kept, which is how they drifted apart in the first place.
-  An unknown field now throws instead of writing to nothing.
-- **Edited IDs are written as JSON numbers.** With 1.4.0's schema a channel
-  change would otherwise have been saved as a quoted string, leaving the bot
-  unable to resolve the channel - the editor would have broken a working
-  installation.
-- **The audio device is editable**, chosen from the same filtered ffmpeg list
-  the installer uses. This is the field most likely to need correcting after
-  an install, and it previously required editing JSON by hand.
-- **`output_format` and `bot_activity` are gone from the editor.** bot.py
-  reads neither, so changing them did nothing while appearing to work.
-- **The command no longer crashes on either of its own paths.** `$errors` and
-  `$updatedFields` were referenced without ever being initialised, so the
-  rollback path and the success path both threw.
-- **A new token is verified against the Discord API** before it is saved, as
-  the installer already did, with the option to save anyway when the API is
-  unreachable.
-- **The current token is never displayed**, not even its last four
-  characters, matching the redaction rule applied elsewhere since v1.3.15.
-- **`Confirm-ConfigEditorPrerequisites` can detect a running bot.** It used
-  `Get-Process | Where-Object { $_.CommandLine ... }`, a property that does
-  not exist on PowerShell 5.1, so the "changes need a restart" warning never
-  appeared.
-- The menu no longer calls `Clear-Host`, which wiped whatever the user had on
-  screen on every keystroke.
-
-### Security
-
-- **Config backups are restricted to the current user.** `Backup-ConfigFile`
-  copies `config.json`, token included, and the copy inherited the
-  directory's permissions - leaving up to ten unprotected copies of the token
-  beside the protected original. The restriction is now applied to backups
-  too, and reapplied to `config.json` after every write.
-
-### Fixed - CI never ran the test suite
-
-- The Pester job pointed at `tests/powershell`, which holds 26 module smoke
-  tests. The unit and integration suites - several hundred cases - sat
-  outside that path and had never run in CI. That is how v1.3.16 was released
-  with nine failing tests. The job now runs the whole `tests` tree.
-- The editor's integration test built its own fixtures using the editor's
-  field names, so it agreed with the editor and both disagreed with the
-  installer - the audit named this as the reason the schema bug shipped. It
-  now generates its config with `New-BotConfigFile`, the function the
-  installer uses, and checks the result against the key list parsed from
-  bot.py.
-
-### Fixed - the recommended audio device was picked at random
-
-- **The installer recommended the wrong VoiceMeeter bus.** It took the first
-  device whose name contained "Voicemeeter" and "Out", and ffmpeg enumerates
-  in no useful order - on a real machine that landed on **B3** while README
-  step 3 had routed audio to **B1**. The bot connected and streamed the wrong
-  bus, and config.json had to be corrected by hand.
-
-  The names carry meaning the old logic ignored: `B1`-`B3` are virtual buses,
-  which exist precisely so other software can capture them, while `A1`-`A5`
-  are physical buses feeding speakers and headphones.
-
-  **Only the B buses are listed now**, ordered B1, B2, B3, with B1
-  preselected. Physical outputs and microphones are filtered out entirely -
-  the bot cannot use them, so offering them only invites the mistake. On the
-  reporting machine that turns a list of twelve devices into a list of three.
-
-- **With no VoiceMeeter bus present the installer preselected device number
-  one,** which on a typical machine is a live microphone - one keystroke away
-  from relaying someone's microphone into a voice channel. That case (usually
-  VoiceMeeter not running) now shows the full list with a warning, has no
-  default at all, and asks for confirmation before accepting a non-virtual
-  device.
-
-- `Sort-Object -Property 'Rank'` does not sort hashtables: a bare property
-  name resolves against the PSObject adapter, which exposes Count/Keys/Values
-  rather than the keys, so the ranking silently did nothing. Fixed with
-  script-block properties.
-
-### Fixed - prerequisite detection
-
-- Python installed for all users (HKLM only) was never found: only HKCU was
-  searched. HKLM, WOW6432Node and the `py` launcher are now included.
-- The Microsoft Store alias at `WindowsApps\python.exe` - a zero-byte stub
-  that opens the Store - could be reported as a working interpreter. Every
-  candidate is now verified by running it, and interpreters older than 3.10
-  are reported with the version that was found.
-- BeyondATC was only looked for under `Program Files` and LocalLow, missing
-  any install on another drive. The uninstall registry entries are now read.
-- VoiceMeeter detection returns the executable and process name, not just the
-  directory, so the launcher can actually start it.
-- `Write-ConfigFile` wrote a UTF-8 BOM despite documenting that it did not.
+- `Edit-BATCRelayBotConfig` works and is enabled again. It changes the bot
+  token, server ID, voice channel ID or audio device without reinstalling,
+  with a backup, verification and rollback around every write.
+- Discord commands `!BATCjoin`, `!BATCleave`, `!BATCstatus`, `!BATCrestart`,
+  `!BATCshutdown` and `!BATChelp`.
+- `Uninstall-BATCRelayBot -Force` skips the final confirmation for unattended
+  cleanup. Optional components still need an explicit yes.
+- The installation log now starts with the first step and records every
+  failure, including those before any file is written.
 
 ### Changed
 
-- **Phase order.** Prerequisites are resolved before any credentials are
-  requested, so a missing tool can no longer discard what was just typed.
-- **VoiceMeeter no longer blocks the installation.** It has to come from
-  VB-Audio's own installer, so the installer explains what to do and lets the
-  user decide whether to continue. BeyondATC is informational only: it is
-  optional, commercial software, and `Start-BATCRelayBot` no longer refuses
-  to run without it.
+- **`config.json` field names.** `server_id` is now `guild_id`, `channel_id`
+  is now `voice_channel_id`, and `audio_device_name` was added. Both IDs are
+  JSON numbers, not strings.
+- **Starting the bot no longer joins a voice channel.** It comes online and
+  stands by; relaying begins on `!BATCjoin`. The bot can run permanently
+  without occupying the channel.
+- **Chat commands are `BATC`-prefixed** so they cannot collide with other
+  bots in the same server. Names are case-insensitive.
+- **The installer resolves prerequisites before asking for anything**, so a
+  missing tool can no longer discard credentials that were just typed.
+- **VoiceMeeter and BeyondATC are never installed or removed automatically.**
+  VoiceMeeter ships audio drivers and BeyondATC is commercial software, so
+  both come from their vendors' installers. Missing VoiceMeeter warns and
+  explains instead of blocking, and the bot runs without BeyondATC.
 - **The audio device is chosen from a list** produced by the same ffmpeg the
-  bot will use, instead of being typed by hand.
-- `Show-PrerequisitesInfo` takes the detection results instead of running a
-  second, independent detection pass.
-- Discord User-Agent follows the documented `DiscordBot ($url, $version)`
-  format.
-- `Start-BATCRelayBot` no longer changes the caller's working directory.
-- bot.py passes `ffmpeg_path` to discord.py instead of relying on ffmpeg
-  being on PATH.
+  bot will use. Only VoiceMeeter's virtual buses are offered, with B1
+  preselected; physical outputs and microphones are filtered out.
+- **The uninstaller stops a running bot** before deleting anything, cleanly
+  where possible. Python and FFmpeg are asked about separately, each showing
+  the exact package and version, and removed only on explicit confirmation.
+- Deleting `config.json` is described accurately: it is overwritten and
+  deleted, which is not secure erasure on an SSD, so every screen points at
+  resetting the token instead.
 
-### Fixed - a stopped bot could not be stopped
+### Removed
 
-- **`Stop-BATCRelayBot` could orphan a running bot permanently.** It treated
-  `bot.pid` as the only source of truth: a stale PID made it delete the file
-  and report "not running", after which every later call said the same while
-  the process kept rejoining the voice channel. Closing PowerShell or
-  uninstalling the module changes nothing - the Python process is independent
-  of both. The PID file is now a hint, with the actual process as fallback.
-- **`Get-BATCRelayBotStatus` told the same lie:** it answered purely from
-  bot.pid, so a missing or stale file made it report "NOT RUNNING" while the
-  bot was live and rejoining the channel. It now falls back to process
-  detection and flags the case via `OrphanedFromPidFile`. A non-numeric
-  bot.pid also crashed it with a parameter-binding error instead of falling
-  back.
-- **`!BATCleave` was undone by the watchdog within ten seconds,** so there was
-  no chat command that could get the bot out of a channel. It now pauses the
-  relay until `!BATCjoin`.
-- **New `!BATCshutdown` command** stops the bot process from chat, for exactly
-  the case where the PowerShell side can no longer reach it. Requires the
-  Administrator permission.
-- `!BATCstatus` reports whether the relay is paused.
+- Output format and bot activity from the configuration editor. `bot.py` read
+  neither, so changing them had no effect.
 
-### Fixed (CRITICAL) - the uninstaller removed nothing it was asked to
+### Fixed
 
-- **Confirming removal of Python or FFmpeg had no effect.** Three separate
-  causes, each sufficient on its own:
-  - Only the literal string `yes` was accepted. A `y` fell through to the
-    default branch and silently meant no.
-  - `winget uninstall "Python.Python"` is not a real package id; the installed
-    one is `Python.Python.3.12`. Ids are now read from what is actually
-    installed.
-  - The winget calls sat inside `try/catch`, which never fires for a native
-    command, and no exit code was checked. The uninstaller logged
-    `[OK] Python uninstalled` regardless of what happened. Removal is now
-    verified by querying winget again afterwards, and a failure reports the
-    manual command to run.
-- **FFmpeg was offered for removal even when it was never installed.**
-  Detection used `winget show`, which queries the catalogue rather than the
-  machine and therefore succeeds for any package that exists at all.
-  Presence is now decided with `winget list`.
-- **A running bot was never detected, by the uninstaller either.** The check
-  was `Get-Process python | Where-Object { $_.CommandLine -match 'bot\.py' }`,
-  and a `Process` object has no `CommandLine` property on Windows PowerShell
-  5.1, so it matched nothing. Files were deleted out from under a live
-  process. Detection now uses `Win32_Process`, covers `pythonw.exe` (which is
-  what `Start-BATCRelayBot` launches), and is shared with `Stop-BATCRelayBot`.
-- **A half-finished installation could not be removed.** A missing
-  config.json aborted the whole uninstall, so the uninstaller refused exactly
-  the case it is most needed for. It is now a warning. A stray *file* where
-  the installation directory should be is reported and removed as well.
-- `Show-PostRemovalSummary` iterated with `foreach ($error in ...)`,
-  shadowing PowerShell's automatic `$error` variable.
-
-### Changed - uninstaller behaviour
-
-- A running bot is now stopped automatically before anything is deleted,
-  gracefully where possible: it leaves the voice channel before exiting, and
-  is only terminated if it does not respond within 15 seconds.
-- Python and FFmpeg are asked about separately, each showing the exact package
-  id and version, each with a warning that other software may depend on it,
-  and each removed only on explicit confirmation. Nothing is removed by
-  default, and a non-interactive run removes nothing at all.
-- Yes/no answers accept `y`, `yes`, `j` and `ja` in either case.
-- `Uninstall-BATCRelayBot` gained `-Force` to skip the final confirmation for
-  unattended cleanup. Optional components still require an explicit choice.
-- The uninstaller returns a result object instead of only printing.
-
-### Changed - honesty about deleting the token
-
-- The uninstaller claimed config.json was erased with a "3-pass SDelete
-  overwrite (UNRECOVERABLE)". SDelete was never bundled - there is no `tools/`
-  directory - so the PowerShell fallback always ran, and overwriting a file
-  in place does not reliably erase it on an SSD anyway. The wording now says
-  what actually happens, and every screen points at the one step that does
-  work: resetting the token in the Discord developer portal.
-
-### Changed - chat commands and startup behaviour
-
-- **Starting the bot no longer joins a voice channel.** The process comes
-  online and stands by; relaying begins on an explicit `!BATCjoin`. This lets
-  the bot run permanently, or start with Windows, without occupying the
-  channel when nobody is flying. Previously the watchdog joined within ten
-  seconds of startup with no way to prevent it.
-- **All commands are now `BATC`-prefixed** so they cannot collide with other
-  bots in the same server: `!BATCjoin`, `!BATCleave`, `!BATCstatus`,
-  `!BATCrestart`, `!BATCshutdown`, `!BATChelp`. Names are case-insensitive,
-  and `!BATCrestart_stream` remains as an alias.
-- Command replies read the configured guild's voice state rather than
-  whichever server the command was typed in, so running a command from a
-  second server no longer reports the wrong state.
+- **The installed bot could never start.** The installer wrote `server_id`
+  and `channel_id` while `bot.py` requires `guild_id` and
+  `voice_channel_id`, and `audio_device_name` was never written or asked
+  for. Every installation since 1.0.0 produced a config `bot.py` rejected.
+- **`Start-BATCRelayBot` never received the fields it needs**
+  (`voicemeeter_process_name`, `batc_path`, `batc_process_name`), and
+  `voicemeeter_path` pointed at a directory where an executable was expected.
+- **Auto-installing a missing tool could not satisfy the readiness check.**
+  It ran winget without re-detecting, so the check that followed still saw
+  the tool as missing and refused to install.
+- **A failed installation closed the window before the error could be read.**
+  `exit` inside a module function terminates the whole PowerShell session; it
+  is now a return.
+- **Prerequisite detection missed real installations**: Python installed for
+  all users, BeyondATC on a drive other than C:, and VoiceMeeter's executable
+  and process name. The Microsoft Store stub could be reported as a working
+  interpreter; every candidate is now verified by running it.
+- **A running bot could become unstoppable.** `Stop-BATCRelayBot` and
+  `Get-BATCRelayBotStatus` trusted `bot.pid` alone, so a missing or stale
+  file made both report "not running" while the bot kept rejoining the
+  channel. Both fall back to finding the process.
+- **`!leave` was undone by the watchdog within ten seconds**, leaving no chat
+  command that could get the bot out of a channel.
+- **The uninstaller removed nothing it was asked to.** Only the literal word
+  `yes` was accepted, the winget package id was wrong, and failures were
+  reported as success. FFmpeg was offered for removal even when it was not
+  installed.
+- **A half-finished installation could not be uninstalled**, because a
+  missing `config.json` aborted the whole operation.
+- **The recommended audio device was arbitrary.** The first name containing
+  "Voicemeeter" and "Out" won, and ffmpeg enumerates in no useful order.
+- **The configuration editor wrote to fields nothing read**, so an edited
+  token was saved while the bot kept using the old one.
+- CI ran 26 module smoke tests; the unit and integration suites sat outside
+  the configured path and never ran. The whole tree runs now.
 
 ### Security
 
-- The bot token is redacted from all log output and never partially printed.
-- `!shutdown` is restricted to administrators so any server member cannot stop
-  the relay.
-- `SecureString` conversion frees its unmanaged buffer, which previously left
-  the token in memory for the life of the session.
+- The bot token is redacted everywhere and never partially displayed.
+- Reading the token from a `SecureString` frees its unmanaged buffer, which
+  previously kept the token in memory for the life of the session.
+- Configuration backups are restricted to the current user. They hold the
+  token in plaintext and previously inherited the directory's permissions.
+- `!BATCshutdown` requires the Administrator permission.
 
-### Tests
+## [1.3.0] - [1.3.16] - 2026-08-30 to 2026-08-31
 
-- New `ConfigContract.Tests.ps1` verifies the installer's output against the
-  keys bot.py and `Start-BATCRelayBot` actually declare, reading both lists
-  from their source so the two cannot drift apart again. The previous
-  `Start-Installation` test asserted the broken schema, which is why the
-  mismatch survived sixteen releases.
-- `Start-Installation` tests no longer run pip for real or write into the
-  developer's own installation directory.
-- The uninstaller tests no longer touch the real machine either. One case
-  called `Invoke-SecureUninstall` with no arguments at all, which runs a real
-  removal against `$env:LOCALAPPDATA\BATCRelayBot` - it would have deleted the
-  developer's own installation. It now checks the parameter defaults instead
-  of executing. `Invoke-SecureUninstall` also gained `-LogDirectory`, because
-  every call wrote a timestamped log into the real roaming profile and a suite
-  run left dozens behind.
-- Suite goes from 270 passing / 9 failing to 298 passing / 0 failing.
+A rapid series of installer hotfixes. Every release in this range changed
+only the PowerShell installer; `bot.py` was untouched throughout.
 
-## [1.3.16] - 2026-08-31 (HOTFIX)
+Recurring themes: PSGallery packaging and path resolution (1.3.6-1.3.9),
+VoiceMeeter and winget detection (1.3.0-1.3.3, 1.3.12-1.3.13), Discord API
+token validation (1.3.14), and security hardening of the installer (1.3.15).
 
-### Fixed (CRITICAL)
-- **Installer crash on error:** PowerShell now pauses before exit, allowing users to see error messages
-- **Phase 4b unreachable:** Auto-install prompt now displays when prerequisites missing (moved before summary check)
-- **Error visibility:** Installation failures now show pause prompt instead of instant window close
+Notable:
 
-### Impact
-Users can now see what went wrong during installation and access the auto-install functionality for missing tools.
+- **1.3.11 was withdrawn** and should not be used.
+- **1.3.10** was tagged but never given a changelog entry.
+- The configuration editor shipped in 1.3.10 and was disabled immediately
+  afterwards; it returns in 1.4.0.
 
-## [1.3.15] - 2026-08-31
-
-### Security (CRITICAL)
-- **S1:** Bot token fully redacted in installation summary (no partial display in logs/console)
-- **S2:** config.json restricted to current user only via NTFS ACLs (prevents unauthorized access)
-- **S3:** Sanitized sensitive data from logs (winget output, Discord API errors no longer exposed)
-
-### Design & Robustness (HIGH)
-- **D1:** Phase 4b auto-install confirmation for missing tools (ADR-005 compliant 6-phase structure)
-  - Users can choose: auto-install, manual install, or skip
-  - Prompt only appears when tools are actually missing
-- **R3:** Installation now fails if critical prerequisites still missing after auto-install attempt
-- **R6/R7:** Multi-level path resolution for requirements.txt and bot.py (works from any directory)
-
-### Enhancement & Maintenance (MEDIUM/LOW)
-- **D2-Paths:** Replaced all hardcoded `C:\Program Files` paths with environment variables (fixes non-English Windows)
-- **D3:** Token validation retry messages now show attempt counter (e.g., "attempt 2/3")
-- **R5:** Log directory guaranteed to exist before writing (prevents silent log failures)
-- **S3b:** Error messages sanitized (no raw exception details exposed to users)
-- **Migration:** Phase 0b auto-applies ACL security to existing v1.3.14 configurations
-
-### Technical Details
-- Prompt count reduced to ADR-005 compliance (3 mandatory + 1 conditional)
-- ACL migration handles permission failures gracefully (non-blocking)
-- Environment variable paths support non-English Windows installations
-- All fixes backward-compatible with v1.3.14 installations
-
-## [1.3.14] - 2026-08-31
-
-### Fixed
-- Fixed Discord API token validation failure in installer (User-Agent header compliance)
-- Improved error messages for Discord API connection failures (contextual guidance)
-- Removed debug output that exposed exception details (security fix)
-
-### Technical Details
-- User-Agent header now includes "DiscordBot" prefix as required by Discord API (Issue #4908, #6473)
-- Token validation failures now provide specific guidance (401 vs 403 vs network errors)
-- Cloudflare blocking issue resolved through proper User-Agent formatting
-- Installer token validation now succeeds for valid bot tokens
-
-## [1.3.13] - 2026-08-30 (HOTFIX)
-
-### Fixed (CRITICAL)
-- Correct winget installation path detection for Python and FFmpeg (AppData, not Program Files)
-  - Fixes auto-install detection when using `winget install`
-  - Handles nested version directories (e.g., ffmpeg-9.0.1-full_build\bin\)
-- Fix PowerShell environment variable syntax in VoiceMeeter detection
-  - Changed from `$env:PROGRAMFILES(x86)` to `${env:ProgramFiles(x86)}` (braces required for parentheses)
-  - Corrected path casing (ProgramFiles, not PROGRAMFILES)
-- Add AppData LocalLow path for BeyondATC detection (official config location)
-  - Improved detection of optional BeyondATC installations
-- Replace UTF8NoBOM with UTF8 encoding for PowerShell 5.1 compatibility
-  - UTF8NoBOM only supported in PowerShell 6.0+ (Core)
-  - Fix enables install.log creation on Windows PowerShell 5.1 systems
-  - Affects both installation and removal logging
-- Add defensive parameters to Discord token validation (suppress prompts)
-
-### Technical Details
-- Verified against PowerShell 5.1 and user-tested installation paths
-- All logging now functional on PowerShell 5.1+
-- Path detection priority: AppData (winget) → Program Files → Registry → PATH
-
-## [1.3.12] - 2026-08-30 (HOTFIX)
-
-### Fixed (CRITICAL)
-- VoiceMeeter detection now finds installations with correct paths (C:\Program Files\VB\... not VB-Audio)
-- VoiceMeeter detection searches registry (HKLM, HKCU, WOW6432) + filesystem + wildcard for 100% coverage
-- FFmpeg auto-install now works: PowerShell PATH refreshed after winget install
-- FFmpeg detection checks common path first before Get-Command fallback
-
-### Important Note
-**v1.3.11 should not be used.** If you installed v1.3.11, update to v1.3.12 immediately:
-```powershell
-Update-Module BATCRelayBot
-```
-
-Both critical bugs (VoiceMeeter detection + FFmpeg auto-install) are now fixed in v1.3.12.
-
-## [1.3.11] - 2026-08-30 (WITHDRAWN)
-
-### Added
-- Auto-detect VoiceMeeter installation path (flexible registry search for multiple installation variants)
-- Auto-install Python and FFmpeg via winget (interactive setup with re-detection)
-- Improved prerequisite validation with better path detection
-
-### Fixed
-- VoiceMeeter detection: Now finds installations with variant DisplayNames (e.g., "VB\Voicemeeter")
-- PowerShell security warning in bot token input (added -UseBasicParsing flag)
-- Config editor field name mappings (token → bot_token, channel_id → voice_channel_id)
-- Uninstaller return value causing "aborted" message on valid installations
-- Box-drawing character encoding corruption in uninstaller screens
-- GitHub Actions workflow: Fixed missing pytest and pytest-asyncio in test pipeline
-
-### Known Issues
-- Edit-BATCRelayBotConfig disabled for v1.3.10 (coming in v1.3.11) — use manual JSON editing for now
-  - See plans/todo/CONFIG-EDITOR-BUGS-ANALYSIS.md for details
-
-## [1.3.9] - 2026-08-30
-
-### Fixed
-- Download bot files from GitHub if not in module directory (PSGallery limitation)
-- Fallback mechanism: try local copy first, then GitHub Raw URL
-- Proper error handling for download failures
-- Works reliably with PSGallery-installed modules
-
-## [1.3.8] - 2026-08-30
-
-### Fixed
-- Correct path calculation for PSGallery module installation (use 1 parent, not 2)
-- Files are now correctly found in Modules\BATCRelayBot directory when installed via Install-Module
-
-## [1.3.7] - 2026-08-30
-
-### Fixed
-- Add .nuspec file to include bot.py, requirements.txt, config.example.json in PSGallery package
-- These files were not being included in PSGallery publish, causing installation failures
-
-## [1.3.6] - 2026-08-30
-
-### Fixed
-- Fix path calculation for copying bot files (requirements.txt, bot.py, config.example.json)
-- Was using 3 parents instead of 2, causing files to not be found
-- Add logging for file copy operations
-
-## [1.3.5] - 2026-08-30
-
-### Added
-- Install logging to file (install.log in bot directory)
-- Better pip install error detection and reporting
-- Log file path shown in error messages
-
-### Improved
-- More detailed pip install progress messages
-- Check if requirements.txt exists before trying to install
-- Improved error messages with actionable information
-
-## [1.3.4] - 2026-08-30
-
-### Improved
-- Add pause on error in Install-BATCRelayBot (window stays open for troubleshooting)
-- Better error messages with full exception details
-- Visual separator for error output
-
-## [1.3.3] - 2026-08-30
-
-### Improved
-- Better VoiceMeeter installation error handling
-- Try multiple package versions (base + Potato) if first fails
-- Detailed error messages explaining common failure reasons
-- Allow continuing setup without VoiceMeeter (with warning)
-
-## [1.3.2] - 2026-08-30
-
-### Fixed
-- Correct VoiceMeeter winget package ID casing (VB-Audio.Voicemeeter)
-- Fixed installation failures due to incorrect package ID lookup
-
-## [1.3.1] - 2026-08-30
-
-### Added
-- Automatic VoiceMeeter installation path detection during setup
-- Skip user prompt for VoiceMeeter path if auto-detection succeeds
-
-### Changed
-- Simplified setup process: fewer interactive prompts
-- Updated README to document VoiceMeeter auto-detection
-
-### Fixed
-- Correct VoiceMeeter winget package ID casing (VB-Audio.Voicemeeter)
-- Fixed installation failures due to incorrect package ID
-
-### Technical
-- Auto-detect VoiceMeeter from standard winget path
-- Graceful fallback to manual entry if auto-detection fails
-
-## [1.3.0] - 2026-08-30
-
-### Added
-- Automatic VoiceMeeter installation path detection during setup
-- Skip user prompt for VoiceMeeter path if auto-detection succeeds
-
-### Changed
-- Simplified setup process: fewer interactive prompts
-- Updated README to document VoiceMeeter auto-detection
-
-### Technical
-- Auto-detect from standard winget installation path: `C:\Program Files (x86)\VB\Voicemeeter\voicemeeter_x64.exe`
-- Graceful fallback to manual path entry if auto-detection fails
+None of these releases fixed the underlying defect that made an installed bot
+unable to start - see 1.4.0. For per-release detail, see the git tags.
 
 ## [1.2.0] - 2026-08-30
 
 ### Added
-- Comprehensive Architecture Decision Records (ADRs) for design documentation
-  - ADR-001: VoiceMeeter selection rationale
-  - ADR-002: PowerShell module vs standalone script decision
-  - ADR-003: AppData\Local installation path justification
-  - ADR-004: Task-based polling vs event-driven architecture
-- Enhanced async function test coverage for bot lifecycle
 
-### Fixed
-- Improved test coverage for async functions (connect_and_stream, watchdog, shutdown_watcher)
-- Added comprehensive command registration tests
-- Cleaned up .gitignore duplicate entries (reduced from 81 to 60 lines)
-
-### Changed
-- Test suite now includes mock-based async testing patterns
+- Architecture Decision Records for VoiceMeeter selection, the module format,
+  the installation path, and the polling design.
+- Async test coverage for the bot lifecycle.
 
 ## [1.1.0] - 2026-08-30
 
-### Added
-- Bot installation now automatic in `$env:USERPROFILE\AppData\Local\BATCRelayBot`
-- `Install-BATCRelayBot` automatically copies bot.py and requirements.txt from module
-- VoiceMeeter uninstall support in `Uninstall-BATCRelayBot` (with user confirmation)
-
 ### Changed
-- All functions now use `BotPath` parameter instead of `ProjectPath`
-- Default bot path changed from current directory to AppData\Local
-- Installation simplified: no need to navigate to project directory
-- Updated help documentation for all functions
 
-### Fixed
-- Installation now properly copies bot files to installation directory
-- Uninstall now handles all three prerequisites (Python, ffmpeg, VoiceMeeter)
+- The bot is installed into `%LOCALAPPDATA%\BATCRelayBot` and its files are
+  copied there automatically, instead of running from the project directory.
+- All commands take `BotPath` in place of `ProjectPath`.
 
 ## [1.0.0] - 2026-08-30
 
-### Added
-- PowerShell module for BATC Relay Bot with full automation
-- `Install-BATCRelayBot` - Installs prerequisites (Python, ffmpeg, VoiceMeeter) and generates config
-- `Start-BATCRelayBot` - Starts the bot and associated services in the background
-- `Stop-BATCRelayBot` - Cleanly stops the bot and services
-- `Get-BATCRelayBotStatus` - Reports bot status and uptime
-- `Uninstall-BATCRelayBot` - Removes configuration and optionally uninstalls prerequisites
-- Automated VoiceMeeter detection and installation via winget
-- Python Discord bot with voice channel streaming
-- Discord commands: `!status`, `!restart_stream`, `!leave`
-- Comprehensive README with setup steps and troubleshooting
-- MIT License
-- Pester tests for PowerShell module
-- pytest tests for Python bot with 80% coverage requirement
-- GitHub Actions CI/CD pipeline for testing and publishing
-- Architecture Decision Records (ADRs) for major design decisions
+Initial release.
 
-### Technical Details
-- Windows 10/11 only (VoiceMeeter, ffmpeg, BATC compatibility)
-- PowerShell 5.1+ support
-- Python 3.10+ support
-- Automatic audio routing from BeyondATC/other apps to Discord via VoiceMeeter virtual bus
+### Added
+
+- PowerShell module with `Install-`, `Start-`, `Stop-`, `Get-…Status` and
+  `Uninstall-BATCRelayBot`.
+- Python bot streaming a Windows recording device into a Discord voice
+  channel, with `!status`, `!restart_stream` and `!leave`.
+- Pester and pytest suites, GitHub Actions for testing and PSGallery
+  publishing, MIT licence.
+- Windows 10/11, PowerShell 5.1+, Python 3.10+.

@@ -8,7 +8,7 @@ function Confirm-ConfigEditorPrerequisites {
     Returns validation result with details for decision-making.
 
     .PARAMETER InstallPath
-    Path to BATCRelayBot installation (default: $env:USERPROFILE\AppData\Local\BATCRelayBot)
+    Path to BATCRelayBot installation (default: $env:LOCALAPPDATA\BATCRelayBot)
 
     .OUTPUTS
     Hashtable with properties:
@@ -28,7 +28,7 @@ function Confirm-ConfigEditorPrerequisites {
     #>
 
     param(
-        [string]$InstallPath = "$env:USERPROFILE\AppData\Local\BATCRelayBot"
+        [string]$InstallPath = (Join-Path $env:LOCALAPPDATA "BATCRelayBot")
     )
 
     $errors = [System.Collections.ArrayList]@()

@@ -10,7 +10,7 @@ function Start-BATCRelayBot {
 
     .PARAMETER BotPath
     Path to the bot installation directory.
-    Defaults to $env:USERPROFILE\AppData\Local\BATCRelayBot
+    Defaults to $env:LOCALAPPDATA\BATCRelayBot
 
     .EXAMPLE
     Start-BATCRelayBot
@@ -20,7 +20,7 @@ function Start-BATCRelayBot {
     #>
 
     param(
-        [string]$BotPath = "$env:USERPROFILE\AppData\Local\BATCRelayBot"
+        [string]$BotPath = (Join-Path $env:LOCALAPPDATA "BATCRelayBot")
     )
 
     $ErrorActionPreference = "Stop"

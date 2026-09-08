@@ -9,7 +9,7 @@ function Stop-BATCRelayBot {
 
     .PARAMETER BotPath
     Path to the bot installation directory.
-    Defaults to $env:USERPROFILE\AppData\Local\BATCRelayBot
+    Defaults to $env:LOCALAPPDATA\BATCRelayBot
 
     .PARAMETER Timeout
     Seconds to wait for graceful shutdown before force-killing (default: 15).
@@ -22,7 +22,7 @@ function Stop-BATCRelayBot {
     #>
 
     param(
-        [string]$BotPath = "$env:USERPROFILE\AppData\Local\BATCRelayBot",
+        [string]$BotPath = (Join-Path $env:LOCALAPPDATA "BATCRelayBot"),
         [int]$Timeout = 15
     )
 

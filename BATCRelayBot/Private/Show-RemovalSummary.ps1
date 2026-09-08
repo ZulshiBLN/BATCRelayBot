@@ -20,7 +20,7 @@ function Show-RemovalSummary {
     #>
 
     param(
-        [string]$BotPath = "$env:USERPROFILE\AppData\Local\BATCRelayBot",
+        [string]$BotPath = (Join-Path $env:LOCALAPPDATA "BATCRelayBot"),
         [hashtable]$PrerequisiteStatus = @{}
     )
 

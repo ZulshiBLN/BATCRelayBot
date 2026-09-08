@@ -8,7 +8,7 @@ function Get-BATCRelayBotStatus {
 
     .PARAMETER BotPath
     Path to the bot installation directory.
-    Defaults to $env:USERPROFILE\AppData\Local\BATCRelayBot
+    Defaults to $env:LOCALAPPDATA\BATCRelayBot
 
     .EXAMPLE
     Get-BATCRelayBotStatus
@@ -22,7 +22,7 @@ function Get-BATCRelayBotStatus {
     #>
 
     param(
-        [string]$BotPath = "$env:USERPROFILE\AppData\Local\BATCRelayBot"
+        [string]$BotPath = (Join-Path $env:LOCALAPPDATA "BATCRelayBot")
     )
 
     $pidFile = Join-Path $BotPath "bot.pid"
