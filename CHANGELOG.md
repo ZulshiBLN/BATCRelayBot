@@ -128,6 +128,14 @@ migrated automatically on the next `Install-BATCRelayBot`, except
 - `.gitignore` closed gaps around `config.json` backups, local editor state and
   test output, any of which could have carried a real token into a commit.
 
+### Known issues
+
+- **Uninstalling while the bot is running leaves the installation directory
+  behind.** The running process holds `bot_error.log`, the removal fails, and
+  the step that follows reports "Nothing to clean up" over the failure. Stop the
+  bot with `Stop-BATCRelayBot` before uninstalling, or delete
+  `%LOCALAPPDATA%\BATCRelayBot` by hand afterwards. Fixed in the next release.
+
 ## [1.3.0] - [1.3.16] - 2026-08-30 to 2026-08-31
 
 A rapid series of installer hotfixes. Every release in this range changed
