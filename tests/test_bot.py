@@ -138,15 +138,15 @@ class TestCommandRegistration:
 
     def test_status_command_exists(self):
         """Should have !status command"""
-        assert "status" in [cmd.name for cmd in bot.bot.commands]
+        assert "BATCstatus" in [cmd.name for cmd in bot.bot.commands]
 
     def test_restart_stream_command_exists(self):
         """Should have !restart_stream command"""
-        assert "restart_stream" in [cmd.name for cmd in bot.bot.commands]
+        assert "BATCrestart" in [cmd.name for cmd in bot.bot.commands]
 
     def test_leave_command_exists(self):
         """Should have !leave command"""
-        assert "leave" in [cmd.name for cmd in bot.bot.commands]
+        assert "BATCleave" in [cmd.name for cmd in bot.bot.commands]
 
     def test_commands_are_callable(self):
         """All registered commands should be callable"""
@@ -155,27 +155,27 @@ class TestCommandRegistration:
 
     def test_status_command_prefix(self):
         """Status command should use ! prefix"""
-        cmd = bot.bot.get_command("status")
+        cmd = bot.bot.get_command("BATCstatus")
         assert cmd is not None
 
 
 def test_status_command_callable():
     """!status command should be callable"""
-    cmd = bot.bot.get_command("status")
+    cmd = bot.bot.get_command("BATCstatus")
     assert cmd is not None
     assert callable(cmd.callback)
 
 
 def test_restart_stream_command_callable():
     """!restart_stream command should be callable"""
-    cmd = bot.bot.get_command("restart_stream")
+    cmd = bot.bot.get_command("BATCrestart")
     assert cmd is not None
     assert callable(cmd.callback)
 
 
 def test_leave_command_callable():
     """!leave command should be callable"""
-    cmd = bot.bot.get_command("leave")
+    cmd = bot.bot.get_command("BATCleave")
     assert cmd is not None
     assert callable(cmd.callback)
 
@@ -318,26 +318,26 @@ async def test_on_ready_starts_tasks():
 
 def test_status_command_exists_and_callable():
     """status command should be registered and callable"""
-    cmd = bot.bot.get_command("status")
+    cmd = bot.bot.get_command("BATCstatus")
     assert cmd is not None
     assert callable(cmd.callback)
-    assert cmd.name == "status"
+    assert cmd.name == "BATCstatus"
 
 
 def test_restart_stream_command_exists_and_callable():
     """restart_stream command should be registered and callable"""
-    cmd = bot.bot.get_command("restart_stream")
+    cmd = bot.bot.get_command("BATCrestart")
     assert cmd is not None
     assert callable(cmd.callback)
-    assert cmd.name == "restart_stream"
+    assert cmd.name == "BATCrestart"
 
 
 def test_leave_command_exists_and_callable():
     """leave command should be registered and callable"""
-    cmd = bot.bot.get_command("leave")
+    cmd = bot.bot.get_command("BATCleave")
     assert cmd is not None
     assert callable(cmd.callback)
-    assert cmd.name == "leave"
+    assert cmd.name == "BATCleave"
 
 
 class TestIntegration:
@@ -364,6 +364,63 @@ class TestIntegration:
     def test_bot_has_all_commands(self):
         """Bot should have all three main commands"""
         command_names = [cmd.name for cmd in bot.bot.commands]
-        assert "status" in command_names
-        assert "restart_stream" in command_names
-        assert "leave" in command_names
+        for expected in ("BATCstatus", "BATCjoin", "BATCleave", "BATCrestart", "BATCshutdown"):
+            assert expected in command_names
+
+
+class TestStandbyOnStart:
+    """
+    The bot must come online without joining anything.
+
+    Starting the process from PowerShell (or at boot) should only log the bot
+    in; relaying begins on an explicit !BATCjoin. Before 1.4.0 the watchdog
+    joined the configured channel within ten seconds of startup, and !leave
+    was undone just as quickly.
+    """
+
+    def test_relay_starts_paused(self):
+        """relay_paused must default to True so startup does not join."""
+        assert bot.relay_paused is True
+
+    @pytest.mark.asyncio
+    async def test_watchdog_does_not_connect_while_paused(self):
+        """The watchdog must not touch voice while the relay is paused."""
+        with patch.object(bot, "relay_paused", True):
+            with patch.object(bot, "connect_and_stream", new=AsyncMock()) as connect:
+                await bot.watchdog()
+                connect.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_watchdog_connects_once_resumed(self):
+        """Once resumed, the watchdog relays as before."""
+        with patch.object(bot, "relay_paused", False):
+            with patch.object(bot, "connect_and_stream", new=AsyncMock()) as connect:
+                await bot.watchdog()
+                connect.assert_awaited_once()
+
+
+class TestBATCCommandNaming:
+    """Every command is BATC-prefixed so it cannot collide with other bots."""
+
+    def test_all_commands_are_batc_prefixed(self):
+        for command in bot.bot.commands:
+            assert command.name.lower().startswith("batc"), (
+                f"command '{command.name}' is missing the BATC prefix"
+            )
+
+    def test_help_command_is_renamed(self):
+        assert bot.bot.help_command.command_attrs["name"] == "BATChelp"
+
+    def test_command_names_are_case_insensitive(self):
+        """!batcjoin should work as well as !BATCjoin."""
+        assert bot.bot.case_insensitive is True
+        assert bot.bot.get_command("batcjoin") is not None
+
+    def test_restart_keeps_its_old_name_as_an_alias(self):
+        assert bot.bot.get_command("BATCrestart_stream") is not None
+
+    def test_shutdown_requires_administrator(self):
+        """A stop command must not be available to every server member."""
+        command = bot.bot.get_command("BATCshutdown")
+        assert command is not None
+        assert command.checks, "BATCshutdown has no permission check"

@@ -8,13 +8,13 @@ Describe "Show-InstallationSummary" {
         $prereqs = @{
             Python = @{ Found = $true; Path = "C:\Python\python.exe"; Version = "3.10" }
             FFmpeg = @{ Found = $true; Path = "C:\FFmpeg\ffmpeg.exe"; Version = "4.4" }
-            VoiceMeeter = @{ Found = $true; Path = "C:\VoiceMeeter" }
+            VoiceMeeter = @{ Found = $true; Path = "C:\VoiceMeeter"; ExePath = "C:\VoiceMeeteroicemeeter_x64.exe"; ProcessName = "voicemeeter_x64" }
             BeyondATC = @{ Found = $false }
         }
         $discord = @{
             BotToken = "test_bot_token_1234567890abcdef"
-            ServerId = "123456789012345678"
-            ChannelId = "987654321098765432"
+            GuildId = "123456789012345678"
+            VoiceChannelId = "987654321098765432"
         }
     }
 
@@ -64,13 +64,13 @@ Describe "Phase 4: Summary Screen Integration" {
         $prereqs = @{
             Python = @{ Found = $true; Path = "C:\Python\python.exe"; Version = "3.10" }
             FFmpeg = @{ Found = $false; Path = $null; Version = $null }
-            VoiceMeeter = @{ Found = $true; Path = "C:\VoiceMeeter" }
+            VoiceMeeter = @{ Found = $true; Path = "C:\VoiceMeeter"; ExePath = "C:\VoiceMeeteroicemeeter_x64.exe"; ProcessName = "voicemeeter_x64" }
             BeyondATC = @{ Found = $false }
         }
         $discord = @{
             BotToken = "token"
-            ServerId = "123456789012345678"
-            ChannelId = "987654321098765432"
+            GuildId = "123456789012345678"
+            VoiceChannelId = "987654321098765432"
         }
 
         { Show-InstallationSummary -Prerequisites $prereqs -DiscordConfig $discord } | Should -Not -Throw
@@ -81,13 +81,13 @@ Describe "Phase 4: Summary Screen Integration" {
         $prereqs = @{
             Python = @{ Found = $true; Path = "C:\Python\python.exe"; Version = "3.10" }
             FFmpeg = @{ Found = $true; Path = "C:\FFmpeg\ffmpeg.exe" }
-            VoiceMeeter = @{ Found = $true; Path = "C:\VoiceMeeter" }
+            VoiceMeeter = @{ Found = $true; Path = "C:\VoiceMeeter"; ExePath = "C:\VoiceMeeteroicemeeter_x64.exe"; ProcessName = "voicemeeter_x64" }
             BeyondATC = @{ Found = $false }
         }
         $discord = @{
             BotToken = "token"
-            ServerId = "123456789012345678"
-            ChannelId = "987654321098765432"
+            GuildId = "123456789012345678"
+            VoiceChannelId = "987654321098765432"
         }
 
         $result = Show-InstallationSummary -Prerequisites $prereqs -DiscordConfig $discord
@@ -99,13 +99,13 @@ Describe "Phase 4: Summary Screen Integration" {
         $allOk = @{
             Python = @{ Found = $true; Path = "C:\Python\python.exe" }
             FFmpeg = @{ Found = $true; Path = "C:\FFmpeg\ffmpeg.exe" }
-            VoiceMeeter = @{ Found = $true; Path = "C:\VoiceMeeter" }
+            VoiceMeeter = @{ Found = $true; Path = "C:\VoiceMeeter"; ExePath = "C:\VoiceMeeteroicemeeter_x64.exe"; ProcessName = "voicemeeter_x64" }
             BeyondATC = @{ Found = $false }
         }
         $discord = @{
             BotToken = "token"
-            ServerId = "123456789012345678"
-            ChannelId = "987654321098765432"
+            GuildId = "123456789012345678"
+            VoiceChannelId = "987654321098765432"
         }
 
         $result = Show-InstallationSummary -Prerequisites $allOk -DiscordConfig $discord

@@ -1,133 +1,189 @@
+#Requires -Version 5.1
+
 function Show-ConfigEditorMenu {
     <#
     .SYNOPSIS
-    Displays interactive configuration editor menu.
+    Interactive menu for changing one configuration field.
+
+    .DESCRIPTION
+    Offers only the fields bot.py reads, taken from Get-ConfigFieldMap. Two
+    earlier entries, output format and bot activity, are gone: bot.py never
+    read them, so changing them did nothing.
+
+    The menu does not clear the console. It used to call Clear-Host on every
+    iteration, which wipes whatever the user had on screen - including the
+    installer output they may still need.
 
     .PARAMETER ConfigPath
-    Path to config.json file
+    Path to config.json.
+
+    .PARAMETER FFmpegPath
+    ffmpeg used to enumerate audio devices. Falls back to detection.
 
     .OUTPUTS
-    Hashtable with Field and Value when user confirms change, or $null on quit
-
-    .EXAMPLE
-    $config = Get-Content $configPath -Raw | ConvertFrom-Json
-    $result = Show-ConfigEditorMenu -ConfigPath $configPath
-    if ($result) {
-        Write-Host "User selected $($result.Field): $($result.Value)"
-    }
+    Hashtable with Field and Value once a change is confirmed, or $null when
+    the user quits.
     #>
-
     param(
-        [string]$ConfigPath
+        [string]$ConfigPath,
+        [string]$FFmpegPath
     )
 
     if (-not (Test-Path $ConfigPath)) {
-        Write-Error "Config file not found: $ConfigPath"
+        # Write-Host, not Write-Error: this is an expected, handled condition
+        # that the caller already reports. Writing to the error stream made
+        # the outcome depend on the host's $ErrorActionPreference - the same
+        # call passed locally and failed on the CI runner.
+        Write-Host "  config.json not found: $ConfigPath" -ForegroundColor Red
         return $null
     }
 
-    $config = Get-Content $ConfigPath -Raw | ConvertFrom-Json
+    while ($true) {
+        try {
+            $config = Get-Content $ConfigPath -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+        } catch {
+            Write-Error "config.json is not valid JSON: $($_.Exception.Message)"
+            return $null
+        }
 
-    $token = $config.bot_token
-    $channelId = $config.voice_channel_id
-    $format = $config.output_format
-    $activity = $config.bot_activity
-
-    $tokenDisplay = if ($token -and $token.Length -gt 4) { $token.Substring($token.Length - 4) } else { "****" }
-
-    $menuLoop = $true
-    while ($menuLoop) {
-        Clear-Host
-        Write-Host "BATCRelayBot Configuration Editor" -ForegroundColor Cyan
         Write-Host ""
-        Write-Host "Current Configuration:"
-        Write-Host "1. Discord Token:       [***REDACTED***] (last 4: $tokenDisplay)"
-        Write-Host "2. Channel ID:          $channelId"
-        Write-Host "3. Output Format:       $format"
-        Write-Host "4. Bot Activity:        $activity"
+        Write-Host "BATCRelayBot Configuration" -ForegroundColor Cyan
         Write-Host ""
-        Write-Host "Select field to edit (1-4) or 'q' to quit: " -NoNewline
+        Write-Host "  1. Bot token          [REDACTED]" -ForegroundColor Gray
+        Write-Host "  2. Server ID          $(Format-ConfigValue $config.guild_id)" -ForegroundColor Gray
+        Write-Host "  3. Voice channel ID   $(Format-ConfigValue $config.voice_channel_id)" -ForegroundColor Gray
+        Write-Host "  4. Audio device       $(Format-ConfigValue $config.audio_device_name)" -ForegroundColor Gray
+        Write-Host ""
+        Write-Host "  q. Quit without changes" -ForegroundColor Gray
+        Write-Host ""
 
-        $selection = Read-Host
+        $selection = (Read-Host "Select field to edit (1-4) or q").Trim()
 
+        $result = $null
         switch ($selection) {
-            "1" {
-                $result = Get-DiscordToken -CurrentToken $tokenDisplay
-                if ($result.Valid) {
-                    $confirm = Read-Host "Confirm change? (y/n)"
-                    if ($confirm -eq "y") {
-                        return @{
-                            Field = "Token"
-                            Value = $result.Value
-                        }
-                    }
-                }
-                else {
-                    Write-Host "❌ $($result.Message)" -ForegroundColor Red
-                    Read-Host "Press Enter to continue"
-                }
-            }
-
+            "1" { $result = Get-DiscordToken }
             "2" {
-                $result = Get-DiscordChannel -CurrentChannel $channelId
-                if ($result.Valid) {
-                    $confirm = Read-Host "Confirm change? (y/n)"
-                    if ($confirm -eq "y") {
-                        return @{
-                            Field = "Channel"
-                            Value = $result.Value
-                        }
-                    }
-                }
-                else {
-                    Write-Host "❌ $($result.Message)" -ForegroundColor Red
-                    Read-Host "Press Enter to continue"
-                }
+                $result = Read-ConfigSnowflake -Field "Guild" -CurrentValue $config.guild_id
             }
-
             "3" {
-                $result = Get-OutputFormat -CurrentFormat $format
-                if ($result.Valid) {
-                    $confirm = Read-Host "Confirm change? (y/n)"
-                    if ($confirm -eq "y") {
-                        return @{
-                            Field = "Format"
-                            Value = $result.Value
-                        }
-                    }
-                }
-                else {
-                    Write-Host "❌ $($result.Message)" -ForegroundColor Red
-                    Read-Host "Press Enter to continue"
-                }
+                $result = Read-ConfigSnowflake -Field "Channel" -CurrentValue $config.voice_channel_id
             }
-
             "4" {
-                $result = Get-BotActivity -CurrentActivity $activity
-                if ($result.Valid) {
-                    $confirm = Read-Host "Confirm change? (y/n)"
-                    if ($confirm -eq "y") {
-                        return @{
-                            Field = "Activity"
-                            Value = $result.Value
-                        }
-                    }
-                }
-                else {
-                    Write-Host "❌ $($result.Message)" -ForegroundColor Red
-                    Read-Host "Press Enter to continue"
-                }
+                $result = Read-ConfigAudioDevice -FFmpegPath $FFmpegPath -CurrentValue $config.audio_device_name
             }
-
-            "q" {
-                Write-Host "Exiting..."
-                return $null
-            }
-
+            "q" { Write-Host "No changes made." -ForegroundColor Yellow; return $null }
+            "Q" { Write-Host "No changes made." -ForegroundColor Yellow; return $null }
             default {
-                Write-Host "Invalid selection. Please select 1-4 or 'q'" -ForegroundColor Yellow
-                Read-Host "Press Enter to continue"
+                Write-Host "  Please choose 1-4, or q to quit." -ForegroundColor Yellow
+                continue
             }
         }
+
+        if (-not $result -or -not $result.Valid) {
+            if ($result -and $result.Message) {
+                Write-Host "  $($result.Message)" -ForegroundColor Yellow
+            }
+            continue
+        }
+
+        # Confirm before returning: this is the last point at which the change
+        # can be abandoned without touching the file.
+        Write-Host ""
+        $confirm = Read-Host "  Apply this change? (y/N)"
+        if ($confirm -notmatch '^(y|yes|j|ja)$') {
+            Write-Host "  Discarded." -ForegroundColor Yellow
+            continue
+        }
+
+        return @{ Field = $result.Field; Value = $result.Value }
     }
 }
+
+function Format-ConfigValue {
+    <#
+    .SYNOPSIS
+    Renders a config value for display, naming the empty case explicitly.
+    #>
+    param($Value)
+
+    if ($null -eq $Value -or [string]::IsNullOrWhiteSpace([string]$Value)) {
+        return "(not set)"
+    }
+    return [string]$Value
+}
+
+function Read-ConfigSnowflake {
+    <#
+    .SYNOPSIS
+    Prompts for a Discord ID and validates it before returning.
+    #>
+    [OutputType([hashtable])]
+    param(
+        [Parameter(Mandatory = $true)][string]$Field,
+        $CurrentValue
+    )
+
+    $definition = Get-ConfigFieldDefinition -Field $Field
+
+    Write-Host ""
+    Write-Host $definition.Label -ForegroundColor Cyan
+    Write-Host "  Current: $(Format-ConfigValue $CurrentValue)" -ForegroundColor Gray
+    Write-Host "  $($definition.Hint)" -ForegroundColor Gray
+    Write-Host ""
+
+    $entered = Read-Host "  New $($definition.Label) (Enter to cancel)"
+
+    if ([string]::IsNullOrWhiteSpace($entered)) {
+        return @{ Value = $null; Valid = $false; Message = "Cancelled - $($definition.Label) unchanged" }
+    }
+
+    $check = Test-ConfigValue -Field $Field -Value $entered.Trim()
+    if (-not $check.Valid) {
+        return @{ Value = $null; Valid = $false; Message = $check.Message }
+    }
+
+    return @{ Value = $entered.Trim(); Valid = $true; Message = $check.Message; Field = $Field }
+}
+
+function Read-ConfigAudioDevice {
+    <#
+    .SYNOPSIS
+    Picks a new audio device from the same filtered list the installer uses.
+
+    .DESCRIPTION
+    Reuses Select-AudioDevice so the editor cannot offer a device the
+    installer would reject, and so the name is always spelled exactly as
+    ffmpeg reports it. This is the field most likely to need correcting after
+    an install, because it is the one that decides whether anything is heard.
+    #>
+    [OutputType([hashtable])]
+    param(
+        [string]$FFmpegPath,
+        $CurrentValue
+    )
+
+    Write-Host ""
+    Write-Host "Audio device" -ForegroundColor Cyan
+    Write-Host "  Current: $(Format-ConfigValue $CurrentValue)" -ForegroundColor Gray
+    Write-Host ""
+
+    if (-not $FFmpegPath) {
+        $detected = Find-FFmpeg
+        if ($detected.Found) { $FFmpegPath = $detected.Path }
+    }
+
+    $device = Select-AudioDevice -FFmpegPath $FFmpegPath
+
+    if (-not $device) {
+        return @{ Value = $null; Valid = $false; Message = "Cancelled - audio device unchanged" }
+    }
+
+    return @{ Value = $device; Valid = $true; Message = "Audio device selected"; Field = "AudioDevice" }
+}
+
+Export-ModuleMember -Function @(
+    'Show-ConfigEditorMenu',
+    'Format-ConfigValue',
+    'Read-ConfigSnowflake',
+    'Read-ConfigAudioDevice'
+)

@@ -2,108 +2,82 @@
 
 <#
 .SYNOPSIS
-Display prerequisites status information (read-only info screen)
+Displays prerequisite status. Read-only, no prompts.
 
 .DESCRIPTION
-Shows what's installed, what's missing, what's optional in a user-friendly format.
-No prompts, just information display.
-
-Phase 2 of installer refactoring: Information Display
+Takes the detection results as a parameter instead of detecting again.
+Running detection a second time cost several seconds and could disagree with
+the results the rest of the installer was working from.
 #>
 
 function Show-PrerequisitesInfo {
     [OutputType([void])]
-    param()
+    param(
+        [hashtable]$Prerequisites
+    )
 
-    Write-Host ""
-    Write-Host "=====================================================================" -ForegroundColor Cyan
-    Write-Host "       BATCRelayBot Installation - Prerequisites Check" -ForegroundColor Cyan
-    Write-Host "=====================================================================" -ForegroundColor Cyan
-    Write-Host ""
-
-    # Detect prerequisites
-    $python = Find-Python
-    $ffmpeg = Find-FFmpeg
-    $voicemeeter = Find-VoiceMeeter
-    $beyondatc = Find-BeyondATC
-
-    # Display results
-    Write-Host "Prerequisites Status:" -ForegroundColor White -BackgroundColor DarkBlue
-    Write-Host ""
-
-    # Python (REQUIRED)
-    Write-Host "  [*] Python 3.10+ (REQUIRED)" -ForegroundColor White
-    if ($python.Found) {
-        Write-Host "      FOUND: $($python.Path)" -ForegroundColor Green
-        Write-Host "      Version: $($python.Version)" -ForegroundColor Green
-        Write-Host "      Source: $($python.Method)" -ForegroundColor DarkGreen
-    } else {
-        Write-Host "      NOT FOUND - Installation will fail" -ForegroundColor Red
-        Write-Host "      Download: https://www.python.org/downloads/" -ForegroundColor Yellow
+    # Detect only when called without results, so the function stays usable
+    # on its own for troubleshooting.
+    if (-not $Prerequisites) {
+        $Prerequisites = @{
+            Python      = Find-Python
+            FFmpeg      = Find-FFmpeg
+            VoiceMeeter = Find-VoiceMeeter
+            BeyondATC   = Find-BeyondATC
+        }
     }
+
     Write-Host ""
+    Write-Host "  Component      Status" -ForegroundColor DarkGray
+    Write-Host "  ---------------------------------------------------------------" -ForegroundColor DarkGray
 
-    # FFmpeg (REQUIRED)
-    Write-Host "  [*] FFmpeg (REQUIRED)" -ForegroundColor White
-    if ($ffmpeg.Found) {
-        Write-Host "      FOUND: $($ffmpeg.Path)" -ForegroundColor Green
-        Write-Host "      Version: $($ffmpeg.Version)" -ForegroundColor Green
-        Write-Host "      Source: $($ffmpeg.Method)" -ForegroundColor DarkGreen
-    } else {
-        Write-Host "      NOT FOUND - Installation will fail" -ForegroundColor Red
-        Write-Host "      Install: winget install Gyan.FFmpeg" -ForegroundColor Yellow
-    }
-    Write-Host ""
+    Write-PrerequisiteLine -Name "Python" -Item $Prerequisites.Python `
+        -Requirement "required" -HelpText "https://www.python.org/downloads/"
 
-    # VoiceMeeter (REQUIRED)
-    Write-Host "  [*] VoiceMeeter (REQUIRED for audio routing)" -ForegroundColor White
-    if ($voicemeeter.Found) {
-        Write-Host "      FOUND: $($voicemeeter.Path)" -ForegroundColor Green
-        Write-Host "      Version: $($voicemeeter.Version)" -ForegroundColor Green
-        Write-Host "      Source: $($voicemeeter.Method)" -ForegroundColor DarkGreen
-    } else {
-        Write-Host "      NOT FOUND - Audio streaming won't work" -ForegroundColor Red
-        Write-Host "      Download: https://vb-audio.com/Voicemeeter/" -ForegroundColor Yellow
-        Write-Host "      Note: Manual installation required" -ForegroundColor Yellow
-    }
-    Write-Host ""
+    Write-PrerequisiteLine -Name "FFmpeg" -Item $Prerequisites.FFmpeg `
+        -Requirement "required" -HelpText "winget install Gyan.FFmpeg"
 
-    # BeyondATC (OPTIONAL)
-    Write-Host "  [o] BeyondATC (OPTIONAL - only for ATC relay)" -ForegroundColor White
-    if ($beyondatc.Found) {
-        Write-Host "      FOUND: $($beyondatc.Path)" -ForegroundColor Green
-        Write-Host "      Version: $($beyondatc.Version)" -ForegroundColor Green
-        Write-Host "      Source: $($beyondatc.Method)" -ForegroundColor DarkGreen
-    } else {
-        Write-Host "      Not installed (optional)" -ForegroundColor Gray
-        Write-Host "      Info: Needed only for ATC relay feature" -ForegroundColor DarkGray
-    }
-    Write-Host ""
+    Write-PrerequisiteLine -Name "VoiceMeeter" -Item $Prerequisites.VoiceMeeter `
+        -Requirement "required" -HelpText "https://vb-audio.com/Voicemeeter/ (manual install)"
 
-    # Summary
-    $requiredFound = @($python.Found, $ffmpeg.Found, $voicemeeter.Found) | Where-Object { $_ } | Measure-Object | Select-Object -ExpandProperty Count
-    $requiredTotal = 3
+    Write-PrerequisiteLine -Name "BeyondATC" -Item $Prerequisites.BeyondATC `
+        -Requirement "optional" -HelpText "https://beyondatc.net/ (commercial, optional)"
 
-    Write-Host "Summary:" -ForegroundColor White -BackgroundColor DarkBlue
-    Write-Host ""
-
-    $requiredColor = if ($requiredFound -eq $requiredTotal) { 'Green' } else { 'Red' }
-    Write-Host "  Required: $requiredFound/$requiredTotal installed" -ForegroundColor $requiredColor
-
-    if ($beyondatc.Found) {
-        Write-Host "  Optional: BeyondATC installed" -ForegroundColor Green
-    } else {
-        Write-Host "  Optional: BeyondATC not installed (optional)" -ForegroundColor Gray
-    }
-    Write-Host ""
-
-    # Readiness
-    if ($requiredFound -eq $requiredTotal) {
-        Write-Host "  >>> Installation can proceed! <<<" -ForegroundColor Green -BackgroundColor DarkGreen
-    } else {
-        Write-Host "  >>> Missing required prerequisites. Installation will fail. <<<" -ForegroundColor Red -BackgroundColor DarkRed
-    }
     Write-Host ""
 }
 
-Export-ModuleMember -Function 'Show-PrerequisitesInfo'
+function Write-PrerequisiteLine {
+    <#
+    .SYNOPSIS
+    Renders one status row, with the reason when something is missing.
+    #>
+    param(
+        [string]$Name,
+        [hashtable]$Item,
+        [string]$Requirement,
+        [string]$HelpText
+    )
+
+    $label = "  {0,-14}" -f $Name
+
+    if ($Item.Found) {
+        $detail = if ($Item.Version -and $Item.Version -ne "Unknown") { " ($($Item.Version))" } else { "" }
+        Write-Host "$label FOUND$detail" -ForegroundColor Green
+        if ($Item.Path) {
+            Write-Host ("{0} {1}" -f (" " * 16), $Item.Path) -ForegroundColor DarkGray
+        }
+    } else {
+        $color = if ($Requirement -eq 'optional') { 'Gray' } else { 'Red' }
+        $word = if ($Requirement -eq 'optional') { "not installed (optional)" } else { "MISSING" }
+        Write-Host "$label $word" -ForegroundColor $color
+
+        if ($Item.Reason) {
+            Write-Host ("{0} {1}" -f (" " * 16), $Item.Reason) -ForegroundColor DarkGray
+        }
+        if ($HelpText -and $Requirement -ne 'optional') {
+            Write-Host ("{0} {1}" -f (" " * 16), $HelpText) -ForegroundColor DarkYellow
+        }
+    }
+}
+
+Export-ModuleMember -Function @('Show-PrerequisitesInfo', 'Write-PrerequisiteLine')

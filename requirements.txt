@@ -2,4 +2,7 @@
 # Please do NOT delete it, even after the packages have already been installed -
 # without this file, setup.ps1 will fail the next time it runs (e.g. on a
 # different PC or after a fresh install).
-discord.py[voice]>=2.3.2
+# Pinned exactly, as rules/project.md requires for anything the bot runs
+# on: an unpinned minor has broken a release here before. 2.7.1 is the
+# version 1.4.0 was tested against end to end.
+discord.py[voice]==2.7.1

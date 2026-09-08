@@ -25,7 +25,7 @@ function Show-UninstallConfirmation {
     Write-Host ""
     Write-Host "Installation Removal:" -ForegroundColor Cyan
     Write-Host "  * Delete all BATCRelayBot files" -ForegroundColor Red
-    Write-Host "  * Securely delete config.json (3-pass SDelete - UNRECOVERABLE)" -ForegroundColor Red
+    Write-Host "  * Overwrite and delete config.json (contains your bot token)" -ForegroundColor Red
     Write-Host "  * Delete logs and artifacts" -ForegroundColor Red
     Write-Host "  * Remove installation directory" -ForegroundColor Red
     Write-Host ""
@@ -46,12 +46,13 @@ function Show-UninstallConfirmation {
 
     Write-Host "WARNING:" -ForegroundColor Red
     Write-Host "  * This action CANNOT be undone" -ForegroundColor Red
-    Write-Host "  * Discord bot token will be PERMANENTLY DELETED" -ForegroundColor Red
+    Write-Host "  * Reset your bot token afterwards - overwriting a file on an" -ForegroundColor Red
+    Write-Host "    SSD does not reliably erase it (developer portal > Bot > Reset)" -ForegroundColor Red
     Write-Host "  * You will need to reinstall if you change your mind" -ForegroundColor Red
     if ($DependencyChoices.RemovePython -or $DependencyChoices.RemoveFFmpeg) {
         Write-Host "  * Uninstalling Python/FFmpeg may break other applications" -ForegroundColor Red
     }
-    Write-Host "  * VoiceMeeter is NOT removed (use vendor uninstaller)" -ForegroundColor Yellow
+    Write-Host "  * VoiceMeeter is NOT removed (use VB-Audio's own uninstaller)" -ForegroundColor Yellow
     Write-Host ""
     Write-Host "===============================================================" -ForegroundColor Red
     Write-Host ""
@@ -70,7 +71,7 @@ function Show-UninstallConfirmation {
 
     if ($confirmed) {
         Write-Host ""
-        Write-Host "Ok Uninstallation confirmed. Proceeding..." -ForegroundColor Green
+        Write-Host "Confirmed. Proceeding..." -ForegroundColor Green
         Write-Host ""
     } else {
         Write-Host ""

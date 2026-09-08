@@ -5,12 +5,20 @@ BeforeAll {
     # Setup test environment
     $testRoot = "$env:TEMP\BATCRelayBot-UninstallTest-$(Get-Random)"
     New-Item -ItemType Directory -Path $testRoot -Force | Out-Null
+
+    # Uninstall logs must not land in the real roaming profile: each call
+    # writes a timestamped file, and a full suite run left dozens behind.
+    $testLogDir = "$env:TEMP\BATCRelayBot-UninstallTestLogs-$(Get-Random)"
+    New-Item -ItemType Directory -Path $testLogDir -Force | Out-Null
 }
 
 AfterAll {
     Remove-Module BATCRelayBot -Force -ErrorAction SilentlyContinue
 
     # Cleanup test environment
+    if ($testLogDir -and (Test-Path $testLogDir)) {
+        Remove-Item -Path $testLogDir -Recurse -Force -ErrorAction SilentlyContinue
+    }
     if (Test-Path $testRoot) {
         Remove-Item -Path $testRoot -Recurse -Force -ErrorAction SilentlyContinue
     }
@@ -21,12 +29,12 @@ Describe "Invoke-SecureUninstall" {
     Context "Return Value Structure" {
 
         It "Returns hashtable" {
-            $result = Invoke-SecureUninstall -BotPath $testRoot -DependencyChoices @{}
+            $result = Invoke-SecureUninstall -BotPath $testRoot -DependencyChoices @{} -LogDirectory $testLogDir
             $result | Should -BeOfType [hashtable]
         }
 
         It "Returns hashtable with required keys" {
-            $result = Invoke-SecureUninstall -BotPath $testRoot -DependencyChoices @{}
+            $result = Invoke-SecureUninstall -BotPath $testRoot -DependencyChoices @{} -LogDirectory $testLogDir
             $result.Keys | Should -Contain "Success"
             $result.Keys | Should -Contain "DeletedFiles"
             $result.Keys | Should -Contain "Errors"
@@ -34,22 +42,22 @@ Describe "Invoke-SecureUninstall" {
         }
 
         It "Success is boolean" {
-            $result = Invoke-SecureUninstall -BotPath $testRoot -DependencyChoices @{}
+            $result = Invoke-SecureUninstall -BotPath $testRoot -DependencyChoices @{} -LogDirectory $testLogDir
             $result.Success | Should -BeOfType [bool]
         }
 
         It "DeletedFiles is array-like" {
-            $result = Invoke-SecureUninstall -BotPath $testRoot -DependencyChoices @{}
+            $result = Invoke-SecureUninstall -BotPath $testRoot -DependencyChoices @{} -LogDirectory $testLogDir
             $result.DeletedFiles -is [System.Collections.IEnumerable] -or $result.DeletedFiles -eq $null | Should -Be $true
         }
 
         It "Errors is array-like" {
-            $result = Invoke-SecureUninstall -BotPath $testRoot -DependencyChoices @{}
+            $result = Invoke-SecureUninstall -BotPath $testRoot -DependencyChoices @{} -LogDirectory $testLogDir
             $result.Errors -is [System.Collections.IEnumerable] -or $result.Errors -eq $null | Should -Be $true
         }
 
         It "LogPath is string" {
-            $result = Invoke-SecureUninstall -BotPath $testRoot -DependencyChoices @{}
+            $result = Invoke-SecureUninstall -BotPath $testRoot -DependencyChoices @{} -LogDirectory $testLogDir
             $result.LogPath | Should -BeOfType [string]
         }
     }
@@ -60,7 +68,7 @@ Describe "Invoke-SecureUninstall" {
             $testDir = "$testRoot\test1"
             New-Item -ItemType Directory -Path $testDir -Force | Out-Null
 
-            $result = Invoke-SecureUninstall -BotPath $testDir -DependencyChoices @{}
+            $result = Invoke-SecureUninstall -BotPath $testDir -DependencyChoices @{} -LogDirectory $testLogDir
             Test-Path $result.LogPath | Should -Be $true
         }
 
@@ -68,7 +76,7 @@ Describe "Invoke-SecureUninstall" {
             $testDir = "$testRoot\test2"
             New-Item -ItemType Directory -Path $testDir -Force | Out-Null
 
-            $result = Invoke-SecureUninstall -BotPath $testDir -DependencyChoices @{}
+            $result = Invoke-SecureUninstall -BotPath $testDir -DependencyChoices @{} -LogDirectory $testLogDir
             $logContent = Get-Content $result.LogPath -Raw
             $logContent | Should -Match "Started:"
         }
@@ -78,7 +86,7 @@ Describe "Invoke-SecureUninstall" {
             New-Item -ItemType Directory -Path $testDir -Force | Out-Null
             "test file" | Out-File "$testDir\test.txt" -Force
 
-            $result = Invoke-SecureUninstall -BotPath $testDir -DependencyChoices @{}
+            $result = Invoke-SecureUninstall -BotPath $testDir -DependencyChoices @{} -LogDirectory $testLogDir
             Test-Path $testDir | Should -Be $false
         }
 
@@ -86,7 +94,7 @@ Describe "Invoke-SecureUninstall" {
             $testDir = "$testRoot\test4"
             New-Item -ItemType Directory -Path $testDir -Force | Out-Null
 
-            $result = Invoke-SecureUninstall -BotPath $testDir -DependencyChoices @{}
+            $result = Invoke-SecureUninstall -BotPath $testDir -DependencyChoices @{} -LogDirectory $testLogDir
             $result.Success | Should -Be $true
         }
 
@@ -99,7 +107,7 @@ Describe "Invoke-SecureUninstall" {
             "content" | Out-File $readonlyFile -Force
             Set-ItemProperty -Path $readonlyFile -Name IsReadOnly -Value $true
 
-            $result = Invoke-SecureUninstall -BotPath $testDir -DependencyChoices @{}
+            $result = Invoke-SecureUninstall -BotPath $testDir -DependencyChoices @{} -LogDirectory $testLogDir
 
             # Cleanup
             Set-ItemProperty -Path $readonlyFile -Name IsReadOnly -Value $false -ErrorAction SilentlyContinue
@@ -121,7 +129,7 @@ Describe "Invoke-SecureUninstall" {
             "file2" | Out-File "$testDir\file2.txt" -Force
             "file3" | Out-File "$testDir\file3.py" -Force
 
-            $result = Invoke-SecureUninstall -BotPath $testDir -DependencyChoices @{}
+            $result = Invoke-SecureUninstall -BotPath $testDir -DependencyChoices @{} -LogDirectory $testLogDir
             @($result.DeletedFiles).Count | Should -BeGreaterThan 2
         }
 
@@ -130,7 +138,7 @@ Describe "Invoke-SecureUninstall" {
             New-Item -ItemType Directory -Path $testDir -Force | Out-Null
             "content" | Out-File "$testDir\testfile.txt" -Force
 
-            $result = Invoke-SecureUninstall -BotPath $testDir -DependencyChoices @{}
+            $result = Invoke-SecureUninstall -BotPath $testDir -DependencyChoices @{} -LogDirectory $testLogDir
             ($result.DeletedFiles | Where-Object { $_ -match "testfile\.txt" }).Count | Should -Be 1
         }
 
@@ -138,7 +146,7 @@ Describe "Invoke-SecureUninstall" {
             $testDir = "$testRoot\test8"
             New-Item -ItemType Directory -Path $testDir -Force | Out-Null
 
-            { Invoke-SecureUninstall -BotPath $testDir -DependencyChoices @{} } | Should -Not -Throw
+            { Invoke-SecureUninstall -BotPath $testDir -DependencyChoices @{} -LogDirectory $testLogDir } | Should -Not -Throw
         }
     }
 
@@ -149,7 +157,7 @@ Describe "Invoke-SecureUninstall" {
             New-Item -ItemType Directory -Path $testDir -Force | Out-Null
             "token" | Out-File "$testDir\config.json" -Force
 
-            $result = Invoke-SecureUninstall -BotPath $testDir -DependencyChoices @{}
+            $result = Invoke-SecureUninstall -BotPath $testDir -DependencyChoices @{} -LogDirectory $testLogDir
             $result.DeletedFiles | Should -Contain "config.json"
         }
 
@@ -157,7 +165,7 @@ Describe "Invoke-SecureUninstall" {
             $testDir = "$testRoot\test10"
             New-Item -ItemType Directory -Path $testDir -Force | Out-Null
 
-            { Invoke-SecureUninstall -BotPath $testDir -DependencyChoices @{} } | Should -Not -Throw
+            { Invoke-SecureUninstall -BotPath $testDir -DependencyChoices @{} -LogDirectory $testLogDir } | Should -Not -Throw
         }
 
         It "Logs config.json deletion" {
@@ -165,7 +173,7 @@ Describe "Invoke-SecureUninstall" {
             New-Item -ItemType Directory -Path $testDir -Force | Out-Null
             "sensitive" | Out-File "$testDir\config.json" -Force
 
-            $result = Invoke-SecureUninstall -BotPath $testDir -DependencyChoices @{}
+            $result = Invoke-SecureUninstall -BotPath $testDir -DependencyChoices @{} -LogDirectory $testLogDir
             $logContent = Get-Content $result.LogPath -Raw
             $logContent | Should -Match "config\.json"
         }
@@ -177,7 +185,7 @@ Describe "Invoke-SecureUninstall" {
             $testDir = "$testRoot\test12"
             New-Item -ItemType Directory -Path $testDir -Force | Out-Null
 
-            { Invoke-SecureUninstall -BotPath $testDir -DependencyChoices @{} } | Should -Not -Throw
+            { Invoke-SecureUninstall -BotPath $testDir -DependencyChoices @{} -LogDirectory $testLogDir } | Should -Not -Throw
         }
 
         It "Accepts RemovePython choice" {
@@ -185,7 +193,7 @@ Describe "Invoke-SecureUninstall" {
             New-Item -ItemType Directory -Path $testDir -Force | Out-Null
 
             $choices = @{ RemovePython = $true }
-            { Invoke-SecureUninstall -BotPath $testDir -DependencyChoices $choices } | Should -Not -Throw
+            { Invoke-SecureUninstall -BotPath $testDir -DependencyChoices $choices -LogDirectory $testLogDir } | Should -Not -Throw
         }
 
         It "Accepts RemoveFFmpeg choice" {
@@ -193,7 +201,7 @@ Describe "Invoke-SecureUninstall" {
             New-Item -ItemType Directory -Path $testDir -Force | Out-Null
 
             $choices = @{ RemoveFFmpeg = $true }
-            { Invoke-SecureUninstall -BotPath $testDir -DependencyChoices $choices } | Should -Not -Throw
+            { Invoke-SecureUninstall -BotPath $testDir -DependencyChoices $choices -LogDirectory $testLogDir } | Should -Not -Throw
         }
 
         It "Accepts RemoveModule choice" {
@@ -201,7 +209,7 @@ Describe "Invoke-SecureUninstall" {
             New-Item -ItemType Directory -Path $testDir -Force | Out-Null
 
             $choices = @{ RemoveModule = $true }
-            { Invoke-SecureUninstall -BotPath $testDir -DependencyChoices $choices } | Should -Not -Throw
+            { Invoke-SecureUninstall -BotPath $testDir -DependencyChoices $choices -LogDirectory $testLogDir } | Should -Not -Throw
         }
 
         It "Handles all dependency choices at once" {
@@ -213,7 +221,7 @@ Describe "Invoke-SecureUninstall" {
                 RemoveFFmpeg = $true
                 RemoveModule = $true
             }
-            { Invoke-SecureUninstall -BotPath $testDir -DependencyChoices $choices } | Should -Not -Throw
+            { Invoke-SecureUninstall -BotPath $testDir -DependencyChoices $choices -LogDirectory $testLogDir } | Should -Not -Throw
         }
     }
 
@@ -223,7 +231,7 @@ Describe "Invoke-SecureUninstall" {
             $testDir = "$testRoot\test17"
             New-Item -ItemType Directory -Path $testDir -Force | Out-Null
 
-            $result = Invoke-SecureUninstall -BotPath $testDir -DependencyChoices @{}
+            $result = Invoke-SecureUninstall -BotPath $testDir -DependencyChoices @{} -LogDirectory $testLogDir
             ($result.Errors -is [System.Collections.IEnumerable] -or $result.Errors -eq $null) | Should -Be $true
         }
 
@@ -231,7 +239,7 @@ Describe "Invoke-SecureUninstall" {
             $testDir = "$testRoot\test18"
             New-Item -ItemType Directory -Path $testDir -Force | Out-Null
 
-            { Invoke-SecureUninstall -BotPath $testDir -DependencyChoices @{} } | Should -Not -Throw
+            { Invoke-SecureUninstall -BotPath $testDir -DependencyChoices @{} -LogDirectory $testLogDir } | Should -Not -Throw
         }
 
         It "Continues removal even if one step fails" {
@@ -239,7 +247,7 @@ Describe "Invoke-SecureUninstall" {
             New-Item -ItemType Directory -Path $testDir -Force | Out-Null
             "content" | Out-File "$testDir\file.txt" -Force
 
-            $result = Invoke-SecureUninstall -BotPath $testDir -DependencyChoices @{}
+            $result = Invoke-SecureUninstall -BotPath $testDir -DependencyChoices @{} -LogDirectory $testLogDir
             # Should still attempt to complete despite errors
             $result | Should -Not -BeNull
         }
@@ -251,19 +259,22 @@ Describe "Invoke-SecureUninstall" {
             $testDir = "$testRoot\test20"
             New-Item -ItemType Directory -Path $testDir -Force | Out-Null
 
-            $result = Invoke-SecureUninstall -BotPath $testDir -DependencyChoices @{}
+            $result = Invoke-SecureUninstall -BotPath $testDir -DependencyChoices @{} -LogDirectory $testLogDir
             $logContent = Get-Content $result.LogPath -Raw
 
-            # Check for key phases
+            # The log has to say what was done and how it ended, so that a
+            # failed removal can be diagnosed after the directory is gone.
             $logContent | Should -Match "Started:"
-            $logContent | Should -Match "Pre-deletion verification|Removal completed"
+            $logContent | Should -Match "Target:"
+            $logContent | Should -Match "Finished:"
+            $logContent | Should -Match "Success:"
         }
 
         It "Log path is accessible" {
             $testDir = "$testRoot\test21"
             New-Item -ItemType Directory -Path $testDir -Force | Out-Null
 
-            $result = Invoke-SecureUninstall -BotPath $testDir -DependencyChoices @{}
+            $result = Invoke-SecureUninstall -BotPath $testDir -DependencyChoices @{} -LogDirectory $testLogDir
             $result.LogPath | Should -Not -BeNullOrEmpty
         }
     }
@@ -271,17 +282,36 @@ Describe "Invoke-SecureUninstall" {
     Context "Default Parameters" {
 
         It "Uses default BotPath if not provided" {
-            # Should not throw when called with minimal parameters
-            # (may fail to delete non-existent directory, but should execute)
-            $result = Invoke-SecureUninstall
-            $result | Should -Not -BeNull
+            # Checked through the parameter metadata rather than by calling it:
+            # with no arguments this function runs a real removal against
+            # $env:LOCALAPPDATA\BATCRelayBot and would delete the developer's
+            # own installation, and it wrote a log into the real roaming
+            # profile every time the suite ran.
+            $parameter = (Get-Command Invoke-SecureUninstall).Parameters['BotPath']
+            $parameter | Should -Not -BeNullOrEmpty
+
+            $default = (Get-Command Invoke-SecureUninstall).ScriptBlock.Ast.Body.ParamBlock.Parameters |
+                Where-Object { $_.Name.VariablePath.UserPath -eq 'BotPath' } |
+                ForEach-Object { $_.DefaultValue.Extent.Text }
+
+            $default | Should -Match 'LOCALAPPDATA'
+            $default | Should -Match 'BATCRelayBot'
+        }
+
+        It "Defaults the log directory outside the installation" {
+            # The log has to survive the deletion of the directory it reports on.
+            $default = (Get-Command Invoke-SecureUninstall).ScriptBlock.Ast.Body.ParamBlock.Parameters |
+                Where-Object { $_.Name.VariablePath.UserPath -eq 'LogDirectory' } |
+                ForEach-Object { $_.DefaultValue.Extent.Text }
+
+            $default | Should -Match 'APPDATA'
         }
 
         It "Uses empty hashtable for DependencyChoices if not provided" {
             $testDir = "$testRoot\test22"
             New-Item -ItemType Directory -Path $testDir -Force | Out-Null
 
-            $result = Invoke-SecureUninstall -BotPath $testDir
+            $result = Invoke-SecureUninstall -BotPath $testDir -LogDirectory $testLogDir
             $result | Should -Not -BeNull
         }
     }
@@ -297,14 +327,14 @@ Describe "Phase 5: Secure Uninstallation" {
         $testDir = "$testRoot\phase5-test"
         New-Item -ItemType Directory -Path $testDir -Force | Out-Null
 
-        { Invoke-SecureUninstall -BotPath $testDir -DependencyChoices @{} } | Should -Not -Throw
+        { Invoke-SecureUninstall -BotPath $testDir -DependencyChoices @{} -LogDirectory $testLogDir } | Should -Not -Throw
     }
 
     It "Returns complete removal status" {
         $testDir = "$testRoot\phase5-complete"
         New-Item -ItemType Directory -Path $testDir -Force | Out-Null
 
-        $result = Invoke-SecureUninstall -BotPath $testDir -DependencyChoices @{}
+        $result = Invoke-SecureUninstall -BotPath $testDir -DependencyChoices @{} -LogDirectory $testLogDir
         $result.Success | Should -BeOfType [bool]
         ($result.DeletedFiles -is [System.Collections.IEnumerable] -or $result.DeletedFiles -eq $null) | Should -Be $true
         ($result.Errors -is [System.Collections.IEnumerable] -or $result.Errors -eq $null) | Should -Be $true
@@ -317,7 +347,7 @@ Describe "Phase 5: Secure Uninstallation" {
         "setup.py" | Out-File "$testDir\setup.py" -Force
         "config" | Out-File "$testDir\config.json" -Force
 
-        $result = Invoke-SecureUninstall -BotPath $testDir -DependencyChoices @{}
+        $result = Invoke-SecureUninstall -BotPath $testDir -DependencyChoices @{} -LogDirectory $testLogDir
 
         Test-Path $testDir | Should -Be $false
         $result.Success | Should -Be $true
@@ -328,7 +358,7 @@ Describe "Phase 5: Secure Uninstallation" {
         New-Item -ItemType Directory -Path $testDir -Force | Out-Null
         "test" | Out-File "$testDir\file.txt" -Force
 
-        $result = Invoke-SecureUninstall -BotPath $testDir -DependencyChoices @{}
+        $result = Invoke-SecureUninstall -BotPath $testDir -DependencyChoices @{} -LogDirectory $testLogDir
         (Test-Path $result.LogPath) | Should -Be $true
         (Get-Content $result.LogPath -Raw).Length | Should -BeGreaterThan 100
     }

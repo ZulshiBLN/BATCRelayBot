@@ -1,4 +1,4 @@
-﻿function Stop-BATCRelayBot {
+function Stop-BATCRelayBot {
     <#
     .SYNOPSIS
     Cleanly stops the BATC Relay Bot.
@@ -9,7 +9,7 @@
 
     .PARAMETER BotPath
     Path to the bot installation directory.
-    Defaults to $env:USERPROFILE\AppData\Local\BATCRelayBot
+    Defaults to $env:LOCALAPPDATA\BATCRelayBot
 
     .PARAMETER Timeout
     Seconds to wait for graceful shutdown before force-killing (default: 15).
@@ -22,44 +22,38 @@
     #>
 
     param(
-        [string]$BotPath = "$env:USERPROFILE\AppData\Local\BATCRelayBot",
+        [string]$BotPath = (Join-Path $env:LOCALAPPDATA "BATCRelayBot"),
         [int]$Timeout = 15
     )
 
     $pidFile = Join-Path $BotPath "bot.pid"
-    $stopSignalFile = Join-Path $BotPath "stop.signal"
 
-    if (-not (Test-Path $pidFile)) {
-        Write-Host "No bot.pid found - bot is not running or was not started with Start-BATCRelayBot." -ForegroundColor Yellow
-        exit 0
+    # bot.pid is a hint, not the authority. Trusting it exclusively is how a
+    # running bot got orphaned: a stale PID made this function delete the file
+    # and report "not running", after which every later call said the same
+    # while the real process kept rejoining the voice channel with no way left
+    # to stop it. Stop-BotProcess always looks at the actual processes.
+    $running = @(Find-BotProcess -BotPath $BotPath)
+
+    if ($running.Count -eq 0) {
+        Write-Host "No running bot found for $BotPath." -ForegroundColor Yellow
+        Remove-Item $pidFile -Force -ErrorAction SilentlyContinue
+        return
     }
 
-    $botPid = Get-Content $pidFile -ErrorAction SilentlyContinue
+    Write-Host "Stopping the bot (PID $($running -join ', ')) - waiting for it to leave the channel..." -ForegroundColor Cyan
+    $result = Stop-BotProcess -BotPath $BotPath -TimeoutSeconds $Timeout
 
-    if (-not ($botPid -and (Get-Process -Id $botPid -ErrorAction SilentlyContinue))) {
-        Write-Host "Process PID $botPid is not running." -ForegroundColor Yellow
-        Remove-Item $pidFile -ErrorAction SilentlyContinue
-        exit 0
+    if (-not $result.Stopped) {
+        Write-Host "The bot could not be stopped. Try again, or end the process manually." -ForegroundColor Red
+        return
     }
 
-    Write-Host "Sending stop signal to bot (PID $botPid) - waiting for graceful shutdown..." -ForegroundColor Cyan
-    New-Item -Path $stopSignalFile -ItemType File -Force | Out-Null
-
-    $waited = 0
-    while ((Get-Process -Id $botPid -ErrorAction SilentlyContinue) -and $waited -lt $Timeout) {
-        Start-Sleep -Seconds 1
-        $waited++
-    }
-
-    if (Get-Process -Id $botPid -ErrorAction SilentlyContinue) {
-        Write-Host "Bot did not shut down cleanly in time - force-stopping..." -ForegroundColor Yellow
-        Stop-Process -Id $botPid -Force
-        Write-Host "Bot force-stopped." -ForegroundColor Yellow
+    if ($result.Method -eq 'graceful') {
+        Write-Host "Bot shut down cleanly." -ForegroundColor Green
     } else {
-        Write-Host "Bot shut down cleanly (after $waited second(s))." -ForegroundColor Green
+        Write-Host "Bot did not respond in time and was terminated." -ForegroundColor Yellow
     }
 
-    Remove-Item $pidFile -ErrorAction SilentlyContinue
-    Remove-Item $stopSignalFile -ErrorAction SilentlyContinue
+    Remove-Item $pidFile -Force -ErrorAction SilentlyContinue
 }
-

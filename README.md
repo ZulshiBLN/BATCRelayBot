@@ -1,200 +1,115 @@
 # BATC Relay Bot
 
-A PowerShell module + Python bot that joins a Discord voice channel and live-streams audio from a Windows recording device (typically a [VoiceMeeter](https://vb-audio.com/Voicemeeter/) virtual output) into that channel. It was built as an automated replacement for manually running a second Discord client to relay [BeyondATC](https://www.beyondatc.net/) radio traffic into a group flight's voice channel.
-
-## How it works
+A PowerShell module and Python bot that joins a Discord voice channel and
+live-streams audio from a Windows recording device into it. Built to replace
+running a second Discord client by hand to relay
+[BeyondATC](https://www.beyondatc.net/) radio traffic into a group flight's
+voice channel.
 
 ```
-BeyondATC  --(Windows app audio output)-->  VoiceMeeter  --(virtual bus B1)-->  ffmpeg  -->  Discord voice channel
+BeyondATC --(app audio)--> VoiceMeeter --(bus B1)--> ffmpeg --> Discord voice channel
 ```
 
-BeyondATC's audio output is routed into VoiceMeeter's virtual input, mixed onto VoiceMeeter's B1 bus, and then this bot captures that bus with ffmpeg and streams it into your Discord voice channel — so everyone in the channel hears the ATC radio traffic without anyone needing a second Discord account or browser window.
+Everyone in the channel hears the ATC traffic; nobody needs a second Discord
+account or a spare browser window.
 
-## Prerequisites
+## Requirements
 
-Before you start, you need:
-
-| Software | Official site | Notes |
+| Software | Where | Notes |
 |---|---|---|
-| Windows 10/11 | — | Windows only (due to VoiceMeeter, ffmpeg, and BATC) |
-| Discord account | https://discord.com | Need server management permissions |
-| winget (Windows Package Manager) | Built-in on Win11; on Win10: [App Installer](https://apps.microsoft.com/detail/9nblggh4nns1) | Automated tool installation |
-| BeyondATC | https://www.beyondatc.net/download | (Optional) Only needed to stream ATC radio traffic |
-| Microsoft Flight Simulator 2024 | https://flightsimulator.xbox.com | (Optional) Only needed if using BeyondATC |
+| Windows 10/11 | — | Windows only: VoiceMeeter and DirectShow |
+| Discord account | [discord.com](https://discord.com) | You need to manage a server |
+| winget | Built into Win11; Win10: [App Installer](https://apps.microsoft.com/detail/9nblggh4nns1) | Used to install Python and ffmpeg |
+| VoiceMeeter | [vb-audio.com](https://vb-audio.com/Voicemeeter/) | Install manually, then reboot |
+| BeyondATC | [beyondatc.net](https://www.beyondatc.net/download) | Optional, only for ATC traffic |
 
-**Python, ffmpeg, and VoiceMeeter are installed automatically by the setup function.**
+**Python and ffmpeg are installed for you** by the setup command, per-user and
+without admin rights. **VoiceMeeter and BeyondATC are not** — VoiceMeeter ships
+audio drivers and BeyondATC is commercial software, so both come from their own
+installers. Setup checks for them and tells you what to do.
 
----
+## Setup
 
-## Setup, step by step
+### 1. Create the Discord bot
 
-### 1. Create a Discord bot application
+1. At [discord.com/developers](https://discord.com/developers/applications),
+   create a **New Application**.
+2. Under **Bot**, generate a token. Treat it like a password.
+3. Under **OAuth2 → URL Generator**, tick the **bot** scope and the **Connect**
+   and **Speak** permissions (add **Send Messages** for the chat commands).
+   Open the generated URL and invite the bot to your server.
+4. Right-click your target voice channel → **Edit Channel → Permissions**, and
+   explicitly **Allow** the bot's role to View Channel, Connect and Speak.
+5. Enable **Developer Mode** (Settings → Advanced) so you can copy IDs.
 
-1. Go to https://discord.com/developers/applications and create a **New Application**.
-2. Under **Bot**, generate a token and copy it somewhere safe. Treat this like a password.
-3. Under **OAuth2 → URL Generator**, check **bot** scope and **Connect** + **Speak** permissions (add **Send Messages** if you want to use text commands). Open the generated URL and invite the bot to your server.
-4. In your server, right-click your target voice channel → **Edit Channel → Permissions**. Select the bot's role and explicitly **Allow** View Channel, Connect, and Speak.
-5. In Discord, enable **Developer Mode** (Settings → Advanced) so you can right-click to copy server and channel IDs.
+### 2. Install
 
-**Reference:** [Discord developer docs](https://discord.com/developers/docs/intro) and [discord.py intents guide](https://discordpy.readthedocs.io/en/stable/intents.html)
-
-### 2. Install the PowerShell module and run automated setup
-
-Open PowerShell (no admin needed) and run:
+Start VoiceMeeter first — its virtual buses only appear in the device list
+while it is running. Then, in PowerShell without admin rights:
 
 ```powershell
 Install-Module BATCRelayBot -Repository PSGallery
 Install-BATCRelayBot
 ```
 
-This will automatically:
-- Create bot directory in `$env:USERPROFILE\AppData\Local\BATCRelayBot`
-- Install Python 3.10+ (via winget)
-- Install ffmpeg (via winget)
-- Install VoiceMeeter (via winget)
-- **Auto-detect VoiceMeeter installation path** (no prompt if already installed)
-- Install required Python packages
-- Auto-detect your VoiceMeeter output device
-- Prompt you for:
-  - Discord bot token
-  - Discord server ID (guild_id)
-  - Discord voice channel ID
-  - Path to BeyondATC.exe (if using BeyondATC)
-  - Path to VoiceMeeter (only if auto-detection failed)
-- Write configuration to `config.json`
+Setup detects what is present, offers to install what is missing, and only
+then asks for your bot token, server ID, voice channel ID and audio device.
+Nothing you type can be discarded by a missing tool.
 
-**Note:** VoiceMeeter installation may require a **system restart** to fully activate. If the setup completes but VoiceMeeter isn't working, restart Windows.
+For the audio device, pick **B1** unless you have a reason not to — that is
+the bus step 3 routes audio to. Everything is logged to `install.log` in the
+installation directory.
 
-### 3. Configure VoiceMeeter audio routing (manual step)
+### 3. Route audio in VoiceMeeter
 
-This is required to route audio from applications into the bot.
+1. **Send your app's audio to VoiceMeeter.** Settings → System → Sound →
+   Volume mixer, set the app's output device to
+   **"Voicemeeter Input (VB-Audio Voicemeeter VAIO)"** — not "Default".
+2. **Send it on to B1.** In VoiceMeeter, on the **Virtual Input** strip,
+   enable the **B1** button and make sure **Solo** is off. The
+   **VIRTUAL OUT (B)** meter should move when audio plays.
+3. **Check it.** Trigger a radio call and watch the Virtual Input meter. If it
+   stays flat, the app is not sending audio to Voicemeeter Input.
 
-1. **Open Windows Volume Mixer:**
-   - Settings → System → Sound → Volume mixer
-   - Find any applications that output audio (e.g., BeyondATC)
-   - Set their output device to **"Voicemeeter Input (VB-Audio Voicemeeter VAIO)"** (not "Default")
-
-2. **Configure VoiceMeeter:**
-   - Open VoiceMeeter
-   - On the **Virtual Input** strip (the one that receives audio from your apps), make sure:
-     - **B1** routing button is enabled (highlighted) — this sends audio to the virtual output bus
-     - **Solo (S)** button is OFF — if on, it mutes everything else
-   - You should see levels move on the **"VIRTUAL OUT (B)"** meter when audio plays
-
-3. **Test the routing:**
-   - Play audio from your application (e.g., trigger a BeyondATC radio call)
-   - Watch the Virtual Input meter — levels should move
-   - If they don't, check step 1: is the app really sending audio to Voicemeeter Input?
-
-**Reference:** [VoiceMeeter manual](https://vb-audio.com/Voicemeeter/)
-
-### 4. Start the bot
+### 4. Run
 
 ```powershell
 Start-BATCRelayBot
 ```
 
-This will:
-- Start VoiceMeeter (if not running)
-- Start BeyondATC (if not running and configured)
-- Start the bot in the background
-- Log output to `logs\bot_output.log` and errors to `logs\bot_error.log`
+The bot comes **online but stays out of the channel**. In Discord, type
+`!BATCjoin` to start relaying. Stop it with `Stop-BATCRelayBot`.
 
-To stop it cleanly:
+## Commands
 
-```powershell
-Stop-BATCRelayBot
-```
-
----
-
-## PowerShell commands
-
-Once the module is imported, these commands are available:
+### PowerShell
 
 | Command | Effect |
 |---|---|
-| `Install-BATCRelayBot` | Installs prerequisites and generates config.json |
-| `Start-BATCRelayBot` | Starts the bot in the background |
-| `Stop-BATCRelayBot` | Stops the bot cleanly |
-| `Get-BATCRelayBotStatus` | Shows whether the bot is running and its uptime |
-| `Edit-BATCRelayBotConfig` | (Coming in v1.3.11) — Interactive editor for config changes. For now, manually edit config.json |
-| `Uninstall-BATCRelayBot` | Removes config and generated files, optionally uninstalls Python/ffmpeg/VoiceMeeter |
+| `Install-BATCRelayBot` | Detects prerequisites, collects settings, writes `config.json` |
+| `Start-BATCRelayBot` | Brings the bot online in the background |
+| `Stop-BATCRelayBot` | Stops it cleanly |
+| `Get-BATCRelayBotStatus` | Shows whether it is running, and for how long |
+| `Edit-BATCRelayBotConfig` | Changes one setting without reinstalling |
+| `Uninstall-BATCRelayBot` | Stops the bot and removes the installation |
 
----
-
-## Editing Configuration
-
-**Note:** Interactive configuration editing is coming in v1.3.11. For now, edit configuration manually.
-
-### Manual JSON Editing (v1.3.10)
-
-To update settings, edit `config.json` directly:
-
-```powershell
-# Stop the bot first
-Stop-BATCRelayBot
-
-# Edit the configuration file
-notepad $env:USERPROFILE\AppData\Local\BATCRelayBot\config.json
-
-# Restart the bot to apply changes
-Start-BATCRelayBot
-```
-
-### Configuration Fields
-
-The `config.json` file contains these fields (you can edit all of them):
-
-- **`bot_token`**: Discord bot authentication token (secret — treat like a password)
-- **`server_id`**: Discord server/guild ID
-- **`voice_channel_id`**: Discord voice channel ID where the bot will stream
-- **`voicemeeter_path`**: Path to voicemeeter_x64.exe (auto-detected during setup)
-- **`ffmpeg_path`**: Path to ffmpeg.exe (auto-detected during setup)
-- **`python_path`**: Path to python.exe (auto-detected during setup)
-
-### Important Notes
-
-- **Stop the bot before editing**: `Stop-BATCRelayBot`
-- **Restart required after editing**: `Start-BATCRelayBot` applies your changes
-- **Backup your config**: Before major edits, manually copy config.json to config.json.backup
-- **JSON syntax matters**: Make sure your JSON is valid after editing (use a JSON validator if unsure)
-
-### Coming in v1.3.11
-
-The interactive `Edit-BATCRelayBotConfig` function will let you update settings without manual JSON editing. See [CONFIG-EDITOR-BUGS-ANALYSIS.md](plans/todo/CONFIG-EDITOR-BUGS-ANALYSIS.md) for why it's not available yet.
-
----
-
-## Discord bot commands
-
-Once the bot is in your server, these text commands are available in any channel it can see:
+### Discord
 
 | Command | Effect |
 |---|---|
-| `!status` | Shows whether the bot is connected and streaming |
-| `!restart_stream` | Restarts the audio stream without leaving the channel |
-| `!leave` | Manually disconnects the bot from voice |
+| `!BATCjoin` | Join the configured channel and start relaying |
+| `!BATCleave` | Leave and **stay out** until `!BATCjoin` |
+| `!BATCstatus` | Connection and stream state |
+| `!BATCrestart` | Restart the stream without leaving |
+| `!BATCshutdown` | Stop the bot process (Administrator only) |
+| `!BATChelp` | List the commands |
 
----
+Names are case-insensitive, so `!batcjoin` works. The `BATC` prefix keeps them
+from colliding with other bots in the same server.
 
-## Troubleshooting
-
-- **"file cannot be loaded... not digitally signed"** - PowerShell's execution policy is blocking the script. Run `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force` first, or permanently with `Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force`.
-
-- **Voice connection times out ("Timed out connecting to voice")** - This is usually a Discord **channel permission** issue, not network/firewall. Re-check Setup step 1.4 above: the bot's role needs explicit "View Channel" + "Connect" + "Speak" on the target channel.
-
-- **VoiceMeeter installed but not activating** - VoiceMeeter may require a system restart. Restart Windows and try again.
-
-- **No audio reaches Discord (bot is connected but silent)** - Debug VoiceMeeter routing first:
-  1. Check step 3 above: is the app really sending audio to Voicemeeter Input? Check the Virtual Input meter.
-  2. Test ffmpeg directly: `ffmpeg -f dshow -i audio="<your device name>" -t 8 test.wav`, then play `test.wav`. If silent, the problem is VoiceMeeter/app routing, not the bot.
-
-- **Bot starts but immediately disconnects** - Check `logs\bot_error.log` for details. Common causes: wrong channel ID, missing bot permissions, or Discord rate limiting.
-
-- **`json.decoder.JSONDecodeError: Unexpected UTF-8 BOM`** - `config.json` was saved with a BOM (e.g., by Notepad). `bot.py` handles this automatically with `utf-8-sig`, so this should only happen with very old copies.
-
----
+`!BATCshutdown` is the way out if the bot runs in the background and
+`Stop-BATCRelayBot` cannot reach it: the Python process is independent of the
+PowerShell module, so closing the terminal does not stop it.
 
 ## Uninstalling
 
@@ -202,29 +117,37 @@ Once the bot is in your server, these text commands are available in any channel
 Uninstall-BATCRelayBot
 ```
 
-This will:
-- Stop the bot (if running)
-- Securely delete `config.json` (which contains your Discord token)
-- Remove generated files (logs, bot.pid, stop.signal)
-- Optionally uninstall Python, ffmpeg, and/or VoiceMeeter (will ask for confirmation separately in case you use them for other projects)
+Stops the bot, removes the installation directory, and asks **separately**
+about Python and FFmpeg — neither is removed unless you confirm it. Add
+`-Force` to skip the final confirmation; the optional components still need an
+explicit yes.
 
-Bot files in `$env:USERPROFILE\AppData\Local\BATCRelayBot` remain in place.
+**VoiceMeeter is never removed.** Use VB-Audio's own uninstaller
+(Settings → Apps), then reboot.
 
----
+**Reset your bot token afterwards.** `config.json` is overwritten before
+deletion, but overwriting does not reliably erase a file on an SSD. Invalidating
+the token is the only guarantee: developer portal → your app → Bot → **Reset
+Token**.
 
-## Files
+## Documentation
 
-| File/Folder | Purpose |
+| Document | Contents |
 |---|---|
-| `BATCRelayBot/` | PowerShell module (install, start, stop, uninstall commands) |
-| `bot.py` | The Discord bot itself (Python) |
+| [docs/CONFIGURATION.md](docs/CONFIGURATION.md) | Every `config.json` field, and how to change it |
+| [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Symptoms, causes, fixes |
+| [CHANGELOG.md](CHANGELOG.md) | Release history |
+
+## Repository layout
+
+| Path | Contents |
+|---|---|
+| `BATCRelayBot/` | The PowerShell module |
+| `bot.py` | The Discord bot |
 | `config.example.json` | Template for `config.json` |
-| `requirements.txt` | Python dependencies (auto-installed by setup) |
-| `LICENSE` | MIT License |
-| `README.md` | This file |
+| `requirements.txt` | Python dependencies, installed by setup |
+| `tests/` | Pester and pytest suites |
 
----
+## Licence
 
-## License
-
-MIT License - see LICENSE file for details.
+MIT — see [LICENSE](LICENSE).

@@ -60,26 +60,45 @@ Describe "Confirm-UninstallPrerequisites" {
 
     Context "Error Handling: Missing Files" {
 
-        It "Returns error when directory not found" {
+        It "Refuses only when there is nothing at the path" {
             $testPath = Join-Path $PSScriptRoot "..\..\testdata\uninstall\nonexistent"
             $result = Confirm-UninstallPrerequisites -BotPath $testPath
 
             $result.Valid | Should -Be $false
             $result.InstallFound | Should -Be $false
-            $result.Errors[0] | Should -Match "Installation directory not found"
+            ($result.Errors -join ' ') | Should -Match 'Nothing to remove'
         }
 
-        It "Returns error when config.json missing" {
+        It "Still uninstalls when config.json is missing" {
+            # An uninstaller that refuses a half-finished installation is
+            # useless at the one moment it is most needed. A missing
+            # config.json is reported as a warning, not a blocker.
             $testPath = Join-Path $PSScriptRoot "..\..\testdata\uninstall\no_config"
             if (Test-Path $testPath) { Remove-Item $testPath -Recurse -Force }
             New-Item -ItemType Directory -Path $testPath -Force | Out-Null
 
             $result = Confirm-UninstallPrerequisites -BotPath $testPath
 
-            $result.Valid | Should -Be $false
-            $result.Errors[0] | Should -Match "config.json not found"
+            $result.Valid | Should -Be $true
+            $result.Errors.Count | Should -Be 0
+            ($result.Warnings -join ' ') | Should -Match 'config\.json is missing'
 
             Remove-Item $testPath -Recurse -Force
+        }
+
+        It "Reports a stray file at the installation path" {
+            # Left behind by a botched copy; it blocks a reinstall until removed.
+            $strayDir = Join-Path $PSScriptRoot "..\..\testdata\uninstall"
+            New-Item -ItemType Directory -Path $strayDir -Force | Out-Null
+            $strayPath = Join-Path $strayDir "stray"
+            Set-Content -Path $strayPath -Value "not a directory" -Force
+
+            $result = Confirm-UninstallPrerequisites -BotPath $strayPath
+
+            $result.Valid | Should -Be $true
+            ($result.Warnings -join ' ') | Should -Match 'is a file, not a directory'
+
+            Remove-Item $strayPath -Force
         }
     }
 

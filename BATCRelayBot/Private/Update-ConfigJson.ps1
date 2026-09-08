@@ -1,58 +1,54 @@
+#Requires -Version 5.1
+
 function Update-ConfigJson {
     <#
     .SYNOPSIS
-    Updates a single field in JSON configuration.
+    Updates a single field in config.json and returns the new JSON.
 
     .DESCRIPTION
-    Reads config.json, updates one field, returns modified JSON string.
-    Preserves all other fields and structure.
+    Reads config.json, changes one field, and returns the modified document as
+    a string. All other fields keep their values and their order.
+
+    The field name is an editor-level name (Token, Guild, Channel,
+    AudioDevice); Get-ConfigFieldMap translates it to the JSON key and the
+    required type. That mapping lives in one place now, because keeping a
+    private copy here is how the editor came to write `token` while the
+    installer wrote `bot_token`.
 
     .PARAMETER ConfigPath
-    Full path to config.json file to read.
+    Full path to config.json.
 
     .PARAMETER Field
-    Field name to update (Token, Channel, Format, Activity).
+    Editor field name. Unknown names throw rather than writing to nothing.
 
     .PARAMETER Value
-    New value for the field (validated before use).
+    New value. Coerced to the field's declared type - Discord IDs become JSON
+    numbers, not quoted strings.
 
     .OUTPUTS
-    [string] Modified JSON content as string
-
-    .EXAMPLE
-    $newJson = Update-ConfigJson -ConfigPath 'C:\BATCRelayBot\config.json' `
-                                 -Field 'Token' -Value 'newtoken123'
-    Write-ConfigFile -ConfigPath 'C:\BATCRelayBot\config.json' -JsonContent $newJson
-
-    .NOTES
-    - Field Mapping:
-      * Token -> token (bot auth token)
-      * Channel -> channel_id (Discord channel ID)
-      * Format -> output_format (message format type)
-      * Activity -> bot_activity (status message)
-    - Validation: Caller must validate value before calling
-    - Error handling: Throws on JSON parse error or missing file
+    [string] the modified JSON.
     #>
-
     param(
         [string]$ConfigPath,
         [string]$Field,
-        [string]$Value
+        $Value
     )
+
+    $definition = Get-ConfigFieldDefinition -Field $Field
+    $jsonField = $definition.Json
+    $typedValue = ConvertTo-ConfigFieldValue -Field $Field -Value $Value
 
     $config = Get-Content $ConfigPath -Raw | ConvertFrom-Json
 
-    $fieldMap = @{
-        "Token"    = "bot_token"
-        "Channel"  = "voice_channel_id"
-        "Format"   = "output_format"
-        "Activity" = "bot_activity"
+    # ConvertFrom-Json yields a PSCustomObject, and dot-assignment on one can
+    # only overwrite an existing property - it throws for a new one.
+    if ($config.PSObject.Properties.Name -contains $jsonField) {
+        $config.$jsonField = $typedValue
+    } else {
+        $config | Add-Member -NotePropertyName $jsonField -NotePropertyValue $typedValue -Force
     }
 
-    $jsonField = $fieldMap[$Field]
-    $config.$jsonField = $Value
-
-    $json = $config | ConvertTo-Json -Depth 10
-
-    return $json
+    return ($config | ConvertTo-Json -Depth 10)
 }
+
+Export-ModuleMember -Function Update-ConfigJson

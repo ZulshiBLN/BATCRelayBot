@@ -57,8 +57,17 @@ Thumbs.db
 
 # Project-specific (Runtime files with secrets)
 config.json
+config.json.backup-*
+config.json.*
 bot.pid
 stop.signal
+
+# Never the example: it is the template users copy from.
+!config.example.json
+
+# Local agent settings. No secrets by design, but it records local paths and
+# approved commands, which is nobody else's business.
+.claude/
 
 # Generated files
 logs/
@@ -68,3 +77,8 @@ install.log
 
 # PowerShell logs
 *.log
+
+# Test and build artefacts
+testResults.xml
+*.trx
+TestResults/

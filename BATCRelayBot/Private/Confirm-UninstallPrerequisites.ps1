@@ -1,93 +1,72 @@
 #Requires -Version 5.1
 
+<#
+.SYNOPSIS
+Checks what state the installation is in (uninstaller phase 1). No prompts.
+
+.DESCRIPTION
+Only one thing is fatal: there is nothing at the path to remove. Everything
+else is reported and handled.
+
+A missing config.json used to abort the whole uninstall, which meant the
+uninstaller refused exactly the case it is most needed for - a half-finished
+or partly deleted installation. A running bot used to abort it too, but was
+never actually detected, so the check only ever got in the way.
+#>
+
 function Confirm-UninstallPrerequisites {
-    <#
-    .SYNOPSIS
-    Validates that BATCRelayBot installation is in a state that can be safely uninstalled.
-
-    .DESCRIPTION
-    Phase 1 of uninstaller: Silently verify installation paths, detect running bot process,
-    check file permissions, and return status. Runs with no prompts.
-
-    .PARAMETER BotPath
-    Installation directory to validate.
-    Defaults to $env:USERPROFILE\AppData\Local\BATCRelayBot
-
-    .OUTPUTS
-    Hashtable with installation status:
-    @{
-        Valid = $true/$false              # Can uninstall proceed?
-        InstallFound = $true/$false       # Installation directory exists?
-        BotRunning = $true/$false         # Bot process currently running?
-        ConfigPath = "full/path"          # Path to config.json
-        LogPath = "full/path"             # Path to install.log
-        Errors = @("error1", "error2")    # List of validation errors
-    }
-
-    .EXAMPLE
-    $status = Confirm-UninstallPrerequisites
-    if ($status.Valid) {
-        Write-Host "Ready to uninstall"
-    } else {
-        Write-Host "Errors: $($status.Errors -join ', ')"
-    }
-    #>
-
+    [OutputType([hashtable])]
     param(
-        [string]$BotPath = "$env:USERPROFILE\AppData\Local\BATCRelayBot"
+        [string]$BotPath = (Join-Path $env:LOCALAPPDATA "BATCRelayBot")
     )
 
-    $ErrorActionPreference = "SilentlyContinue"
     $errors = @()
-    $installFound = $false
-    $configPath = $null
-    $logPath = $null
-    $botRunning = $false
+    $warnings = @()
+    $configPath = Join-Path $BotPath "config.json"
+    $logPath = Join-Path $BotPath "install.log"
+    $runningProcesses = @()
 
-    # Step 1: Verify installation path exists
-    if (-not (Test-Path $BotPath)) {
-        $errors += "Installation directory not found: $BotPath"
+    $installFound = Test-Path $BotPath
+
+    if (-not $installFound) {
+        $errors += "Nothing to remove - $BotPath does not exist."
     } else {
-        $installFound = $true
+        # A file where the directory should be: exactly what a botched copy
+        # leaves behind, and it blocks a reinstall until it is gone.
+        $item = Get-Item $BotPath -Force -ErrorAction SilentlyContinue
+        if ($item -and -not $item.PSIsContainer) {
+            $warnings += "$BotPath is a file, not a directory - it will be removed."
+        } else {
+            if (-not (Test-Path $configPath)) {
+                $warnings += "config.json is missing - the installation is incomplete and will be cleaned up."
+            }
 
-        # Step 2: Verify critical files exist
-        $configPath = Join-Path $BotPath "config.json"
-        $logPath = Join-Path $BotPath "install.log"
-
-        if (-not (Test-Path $configPath)) {
-            $errors += "config.json not found at $configPath"
+            try {
+                $probe = Join-Path $BotPath ".uninstall_probe"
+                "probe" | Set-Content $probe -ErrorAction Stop
+                Remove-Item $probe -Force -ErrorAction Stop
+            } catch {
+                $errors += "No write access to $BotPath - run PowerShell as the user who installed it."
+            }
         }
 
-        # Step 3: Check if bot process is running
-        $botProcess = Get-Process python -ErrorAction SilentlyContinue |
-                      Where-Object { $_.CommandLine -match "bot\.py" }
-
-        if ($botProcess) {
-            $botRunning = $true
-            $errors += "Bot process is running (PID: $($botProcess.Id)). Stop it before uninstalling."
-        }
-
-        # Step 4: Verify file permissions (can we read/write?)
-        try {
-            $testFile = Join-Path $BotPath ".uninstall_test"
-            "test" | Set-Content $testFile -ErrorAction Stop
-            Remove-Item $testFile -ErrorAction Stop
-        } catch {
-            $errors += "Insufficient permissions to read/write in $BotPath"
+        $runningProcesses = @(Find-BotProcess -BotPath $BotPath)
+        if ($runningProcesses.Count -gt 0) {
+            # Not an error: the removal step stops it before deleting anything.
+            $warnings += "The bot is running (PID $($runningProcesses -join ', ')) and will be stopped."
         }
     }
 
-    # Determine if we can proceed
-    $valid = ($installFound -and -not $botRunning -and $errors.Count -eq 0)
-
     return @{
-        Valid = $valid
-        InstallFound = $installFound
-        BotRunning = $botRunning
-        InstallPath = $BotPath
-        ConfigPath = $configPath
-        LogPath = $logPath
-        Errors = $errors
+        Valid          = ($installFound -and $errors.Count -eq 0)
+        InstallFound   = $installFound
+        BotRunning     = ($runningProcesses.Count -gt 0)
+        BotProcessIds  = $runningProcesses
+        InstallPath    = $BotPath
+        ConfigPath     = $configPath
+        LogPath        = $logPath
+        Warnings       = $warnings
+        Errors         = $errors
     }
 }
 
