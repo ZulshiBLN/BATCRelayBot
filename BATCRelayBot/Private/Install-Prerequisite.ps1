@@ -16,12 +16,6 @@ detection rather than by winget's exit code, which reports failure for
 harmless cases such as the package already being present.
 #>
 
-function Test-WingetAvailable {
-    [OutputType([bool])]
-    param()
-    return [bool](Get-Command winget.exe -ErrorAction SilentlyContinue)
-}
-
 function Invoke-WingetInstall {
     <#
     .SYNOPSIS
@@ -86,7 +80,7 @@ function Install-MissingPrerequisite {
         [string]$LogPath
     )
 
-    if (-not (Test-WingetAvailable)) {
+    if (-not (Test-WingetPresent)) {
         Write-Host "  winget is not available on this system." -ForegroundColor Red
         Write-Host "  Install 'App Installer' from the Microsoft Store, or install the" -ForegroundColor Yellow
         Write-Host "  missing tools manually and run the installer again." -ForegroundColor Yellow
@@ -165,6 +159,5 @@ function Update-ProcessPath {
 Export-ModuleMember -Function @(
     'Install-MissingPrerequisite',
     'Invoke-WingetInstall',
-    'Test-WingetAvailable',
     'Update-ProcessPath'
 )
