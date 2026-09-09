@@ -895,6 +895,73 @@ class TestJoinPermissions:
         assert bot.relay_paused is False
 
 
+class TestShutdownSurvivesFailure:
+    """
+    The bot must always keep a way out.
+
+    On 2026-09-09 a session logged a join, then twenty seconds, then nothing -
+    no "Stop signal detected" line at all - and ended when Stop-BATCRelayBot's
+    fifteen-second grace ran out and terminated it. A discord.py task loop
+    stops on an unhandled exception and says nothing about it, and this loop
+    was the only thing reading the stop signal.
+    """
+
+    def test_both_loops_report_failure_instead_of_dying_quietly(self):
+        assert bot.shutdown_watcher.get_task is not None
+        assert bot.shutdown_watcher._error is not bot.tasks.Loop.error.__get__
+        # The handler is what discord.py calls; without one the loop ends.
+        assert bot.shutdown_watcher._error.__name__ == "shutdown_watcher_error"
+        assert bot.watchdog._error.__name__ == "watchdog_error"
+
+    @pytest.mark.asyncio
+    async def test_a_failed_check_does_not_end_the_watcher(self, monkeypatch):
+        """An unreadable stop.signal is a reason to look again in a second."""
+        signal = MagicMock()
+        signal.exists = Mock(side_effect=OSError("device not ready"))
+        monkeypatch.setattr(bot, "STOP_SIGNAL_PATH", signal)
+
+        # No exception escapes, so the loop lives to check again.
+        await bot.shutdown_watcher.coro()
+
+    @pytest.mark.asyncio
+    async def test_the_audio_source_is_released_before_the_process_ends(self, monkeypatch, tmp_path):
+        """
+        discord.py kills ffmpeg from the player's daemon thread. If the
+        interpreter exits first that thread is torn down, ffmpeg survives, and
+        it keeps holding the VoiceMeeter bus it was capturing.
+        """
+        source = MagicMock()
+        monkeypatch.setattr(bot, "current_source", source)
+
+        signal = tmp_path / "stop.signal"
+        signal.touch()
+        monkeypatch.setattr(bot, "STOP_SIGNAL_PATH", signal)
+
+        # voice_clients is a read-only property, so it is replaced on the
+        # class rather than the instance.
+        with patch.object(type(bot.bot), "voice_clients", new=[]):
+            with patch.object(bot.bot, "close", new=AsyncMock()):
+                await bot.shutdown_watcher.coro()
+
+        source.cleanup.assert_called_once()
+        assert bot.current_source is None
+        assert not signal.exists()
+
+    @pytest.mark.asyncio
+    async def test_leaving_releases_it_too(self, monkeypatch):
+        source = MagicMock()
+        monkeypatch.setattr(bot, "current_source", source)
+
+        ctx = make_context(MagicMock())
+        voice_client = AsyncMock()
+        voice_client.channel.name = "Tower"
+
+        with patch("bot.configured_voice_client", return_value=voice_client):
+            await bot.batc_leave.callback(ctx)
+
+        source.cleanup.assert_called_once()
+
+
 def test_bot_py_stays_ascii():
     """
     A BOM-less file with non-ASCII is read as ANSI by PowerShell 5.1, and this

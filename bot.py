@@ -145,6 +145,31 @@ def configured_voice_client():
 # outlive the command that set it. None means nobody has asked yet.
 target_channel_id = None
 
+# The ffmpeg process behind the stream, kept so it can be ended deliberately.
+#
+# discord.py kills it from the audio player's thread, which is a daemon
+# thread: if the interpreter exits first, that thread is torn down before its
+# cleanup runs and ffmpeg keeps holding the recording device. An orphan on a
+# VoiceMeeter bus is not a tidiness problem - it takes the machine's audio
+# with it until somebody kills the process by hand.
+current_source = None
+
+
+def release_audio_source():
+    """Ends the ffmpeg process now, rather than hoping a thread gets to it."""
+    global current_source
+
+    source = current_source
+    current_source = None
+    if source is None:
+        return
+
+    try:
+        source.cleanup()
+        log.info("Audio source released.")
+    except Exception:
+        log.exception("Could not release the audio source")
+
 
 def resolve_target_channel(ctx, argument=""):
     """
@@ -261,7 +286,9 @@ async def connect_and_stream():
         log.info("Moved to voice channel: %s", channel.name)
 
     if not voice_client.is_playing():
+        global current_source
         source = make_audio_source()
+        current_source = source
         voice_client.play(source, after=lambda e: log.warning("Stream ended: %s", e))
         log.info("Audio stream started (device: %s)", CONFIG["audio_device_name"])
 
@@ -297,8 +324,20 @@ async def shutdown_watcher():
     either Stop-BATCRelayBot or !BATCshutdown. If so: leave the voice channel
     cleanly, close the bot connection, and exit the process instead of just
     being force-killed.
+
+    The whole body is guarded. A discord.py task loop that raises an unhandled
+    exception stops, and stops quietly - after which nothing can end this
+    process gracefully any more: !BATCshutdown writes a signal nobody reads,
+    Stop-BATCRelayBot waits fifteen seconds and terminates the process, and
+    ffmpeg is orphaned holding the recording device. The log from 2026-09-09
+    shows exactly that shape: a join, then twenty seconds, then nothing, with
+    no "Stop signal detected" line anywhere.
     """
-    if not STOP_SIGNAL_PATH.exists():
+    try:
+        if not STOP_SIGNAL_PATH.exists():
+            return
+    except OSError:
+        log.exception("Could not check for the stop signal")
         return
 
     log.info("Stop signal detected, leaving voice channel and shutting down...")
@@ -313,12 +352,38 @@ async def shutdown_watcher():
         except Exception:
             log.exception("Error while leaving the voice channel")
 
+    # Not left to disconnect(). It ends the player thread, which is a daemon
+    # thread, and the ffmpeg process is only killed by that thread's finally.
+    # If the interpreter exits first the thread is torn down and ffmpeg
+    # survives, holding the dshow capture of the VoiceMeeter bus.
+    release_audio_source()
+
     try:
         STOP_SIGNAL_PATH.unlink()
-    except FileNotFoundError:
+    except OSError:
         pass
 
     await bot.close()
+
+
+@shutdown_watcher.error
+async def shutdown_watcher_error(error: Exception):
+    """
+    A loop that dies silently takes the only graceful exit with it.
+
+    discord.py stops a task loop on an unhandled exception and says nothing
+    unless a handler like this one exists. Restarting it is right: the failure
+    is far more likely to be transient - a file lock on stop.signal - than a
+    reason to give up the ability to shut down at all.
+    """
+    log.exception("shutdown_watcher failed, restarting it", exc_info=error)
+    shutdown_watcher.restart()
+
+
+@watchdog.error
+async def watchdog_error(error: Exception):
+    log.exception("watchdog failed, restarting it", exc_info=error)
+    watchdog.restart()
 
 
 @bot.event
@@ -417,6 +482,7 @@ async def batc_leave(ctx: commands.Context):
         # Read before disconnecting: afterwards there is no channel to name.
         left = vc.channel.name
         await vc.disconnect()
+        release_audio_source()
         await ctx.send(
             f"{ctx.author.display_name}, contact {station_name()} again in "
             f"**{left}**. Good day."
@@ -465,6 +531,12 @@ async def batc_shutdown(ctx: commands.Context):
         f"{ctx.author.display_name}, {station} is terminating transmission. "
         f"I repeat {station} is offline now, bye bye!"
     )
+
+    # Logged without naming who asked - the secrets rule covers user
+    # identities. What matters here is that the command ran at all: the log of
+    # 2026-09-09 showed neither this line nor the watcher's, which is what
+    # made it impossible to tell whether the signal was written or ignored.
+    log.info("Shutdown requested from chat, writing the stop signal")
     STOP_SIGNAL_PATH.touch()
 
 

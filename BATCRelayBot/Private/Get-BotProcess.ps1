@@ -158,9 +158,25 @@ function Stop-BotProcess {
         Remove-Item $stopSignal -Force -ErrorAction SilentlyContinue
     }
 
+    # Children first. ffmpeg is started by the bot and holds the recording
+    # device; killing only the parent leaves it running on a VoiceMeeter bus,
+    # where it takes the machine's audio with it until somebody notices.
+    $orphans = @()
+    try {
+        $orphans = @(Get-CimInstance Win32_Process -Filter "Name='ffmpeg.exe'" -ErrorAction Stop |
+            Where-Object { $running -contains [int]$_.ParentProcessId } |
+            ForEach-Object { [int]$_.ProcessId })
+    } catch {}
+
     foreach ($processId in $running) {
         try {
             Stop-Process -Id $processId -Force -ErrorAction Stop
+        } catch {}
+    }
+
+    foreach ($orphan in $orphans) {
+        try {
+            Stop-Process -Id $orphan -Force -ErrorAction Stop
         } catch {}
     }
 
