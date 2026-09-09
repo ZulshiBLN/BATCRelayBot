@@ -3,8 +3,8 @@ title: Changelog
 description: Release history for the BATCRelayBot PowerShell module and Discord bot.
 document_type: history
 audience: users
-applies_to: BATCRelayBot 1.4.1
-updated: 2026-09-08
+applies_to: BATCRelayBot 1.5.0
+updated: 2026-09-09
 ---
 
 # Changelog
@@ -15,16 +15,33 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Entries describe what changed for users. For the reasoning behind a change,
 see the commit that made it.
 
-## [Unreleased]
+## [1.5.0] - 2026-09-09
 
-### Security
+The bot goes where you are, and the commands stop talking over themselves.
 
-- **The bot log no longer records Discord IDs.** discord.py writes lines such
-  as "The voice handshake is being terminated for Channel ID … (Guild ID …)",
-  and `bot_error.log` travels into bug reports and screenshots exactly as
-  `install.log` does. That log was redacted in 1.4.1; this one was not looked
-  at. Redaction now sits on the log handler, so a library's lines are covered
-  as well as the bot's own.
+### Added
+
+- **`!BATCjoin` brings the bot into the channel you are in.** It used to relay
+  into one channel chosen at install time, so moving it meant editing
+  `config.json` and restarting. Whoever types the command is almost always
+  already sitting in the channel they want it in.
+
+  Name one instead with **`!BATCjoin <name or id>`** — `!BATCjoin Tower` or
+  `!BATCjoin 1535343588567683122`. A name is matched whatever case you type,
+  and where two channels share one, the first is taken and the reply says
+  which. Asking from no channel and naming none is answered with what to do,
+  not with silence.
+
+- **A direct message when the bot may not enter a channel.** It names the
+  channel, what is missing on it, and the full set it needs — View Channel,
+  Connect and Speak on a voice channel; View Channel and Send Messages on the
+  text channel you type in. The channel itself only gets a line saying the
+  message was sent, and if your direct messages are closed the detail goes to
+  the channel instead.
+
+  Before this the caller got "Could not join the configured voice channel -
+  check guild_id and voice_channel_id", which is not something a member of the
+  server can act on.
 
 ### Fixed
 
@@ -57,19 +74,21 @@ see the commit that made it.
   the exiting process can cut short, and a forced stop takes any ffmpeg child
   with it.
 
-### Removed
-
-- **`voice_channel_id` is gone from the configuration.** The bot joins the
-  channel you are in when you say `!BATCjoin`, or the one you name, so a
-  channel fixed at install time decided nothing.
-
-  **Nothing breaks on upgrade**: an existing `config.json` keeps the field and
-  the bot ignores it. The installer asks three questions instead of four, and
-  the config editor offers three fields instead of four. If you edited
-  `voice_channel_id` to move the bot, that is now `!BATCjoin <name or id>`
-  instead - no restart, and no file to edit.
+- **An uninstall that could not delete a file no longer reports itself as
+  tidy.** A file handle outlives the process that held it by a moment, so
+  removing the installation directory immediately after stopping the bot failed
+  on `bot_error.log` - and the next step, which only ever looked at a different
+  folder, printed "Nothing to clean up" underneath it. The removal now retries
+  while handles clear, and anything still on disk is listed by path with the
+  reason it stayed.
 
 ### Changed
+
+- **`!BATChelp` and the replies read like the radio.** The help was one flat
+  block with no telling where a command ended; each now stands on its own line
+  with its description under it, and the list is built from the registered
+  commands, so one added later cannot be left out of its own help. Join, leave,
+  restart, status and shutdown name who asked and which channel.
 
 - **The commands no longer print their result object.** `Install-BATCRelayBot`,
   `Uninstall-BATCRelayBot`, `Edit-BATCRelayBotConfig` and
@@ -101,18 +120,6 @@ see the commit that made it.
   so an installation found through the filesystem showed a bare `FOUND` while
   BeyondATC beside it showed a version. The executable is asked when the
   registry has nothing.
-
-### Fixed
-
-- **An uninstall that could not delete a file no longer reports itself as
-  tidy.** A file handle outlives the process that held it by a moment, so
-  removing the installation directory immediately after stopping the bot failed
-  on `bot_error.log` - and the next step, which only ever looked at a different
-  folder, printed "Nothing to clean up" underneath it. The removal now retries
-  while handles clear, and anything still on disk is listed by path with the
-  reason it stayed.
-
-### Changed
 
 - **The uninstaller says each thing once.** Its "what will be removed" screen
   opened a second banner under the caller's heading, printed the installation
@@ -149,6 +156,16 @@ see the commit that made it.
 
 ### Removed
 
+- **`voice_channel_id` is gone from the configuration.** The bot joins the
+  channel you are in when you say `!BATCjoin`, or the one you name, so a
+  channel fixed at install time decided nothing.
+
+  **Nothing breaks on upgrade**: an existing `config.json` keeps the field and
+  the bot ignores it. The installer asks three questions instead of four, and
+  the config editor offers three fields instead of four. If you edited
+  `voice_channel_id` to move the bot, that is now `!BATCjoin <name or id>`
+  instead - no restart, and no file to edit.
+
 - **"Continue without installing" is gone** from the missing-tool prompt. The
   bot cannot run without Python or FFmpeg, so continuing only moved the failure
   further from its cause. The choice is now a single question that defaults to
@@ -157,6 +174,15 @@ see the commit that made it.
 - **The uninstaller no longer offers to remove the PowerShell module.**
   Uninstalling the module that is running the uninstaller is a separate
   decision; the summary prints the one command that does it.
+
+### Security
+
+- **The bot log no longer records Discord IDs.** discord.py writes lines such
+  as "The voice handshake is being terminated for Channel ID … (Guild ID …)",
+  and `bot_error.log` travels into bug reports and screenshots exactly as
+  `install.log` does. That log was redacted in 1.4.1; this one was not looked
+  at. Redaction now sits on the log handler, so a library's lines are covered
+  as well as the bot's own.
 
 ## [1.4.1] - 2026-09-08
 

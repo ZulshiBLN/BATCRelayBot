@@ -76,8 +76,11 @@ Install-BATCRelayBot
 ```
 
 Setup detects what is present, offers to install what is missing, and only
-then asks for your bot token, server ID, voice channel ID and audio device.
-Nothing you type can be discarded by a missing tool.
+then asks for your bot token, server ID and audio device. Nothing you type can
+be discarded by a missing tool.
+
+There is no voice channel to configure: the bot joins whichever channel you
+are in when you call it.
 
 For the audio device, pick **B1** unless you have a reason not to — that is
 the bus step 3 routes audio to. Everything is logged to `install.log` in the
@@ -100,8 +103,9 @@ installation directory.
 Start-BATCRelayBot
 ```
 
-The bot comes **online but stays out of the channel**. In Discord, type
-`!BATCjoin` to start relaying. Stop it with `Stop-BATCRelayBot`.
+The bot comes **online but stays out of the channel**. Join a voice channel
+yourself, type `!BATCjoin` in Discord, and it follows you in — or name one
+with `!BATCjoin Tower`. Stop it with `Stop-BATCRelayBot`.
 
 ## Commands
 
@@ -120,7 +124,8 @@ The bot comes **online but stays out of the channel**. In Discord, type
 
 | Command | Effect |
 |---|---|
-| `!BATCjoin` | Join the configured channel and start relaying |
+| `!BATCjoin` | Join **your** voice channel and start relaying |
+| `!BATCjoin <name or id>` | Join that channel instead |
 | `!BATCleave` | Leave and **stay out** until `!BATCjoin` |
 | `!BATCstatus` | Connection and stream state |
 | `!BATCrestart` | Restart the stream without leaving |
@@ -140,13 +145,15 @@ PowerShell module, so closing the terminal does not stop it.
 Uninstall-BATCRelayBot
 ```
 
-Stops the bot, removes the installation directory, and asks **separately**
-about Python and FFmpeg — neither is removed unless you confirm it. Add
-`-Force` to skip the final confirmation; the optional components still need an
-explicit yes.
+Stops the bot, deletes everything it installed, and asks **separately** about
+Python and FFmpeg — neither is removed unless you confirm it. Add `-Force` to
+skip the final confirmation; the optional components still need an explicit
+yes. The installation directory itself stays, holding `uninstall.log` and
+nothing else.
 
-**VoiceMeeter is never removed.** Use VB-Audio's own uninstaller
-(Settings → Apps), then reboot.
+**VoiceMeeter and BeyondATC are never removed.** Use each vendor's own
+installer to uninstall them — for VoiceMeeter, Settings → Apps leaves its
+audio drivers behind.
 
 **Reset your bot token afterwards.** `config.json` is overwritten before
 deletion, but overwriting does not reliably erase a file on an SSD. Invalidating
