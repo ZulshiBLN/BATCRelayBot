@@ -35,6 +35,7 @@ Configuration: config.json (see config.example.json)
 import asyncio
 import json
 import logging
+import os
 import pathlib
 import re
 import sys
@@ -97,6 +98,7 @@ log = logging.getLogger("atc-relay")
 
 CONFIG_PATH = pathlib.Path(__file__).parent / "config.json"
 STOP_SIGNAL_PATH = pathlib.Path(__file__).parent / "stop.signal"
+PID_FILE_PATH = pathlib.Path(__file__).parent / "bot.pid"
 
 
 def load_config() -> dict:
@@ -201,6 +203,25 @@ target_channel_id = None
 # VoiceMeeter bus is not a tidiness problem - it takes the machine's audio
 # with it until somebody kills the process by hand.
 current_source = None
+
+
+def release_pid_file():
+    """
+    Removes bot.pid, but only when it names this process.
+
+    Stop-BATCRelayBot removes it; a shutdown from chat left it behind naming a
+    process that had exited. Nothing treats it as the authority any more -
+    that is what the process list is for - but a file stating something untrue
+    is still something somebody will eventually read.
+
+    The identity check matters: two installations have their own directories,
+    but a file that has been rewritten by someone else is not ours to delete.
+    """
+    try:
+        if PID_FILE_PATH.read_text().strip() == str(os.getpid()):
+            PID_FILE_PATH.unlink()
+    except OSError:
+        pass
 
 
 def release_audio_source():
@@ -445,6 +466,8 @@ async def shutdown_watcher():
         STOP_SIGNAL_PATH.unlink()
     except OSError:
         pass
+
+    release_pid_file()
 
     await bot.close()
 

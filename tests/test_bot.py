@@ -975,6 +975,35 @@ class TestShutdownSurvivesFailure:
         assert not signal.exists()
 
     @pytest.mark.asyncio
+    async def test_it_clears_its_own_pid_file(self, monkeypatch, tmp_path):
+        """A shutdown from chat used to leave bot.pid naming a dead process."""
+        import os
+
+        pid_file = tmp_path / "bot.pid"
+        pid_file.write_text(str(os.getpid()))
+        monkeypatch.setattr(bot, "PID_FILE_PATH", pid_file)
+
+        signal = tmp_path / "stop.signal"
+        signal.touch()
+        monkeypatch.setattr(bot, "STOP_SIGNAL_PATH", signal)
+
+        with patch.object(type(bot.bot), "voice_clients", new=[]):
+            with patch.object(bot.bot, "close", new=AsyncMock()):
+                await bot.shutdown_watcher.coro()
+
+        assert not pid_file.exists()
+
+    def test_it_leaves_a_pid_file_that_is_not_its_own(self, monkeypatch, tmp_path):
+        """Someone else's file is not ours to delete."""
+        pid_file = tmp_path / "bot.pid"
+        pid_file.write_text("999999")
+        monkeypatch.setattr(bot, "PID_FILE_PATH", pid_file)
+
+        bot.release_pid_file()
+
+        assert pid_file.exists()
+
+    @pytest.mark.asyncio
     async def test_leaving_releases_it_too(self, monkeypatch):
         source = MagicMock()
         monkeypatch.setattr(bot, "current_source", source)

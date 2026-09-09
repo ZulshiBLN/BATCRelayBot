@@ -40,6 +40,7 @@ function Get-DiscordConfiguration {
 
     $config.GuildId = Read-DiscordSnowflake `
         -Label "Server ID (guild)" `
+        -Step "Step 2/2" `
         -Hint "Discord: Settings > Advanced > Developer Mode, then right-click the server > Copy Server ID" `
         -LogPath $LogPath
     if (-not $config.GuildId) { return $null }
@@ -61,7 +62,7 @@ function Read-DiscordToken {
     $maxAttempts = 3
 
     for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
-        Write-Host "Step 1/3: Bot token" -ForegroundColor Cyan
+        Write-Host "Step 1/2: Bot token" -ForegroundColor Cyan
         Write-Host "  https://discord.com/developers/applications > your app > Bot > Reset Token" -ForegroundColor Gray
 
         $secure = Read-Host "  Token (hidden)" -AsSecureString
@@ -115,13 +116,19 @@ function Read-DiscordSnowflake {
     param(
         [Parameter(Mandatory = $true)][string]$Label,
         [Parameter(Mandatory = $true)][string]$Hint,
-        [string]$LogPath
+        [string]$LogPath,
+
+        # Passed in rather than worked out from the label. It used to pick the
+        # numbering itself, out of a total that counted a voice channel
+        # question no longer asked - so the caller announced two values and
+        # then numbered them out of three. The count belongs where the steps
+        # are, which is the caller.
+        [string]$Step
     )
 
-    $step = if ($Label -like "Server*") { "Step 2/3" } else { "Step 3/3" }
-
     while ($true) {
-        Write-Host "${step}: $Label" -ForegroundColor Cyan
+        $heading = if ($Step) { "${Step}: $Label" } else { $Label }
+        Write-Host $heading -ForegroundColor Cyan
         Write-Host "  $Hint" -ForegroundColor Gray
         $value = Read-Host "  $Label"
 

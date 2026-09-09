@@ -152,6 +152,30 @@ Describe "Installer prompts" {
         $source | Should -Match 'Press Enter to close'
     }
 
+    # "Two values from the Discord developer portal", followed by Step 1/3 and
+    # Step 2/3. The three counted a voice channel question that had been
+    # removed, and the branch that would have printed Step 3/3 was unreachable.
+    It "numbers its configuration steps out of the number of steps there are" {
+        $source = [System.IO.File]::ReadAllText((Join-Path $Module 'Private\Get-DiscordConfiguration.ps1'))
+        $steps = [regex]::Matches($source, 'Step (?<n>\d+)/(?<of>\d+)')
+
+        $steps.Count | Should -BeGreaterThan 0
+
+        $totals = @($steps | ForEach-Object { [int]$_.Groups['of'].Value } | Select-Object -Unique)
+        $totals.Count | Should -Be 1 -Because "every step must count out of the same total"
+
+        $numbers = @($steps | ForEach-Object { [int]$_.Groups['n'].Value } | Sort-Object -Unique)
+        $numbers | Should -Be (1..$totals[0]) -Because "the steps must be 1 to $($totals[0]), with none missing"
+    }
+
+    It "says how many values it is about to ask for, in words that match" {
+        $source = [System.IO.File]::ReadAllText((Join-Path $Module 'Private\Get-DiscordConfiguration.ps1'))
+        $total = [int]([regex]::Match($source, 'Step \d+/(?<of>\d+)').Groups['of'].Value)
+
+        $spelled = @{ 1 = 'One'; 2 = 'Two'; 3 = 'Three'; 4 = 'Four' }[$total]
+        $source | Should -Match "$spelled values" -Because "the heading and the step count are the same fact"
+    }
+
     # The channel was the fourth question until it stopped configuring
     # anything: the bot joins the channel the caller is in, or one they name.
     It "no longer asks for a voice channel" {
