@@ -170,6 +170,55 @@ def resolve_target_channel(ctx, argument=""):
     )
 
 
+def missing_join_permissions(channel, member):
+    """
+    Which of the two permissions needed to relay are missing on a channel.
+
+    Connect gets the bot in, Speak lets it be heard. Without Speak it joins
+    and streams into silence, which looks like a broken installation rather
+    than a permission a server admin can grant in ten seconds.
+    """
+    permissions = channel.permissions_for(member)
+
+    missing = []
+    if not permissions.connect:
+        missing.append("Connect")
+    if not permissions.speak:
+        missing.append("Speak")
+    return missing
+
+
+async def report_missing_permissions(ctx, channel, missing):
+    """
+    Tells the caller what is missing where, by direct message.
+
+    The detail goes to the person who asked rather than into the channel:
+    they are the one who can pass it to an admin, and a permissions lecture
+    in a busy channel helps nobody. The channel gets one line saying a
+    message was sent, so the command does not look ignored.
+
+    If their direct messages are closed, the detail goes to the channel
+    instead - failing to deliver it at all would be the worst of the three.
+    """
+    names = " and ".join(missing)
+    detail = (
+        f"I could not enter **{channel.name}**.\n"
+        f"Missing on that channel: **{names}**.\n"
+        f"A server admin can grant {'them' if len(missing) > 1 else 'it'} under "
+        f"Channel Settings > Permissions, for my role. Then say `!BATCjoin` again."
+    )
+
+    try:
+        await ctx.author.send(detail)
+    except discord.Forbidden:
+        await ctx.send(detail)
+        return
+
+    await ctx.send(
+        f"Cannot enter **{channel.name}** - I have sent you the details."
+    )
+
+
 async def connect_and_stream():
     guild = bot.get_guild(CONFIG["guild_id"])
     if guild is None:
@@ -287,6 +336,15 @@ async def batc_join(ctx: commands.Context, *, channel_name: str = ""):
     channel, reason = resolve_target_channel(ctx, channel_name)
     if channel is None:
         await ctx.send(reason)
+        return
+
+    # Before the target is remembered and the relay unpaused. Setting them
+    # first would leave the watchdog retrying a channel the bot may not enter,
+    # every ten seconds, for as long as the process runs.
+    missing = missing_join_permissions(channel, ctx.guild.me)
+    if missing:
+        log.warning("Cannot join %s - missing %s", channel.name, ", ".join(missing))
+        await report_missing_permissions(ctx, channel, missing)
         return
 
     target_channel_id = channel.id

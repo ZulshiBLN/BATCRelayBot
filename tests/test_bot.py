@@ -489,6 +489,10 @@ def make_context(guild=None, author_channel=None):
     ctx.author.voice = MagicMock() if author_channel else None
     if author_channel:
         ctx.author.voice.channel = author_channel
+
+    # Both are awaited, so neither may be an ordinary Mock.
+    ctx.send = AsyncMock()
+    ctx.author.send = AsyncMock()
     return ctx
 
 
@@ -607,3 +611,114 @@ class TestResolveTargetChannel:
 
         assert found is None
         assert "server" in reason.lower()
+
+
+def grant(connect=True, speak=True):
+    """A channel whose permissions_for() reports the given two."""
+    channel = make_voice_channel("Tower", 111)
+    permissions = MagicMock()
+    permissions.connect = connect
+    permissions.speak = speak
+    channel.permissions_for = Mock(return_value=permissions)
+    return channel
+
+
+class TestJoinPermissions:
+    """
+    What happens when the bot may not enter, or may not be heard.
+
+    Before this, the caller got nothing they could act on. Without Speak the
+    bot joins and streams into silence, which looks like a broken install
+    rather than a permission an admin can grant in ten seconds.
+    """
+
+    def test_nothing_missing_when_both_are_granted(self):
+        assert bot.missing_join_permissions(grant(), MagicMock()) == []
+
+    def test_connect_is_reported(self):
+        assert bot.missing_join_permissions(grant(connect=False), MagicMock()) == ["Connect"]
+
+    def test_speak_is_reported(self):
+        assert bot.missing_join_permissions(grant(speak=False), MagicMock()) == ["Speak"]
+
+    def test_both_are_reported(self):
+        missing = bot.missing_join_permissions(grant(connect=False, speak=False), MagicMock())
+        assert missing == ["Connect", "Speak"]
+
+    @pytest.mark.asyncio
+    async def test_the_detail_goes_to_the_caller_by_direct_message(self):
+        ctx = make_context(MagicMock())
+        channel = grant(connect=False)
+
+        await bot.report_missing_permissions(ctx, channel, ["Connect"])
+
+        ctx.author.send.assert_awaited_once()
+        detail = ctx.author.send.await_args.args[0]
+        assert "Tower" in detail
+        assert "Connect" in detail
+
+    @pytest.mark.asyncio
+    async def test_the_channel_is_told_that_a_message_was_sent(self):
+        """Otherwise the command looks ignored."""
+        ctx = make_context(MagicMock())
+
+        await bot.report_missing_permissions(ctx, grant(connect=False), ["Connect"])
+
+        ctx.send.assert_awaited_once()
+        assert "Tower" in ctx.send.await_args.args[0]
+
+    @pytest.mark.asyncio
+    async def test_closed_direct_messages_fall_back_to_the_channel(self):
+        """Not delivering it at all would be the worst of the three."""
+        ctx = make_context(MagicMock())
+        ctx.author.send = AsyncMock(
+            side_effect=discord.Forbidden(MagicMock(status=403), "cannot send")
+        )
+
+        await bot.report_missing_permissions(ctx, grant(speak=False), ["Speak"])
+
+        ctx.send.assert_awaited_once()
+        detail = ctx.send.await_args.args[0]
+        assert "Speak" in detail
+        assert "Tower" in detail
+
+    # The check has to run before the target is remembered. Setting it first
+    # would leave the watchdog retrying an impossible channel every ten
+    # seconds for as long as the process runs.
+    @pytest.mark.asyncio
+    async def test_join_refuses_without_remembering_the_channel(self, monkeypatch):
+        channel = grant(connect=False)
+        guild = MagicMock()
+        guild.voice_channels = [channel]
+        ctx = make_context(guild, channel)
+
+        monkeypatch.setattr(bot, "target_channel_id", None)
+        monkeypatch.setattr(bot, "relay_paused", True)
+
+        with patch("bot.connect_and_stream", new=AsyncMock()) as connect:
+            await bot.batc_join.callback(ctx)
+
+            connect.assert_not_awaited()
+
+        assert bot.target_channel_id is None
+        assert bot.relay_paused is True
+        ctx.author.send.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_join_proceeds_when_both_are_granted(self, monkeypatch):
+        channel = grant()
+        guild = MagicMock()
+        guild.voice_channels = [channel]
+        ctx = make_context(guild, channel)
+
+        monkeypatch.setattr(bot, "target_channel_id", None)
+        monkeypatch.setattr(bot, "relay_paused", True)
+
+        with patch("bot.connect_and_stream", new=AsyncMock()) as connect:
+            with patch("bot.configured_voice_client", return_value=None):
+                await bot.batc_join.callback(ctx)
+
+                connect.assert_awaited_once()
+
+        assert bot.target_channel_id == channel.id
+        assert bot.relay_paused is False
