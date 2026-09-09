@@ -53,6 +53,16 @@ function Stop-BATCRelayBot {
         Write-Host "Bot shut down cleanly." -ForegroundColor Green
     } else {
         Write-Host "Bot did not respond in time and was terminated." -ForegroundColor Yellow
+
+        # A terminated bot takes ffmpeg with it without closing the capture
+        # it held on a VoiceMeeter bus, and VoiceMeeter's engine can be left
+        # in a state where nothing on the machine plays audio. Restarting the
+        # VoiceMeeter process does not clear it - the engine has to be
+        # restarted, or VoiceMeeter shut down from its own tray menu.
+        Write-Host ""
+        Write-Host "  If audio stops working across the machine, restart VoiceMeeter's" -ForegroundColor Yellow
+        Write-Host "  audio engine: right-click its tray icon > Restart Audio Engine." -ForegroundColor Yellow
+        Write-Host "  Killing and relaunching the VoiceMeeter process does not fix it." -ForegroundColor Yellow
     }
 
     Remove-Item $pidFile -Force -ErrorAction SilentlyContinue

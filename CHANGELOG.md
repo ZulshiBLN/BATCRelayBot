@@ -28,6 +28,23 @@ see the commit that made it.
 
 ### Fixed
 
+- **Two bots can no longer run at once.** `Start-BATCRelayBot` decided from
+  `bot.pid`, so a stale file let it start a second bot beside a running one.
+  Both answered every command, the second start overwrote the first one's log,
+  and `Stop-BATCRelayBot` then waited for a process that would not answer and
+  terminated it.
+
+  That is how the machine's audio ended up broken: a terminated bot loses
+  ffmpeg without closing the capture it held on a VoiceMeeter bus, and
+  VoiceMeeter's audio engine is then stuck for everything — a browser video
+  will not start, a stream reports a decoding error, a local file will not
+  play. Restarting the VoiceMeeter *process* does not clear it; its **Restart
+  Audio Engine** does, and `Stop-BATCRelayBot` now says so when it had to
+  terminate rather than stop.
+
+  The running bot is now found the same way the rest of the module finds it,
+  by looking at the processes rather than at a file.
+
 - **`!BATCshutdown` no longer leaves the machine's audio broken.** The watcher
   that reads the stop signal had no error handling, and a discord.py task loop
   stops silently when it raises. After that nothing could end the bot
