@@ -81,13 +81,19 @@ Describe "Invoke-SecureUninstall" {
             $logContent | Should -Match "Started:"
         }
 
-        It "Deletes installation directory after removal" {
+        # The directory itself survives, holding the removal log and nothing
+        # else. Deleting it would take the log with it, and writing that log to
+        # a second folder under Roaming is what this replaced.
+        It "Empties the installation directory" {
             $testDir = "$testRoot\test3"
             New-Item -ItemType Directory -Path $testDir -Force | Out-Null
             "test file" | Out-File "$testDir\test.txt" -Force
 
             $result = Invoke-SecureUninstall -BotPath $testDir -DependencyChoices @{} -LogDirectory $testLogDir
-            Test-Path $testDir | Should -Be $false
+
+            Test-Path "$testDir\test.txt" | Should -Be $false
+            @(Get-ChildItem $testDir -Recurse -File).Count | Should -Be 0
+            $result.Leftovers.Count | Should -Be 0
         }
 
         It "Returns Success = true when directory deleted" {
@@ -298,13 +304,16 @@ Describe "Invoke-SecureUninstall" {
             $default | Should -Match 'BATCRelayBot'
         }
 
-        It "Defaults the log directory outside the installation" {
-            # The log has to survive the deletion of the directory it reports on.
+        It "Defaults the log directory to the installation itself" {
+            # It used to default to a second folder under Roaming, so removing
+            # an installation created a directory elsewhere in the profile and
+            # left a timestamped file there on every run. The installation
+            # directory is emptied rather than deleted, so the log can stay.
             $default = (Get-Command Invoke-SecureUninstall).ScriptBlock.Ast.Body.ParamBlock.Parameters |
                 Where-Object { $_.Name.VariablePath.UserPath -eq 'LogDirectory' } |
                 ForEach-Object { $_.DefaultValue.Extent.Text }
 
-            $default | Should -Match 'APPDATA'
+            $default | Should -Be '$BotPath'
         }
 
         It "Uses empty hashtable for DependencyChoices if not provided" {
@@ -341,7 +350,7 @@ Describe "Phase 5: Secure Uninstallation" {
         $result.LogPath | Should -Not -BeNullOrEmpty
     }
 
-    It "Completely removes installation directory" {
+    It "Removes every installed file, config.json included" {
         $testDir = "$testRoot\phase5-remove"
         New-Item -ItemType Directory -Path $testDir -Force | Out-Null
         "setup.py" | Out-File "$testDir\setup.py" -Force
@@ -349,8 +358,9 @@ Describe "Phase 5: Secure Uninstallation" {
 
         $result = Invoke-SecureUninstall -BotPath $testDir -DependencyChoices @{} -LogDirectory $testLogDir
 
-        Test-Path $testDir | Should -Be $false
+        @(Get-ChildItem $testDir -Recurse -File).Count | Should -Be 0
         $result.Success | Should -Be $true
+        $result.Leftovers.Count | Should -Be 0
     }
 
     It "Produces removal log with deletion details" {

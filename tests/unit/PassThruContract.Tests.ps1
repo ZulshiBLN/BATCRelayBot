@@ -77,7 +77,9 @@ Describe "-PassThru contract" {
                 Mock Confirm-UninstallPrerequisites {
                     @{ Valid = $true; InstallPath = 'C:\does-not-exist'; Errors = @(); Warnings = @() }
                 }
-                Mock Show-RemovalSummary { @{} }
+                # Returns nothing, like the real one - a mock that emits would
+                # itself be the leak this context is checking for.
+                Mock Show-RemovalSummary { }
                 Mock Get-DependencyChoices { @{} }
                 Mock Invoke-SecureUninstall { @{ Success = $true; DeletedFiles = @(); Errors = @() } }
                 Mock Show-PostRemovalSummary { }

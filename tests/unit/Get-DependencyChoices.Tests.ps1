@@ -22,7 +22,6 @@ Describe "Get-DependencyChoices" {
             $result = Get-DependencyChoices
             $result.Keys | Should -Contain "RemovePython"
             $result.Keys | Should -Contain "RemoveFFmpeg"
-            $result.Keys | Should -Contain "RemoveModule"
             $result.Keys | Should -Contain "SkipDependencyPrompts"
         }
 
@@ -30,7 +29,6 @@ Describe "Get-DependencyChoices" {
             $result = Get-DependencyChoices
             $result.RemovePython | Should -BeOfType [bool]
             $result.RemoveFFmpeg | Should -BeOfType [bool]
-            $result.RemoveModule | Should -BeOfType [bool]
             $result.SkipDependencyPrompts | Should -BeOfType [bool]
         }
     }
@@ -61,7 +59,13 @@ Describe "Get-DependencyChoices" {
             # If WinGet available, defaults might vary based on system
             $result.RemovePython | Should -BeOfType [bool]
             $result.RemoveFFmpeg | Should -BeOfType [bool]
-            $result.RemoveModule | Should -BeOfType [bool]
+        }
+
+        # The module is not offered here. Uninstalling the module that is
+        # running the uninstaller is a separate decision, and the summary
+        # afterwards prints the one command that does it.
+        It "does not offer to remove the PowerShell module" {
+            (Get-DependencyChoices).Keys | Should -Not -Contain "RemoveModule"
         }
 
         It "Accepts no parameters" {
@@ -111,7 +115,6 @@ Describe "Phase 3: Optional Dependency Prompts" {
         # Verify they're actual booleans with valid values
         [bool]$result.RemovePython -is [bool] | Should -Be $true
         [bool]$result.RemoveFFmpeg -is [bool] | Should -Be $true
-        [bool]$result.RemoveModule -is [bool] | Should -Be $true
         [bool]$result.SkipDependencyPrompts -is [bool] | Should -Be $true
     }
 }

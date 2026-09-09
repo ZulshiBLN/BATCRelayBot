@@ -50,12 +50,51 @@ see the commit that made it.
   BeyondATC beside it showed a version. The executable is asked when the
   registry has nothing.
 
+### Fixed
+
+- **An uninstall that could not delete a file no longer reports itself as
+  tidy.** A file handle outlives the process that held it by a moment, so
+  removing the installation directory immediately after stopping the bot failed
+  on `bot_error.log` - and the next step, which only ever looked at a different
+  folder, printed "Nothing to clean up" underneath it. The removal now retries
+  while handles clear, and anything still on disk is listed by path with the
+  reason it stayed.
+
+### Changed
+
+- **The uninstaller says each thing once.** Its "what will be removed" screen
+  opened a second banner under the caller's heading, printed the installation
+  path twice more, listed every log file a second time, and ended with a
+  disk-space figure reading "Approximately: 0.01 MB". The confirmation warned
+  that removing Python or FFmpeg can break other software whether or not either
+  had been chosen; it now lists only what was approved, and says `None` when
+  nothing was.
+
+- **The confirmation word is `uninstall`, not `yes`.** Nine considered
+  characters are a different act from three reflexive ones.
+
+- **The manual steps afterwards are correct.** They told users to remove
+  VoiceMeeter through Control Panel, which leaves its audio drivers behind;
+  VB-Audio's own installer is what removes it. BeyondATC was never mentioned
+  although it is not removed either. Both are now named, with their vendors'
+  pages.
+
+- **The removal log stays in the installation directory** as `uninstall.log`.
+  It was written to a second folder under Roaming, so removing an installation
+  created a directory elsewhere in the profile and left a timestamped file
+  there on every run. The directory now survives holding that log and nothing
+  else, and any older Roaming folders are cleaned up.
+
 ### Removed
 
 - **"Continue without installing" is gone** from the missing-tool prompt. The
   bot cannot run without Python or FFmpeg, so continuing only moved the failure
   further from its cause. The choice is now a single question that defaults to
   installing; declining shows the links and stops.
+
+- **The uninstaller no longer offers to remove the PowerShell module.**
+  Uninstalling the module that is running the uninstaller is a separate
+  decision; the summary prints the one command that does it.
 
 ## [1.4.1] - 2026-09-08
 

@@ -86,7 +86,7 @@ function Uninstall-BATCRelayBot {
 
     # ---- Phase 2: what will go -----------------------------------------
     Write-Host "[2/5] What will be removed" -ForegroundColor Cyan
-    Show-RemovalSummary -BotPath $prerequisites.InstallPath | Out-Null
+    Show-RemovalSummary -BotPath $prerequisites.InstallPath
 
     # ---- Phase 3: optional components ----------------------------------
     Write-Host "[3/5] Optional components" -ForegroundColor Cyan

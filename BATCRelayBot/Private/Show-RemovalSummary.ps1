@@ -3,124 +3,50 @@
 function Show-RemovalSummary {
     <#
     .SYNOPSIS
-    Displays what will be deleted during uninstallation (Phase 2).
+    Lists what the removal will delete (uninstaller phase 2). Read-only.
 
     .DESCRIPTION
-    Shows a formatted, read-only summary of files that will be removed.
-    No prompts - purely informational. Highlights sensitive data (Discord token).
+    This used to open its own banner - "BATCRelayBot Removal - What Will Be
+    Deleted?" - directly under the caller's "[2/5] What will be removed", print
+    the installation path twice more after phase 1 had already reported it, list
+    every log file a second time under a separate "Logs & Artifacts" heading,
+    and finish with a disk-space figure that read "Approximately: 0.01 MB".
+
+    The manual steps it ended with have moved to the summary shown after the
+    removal, where they are still true and where the user is when they matter.
 
     .PARAMETER BotPath
-    Installation directory path.
-
-    .PARAMETER PrerequisiteStatus
-    Hashtable from Phase 1 (Confirm-UninstallPrerequisites).
-
-    .EXAMPLE
-    Show-RemovalSummary -BotPath "C:\Users\...\AppData\Local\BATCRelayBot"
+    Installation directory whose contents are about to be deleted.
     #>
-
+    [OutputType([void])]
     param(
-        [string]$BotPath = (Join-Path $env:LOCALAPPDATA "BATCRelayBot"),
-        [hashtable]$PrerequisiteStatus = @{}
+        [string]$BotPath = (Join-Path $env:LOCALAPPDATA "BATCRelayBot")
     )
 
-    # Calculate total disk space
-    $totalSize = 0
-    if (Test-Path $BotPath) {
-        $totalSize = (Get-ChildItem -Path $BotPath -Recurse -ErrorAction SilentlyContinue |
-                     Measure-Object -Property Length -Sum).Sum
-    }
-    $sizeGB = [math]::Round($totalSize / 1GB, 2)
-    $sizeMB = [math]::Round($totalSize / 1MB, 2)
-
-    # Build file list
     $files = @()
     if (Test-Path $BotPath) {
-        $files = @(Get-ChildItem -Path $BotPath -Recurse -ErrorAction SilentlyContinue |
-                   Select-Object -ExpandProperty Name)
+        $files = @(Get-ChildItem -Path $BotPath -Recurse -File -ErrorAction SilentlyContinue |
+                   Select-Object -ExpandProperty Name | Sort-Object)
     }
 
-    # Display banner
-    Write-Host ""
-    Write-Host "===============================================================" -ForegroundColor Cyan
-    Write-Host "        BATCRelayBot Removal - What Will Be Deleted?" -ForegroundColor Cyan
-    Write-Host "===============================================================" -ForegroundColor Cyan
-    Write-Host ""
+    if ($files.Count -eq 0) {
+        Write-Host "        Nothing found to delete." -ForegroundColor Gray
+        Write-Host ""
+        return
+    }
 
-    # Installation Location
-    Write-Host "Installation Location:" -ForegroundColor Yellow
-    Write-Host "  Path: $BotPath" -ForegroundColor Gray
-    Write-Host ""
-
-    # Files to delete
-    Write-Host "Files to be DELETED:" -ForegroundColor Yellow
-    if ($files.Count -gt 0) {
-        $files | Sort-Object | ForEach-Object {
-            Write-Host "  - $_" -ForegroundColor Gray
-        }
-    } else {
-        Write-Host "  (No files found)" -ForegroundColor Gray
+    Write-Host "        $($files.Count) file$(if ($files.Count -ne 1) { 's' }):" -ForegroundColor Gray
+    foreach ($name in $files) {
+        Write-Host "          $name" -ForegroundColor DarkGray
     }
     Write-Host ""
 
-    # Sensitive data warning
-    Write-Host "Configuration & Sensitive Data:" -ForegroundColor Yellow
-    $configPath = Join-Path $BotPath "config.json"
-    if (Test-Path $configPath) {
-        Write-Host "  config.json - CONTAINS YOUR DISCORD BOT TOKEN" -ForegroundColor Red
-        Write-Host "    It is overwritten three times and then deleted." -ForegroundColor DarkRed
-        Write-Host "    On an SSD that is not a guarantee, so reset the token afterwards:" -ForegroundColor DarkRed
-        Write-Host "    https://discord.com/developers/applications > Bot > Reset Token" -ForegroundColor DarkRed
-    } else {
-        Write-Host "  config.json (not found)" -ForegroundColor Gray
+    if (Test-Path (Join-Path $BotPath "config.json")) {
+        Write-Host "        config.json holds your bot token. It is overwritten three times" -ForegroundColor Yellow
+        Write-Host "        before deletion, which an SSD may still not honour - so reset the" -ForegroundColor Yellow
+        Write-Host "        token afterwards at https://discord.com/developers/applications" -ForegroundColor Yellow
+        Write-Host ""
     }
-    Write-Host ""
-
-    # Logs & artifacts
-    Write-Host "Logs & Artifacts:" -ForegroundColor Yellow
-    $logFiles = @(Get-ChildItem -Path $BotPath -Filter "*.log" -ErrorAction SilentlyContinue |
-                  Select-Object -ExpandProperty Name)
-    if ($logFiles.Count -gt 0) {
-        $logFiles | ForEach-Object {
-            Write-Host "  - $_" -ForegroundColor Gray
-        }
-    } else {
-        Write-Host "  (No log files found)" -ForegroundColor Gray
-    }
-    Write-Host ""
-
-    # Installation directory
-    Write-Host "Installation Directory:" -ForegroundColor Yellow
-    Write-Host "  Complete directory will be removed" -ForegroundColor Gray
-    Write-Host "  Path: $BotPath" -ForegroundColor Gray
-    Write-Host ""
-
-    # Disk space
-    Write-Host "Disk Space Freed:" -ForegroundColor Yellow
-    if ($totalSize -gt 0) {
-        if ($sizeGB -gt 0) {
-            Write-Host "  Approximately: $sizeGB GB" -ForegroundColor Green
-        } else {
-            Write-Host "  Approximately: $sizeMB MB" -ForegroundColor Green
-        }
-    } else {
-        Write-Host "  (No data to calculate)" -ForegroundColor Gray
-    }
-    Write-Host ""
-
-    # Manual steps
-    Write-Host "Manual Steps After Removal:" -ForegroundColor Yellow
-    Write-Host "  1. If you installed VoiceMeeter: remove it via Settings > Apps" -ForegroundColor Gray
-    Write-Host "     to uninstall it separately (we don't touch it)" -ForegroundColor Gray
-    Write-Host "  2. Python & FFmpeg: Only removed if you choose in next screen" -ForegroundColor Gray
-    Write-Host "  3. PowerShell Module: Only removed if you choose in next screen" -ForegroundColor Gray
-    Write-Host ""
-
-    # Footer
-    Write-Host "===============================================================" -ForegroundColor Cyan
-    Write-Host ""
-
-    return @{ Ready = $true }
 }
 
 Export-ModuleMember -Function Show-RemovalSummary
