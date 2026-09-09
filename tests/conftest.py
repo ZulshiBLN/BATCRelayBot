@@ -15,7 +15,6 @@ def config_file(tmp_path):
     config_data = {
         "bot_token": "test_token_12345",
         "guild_id": 123456789012345678,
-        "voice_channel_id": 987654321098765432,
         "audio_device_name": "Voicemeeter Out MME",
         "python_path": "C:\\Python311\\python.exe",
         "voicemeeter_path": "C:\\Program Files (x86)\\VB\\Voicemeeter\\voicemeeter_x64.exe",

@@ -9,7 +9,7 @@ The installer writes config.json; bot.py and Start-BATCRelayBot read it.
 Nothing in the test suite ever verified that these agree, which is why a
 schema mismatch survived from v1.0.0 to v1.3.16 undetected:
 
-  bot.py requires : bot_token, guild_id, voice_channel_id, audio_device_name
+  bot.py requires : bot_token, guild_id, audio_device_name
   installer wrote : bot_token, server_id, channel_id
 
 This test derives the expected keys from the consumers themselves (bot.py
@@ -59,7 +59,6 @@ BeforeAll {
     $script:Discord = @{
         BotToken        = ("A" * 24) + "." + ("B" * 6) + "." + ("C" * 27)
         GuildId         = "123456789012345678"
-        VoiceChannelId  = "987654321098765432"
         AudioDeviceName = "VoiceMeeter Output (VB-Audio Voicemeeter VAIO)"
     }
 }
@@ -106,20 +105,25 @@ Describe "Config contract: installer output vs. consumers" {
         }
     }
 
-    It "writes guild_id and voice_channel_id as JSON numbers, not strings" {
-        # discord.py's get_guild()/get_channel() match on int; a quoted ID
-        # silently resolves to None and the bot logs 'not found'.
+    It "writes guild_id as a JSON number, not a string" {
+        # discord.py's get_guild() matches on int; a quoted ID silently
+        # resolves to None and the bot logs 'not found'.
         $raw = Get-Content $script:ConfigPath -Raw
         $raw | Should -Match '"guild_id"\s*:\s*\d+'
-        $raw | Should -Match '"voice_channel_id"\s*:\s*\d+'
-        $script:Config.guild_id        | Should -BeOfType [long]
-        $script:Config.voice_channel_id | Should -BeOfType [long]
+        $script:Config.guild_id | Should -BeOfType [long]
     }
 
     It "does not emit the legacy misnamed keys" {
         $names = $script:Config.PSObject.Properties.Name
         $names | Should -Not -Contain "server_id"
         $names | Should -Not -Contain "channel_id"
+    }
+
+    # The channel is resolved per !BATCjoin. Writing it would put a value in
+    # the file that nothing reads, which is how the editor came to save an
+    # edited token into a field the bot ignored.
+    It "no longer writes a voice channel" {
+        $script:Config.PSObject.Properties.Name | Should -Not -Contain "voice_channel_id"
     }
 
     It "points voicemeeter_path at an executable, not a directory" {
@@ -190,7 +194,7 @@ Describe "Config migration from the pre-1.4.0 schema" {
         Remove-Item $script:MigDir -Recurse -Force -ErrorAction SilentlyContinue
     }
 
-    It "renames server_id/channel_id and converts them to numbers" {
+    It "renames server_id and converts it to a number" {
         @{
             bot_token  = "legacy-token"
             server_id  = "123456789012345678"
@@ -201,12 +205,30 @@ Describe "Config migration from the pre-1.4.0 schema" {
 
         $result.Migrated | Should -BeTrue
         $migrated = Get-Content $script:MigPath -Raw | ConvertFrom-Json
-        $migrated.guild_id         | Should -Be 123456789012345678
-        $migrated.voice_channel_id | Should -Be 987654321098765432
+        $migrated.guild_id | Should -Be 123456789012345678
         $migrated.PSObject.Properties.Name | Should -Not -Contain "server_id"
-        $migrated.PSObject.Properties.Name | Should -Not -Contain "channel_id"
     }
 
+    # channel_id used to be renamed to voice_channel_id. Nothing reads either
+    # now, so the rename was work that looked like it achieved something. The
+    # old key is left where it is and ignored.
+    It "leaves an old channel_id alone rather than migrating it into a dead field" {
+        @{
+            bot_token  = "legacy-token"
+            server_id  = "123456789012345678"
+            channel_id = "987654321098765432"
+        } | ConvertTo-Json | Set-Content $script:MigPath -Encoding UTF8
+
+        Convert-LegacyBotConfig -ConfigPath $script:MigPath | Out-Null
+
+        $migrated = Get-Content $script:MigPath -Raw | ConvertFrom-Json
+        $migrated.PSObject.Properties.Name | Should -Not -Contain "voice_channel_id"
+        $migrated.channel_id | Should -Be "987654321098765432"
+    }
+
+    # voice_channel_id is here on purpose: this is what an installation
+    # upgraded from 1.4.x looks like, carrying the key the bot no longer
+    # reads. Migration must leave it alone rather than finding work to do.
     It "reports a config that is already current as not migrated" {
         @{
             bot_token         = "t"

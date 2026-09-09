@@ -18,7 +18,6 @@ with patch("pathlib.Path.exists", return_value=True):
         with patch("json.load", return_value={
             "bot_token": "test_token",
             "guild_id": 123456789012345678,
-            "voice_channel_id": 987654321098765432,
             "audio_device_name": "Voicemeeter Out MME",
         }):
             import bot
@@ -40,7 +39,6 @@ class TestLoadConfig:
         config_data = {
             "bot_token": "test_token",
             "guild_id": 123456789012345678,
-            "voice_channel_id": 987654321098765432,
             "audio_device_name": "Voicemeeter Out MME",
         }
         config_file = tmp_path / "config.json"
@@ -56,7 +54,6 @@ class TestLoadConfig:
         config_data = {
             "bot_token": "test_token",
             "guild_id": 123456789012345678,
-            "voice_channel_id": 987654321098765432,
             "audio_device_name": "Voicemeeter Out MME",
         }
         config_file = tmp_path / "config.json"
@@ -71,23 +68,25 @@ class TestLoadConfig:
 class TestConfigValidation:
     """Tests for config.json validation"""
 
-    def test_config_has_required_keys(self):
-        """Config should have all required keys"""
-        required_keys = ["bot_token", "guild_id", "voice_channel_id", "audio_device_name"]
-        for key in required_keys:
+    # Read from bot.py rather than retyped here. These three listed the keys
+    # themselves and so only confirmed that the test fixture agreed with the
+    # test: they stayed green through the removal of voice_channel_id from
+    # REQUIRED_KEYS, which is the one thing they existed to notice.
+    def test_config_has_every_key_bot_py_demands(self):
+        for key in bot.REQUIRED_KEYS:
             assert key in bot.CONFIG, f"Missing required key: {key}"
 
-    def test_config_required_keys_not_empty(self):
-        """Required config keys should not be empty"""
-        assert bot.CONFIG.get("bot_token"), "bot_token is empty"
-        assert bot.CONFIG.get("guild_id"), "guild_id is empty"
-        assert bot.CONFIG.get("voice_channel_id"), "voice_channel_id is empty"
-        assert bot.CONFIG.get("audio_device_name"), "audio_device_name is empty"
+    def test_no_required_key_is_empty(self):
+        for key in bot.REQUIRED_KEYS:
+            assert bot.CONFIG.get(key), f"{key} is empty"
 
-    def test_config_ids_are_integers(self):
-        """guild_id and voice_channel_id should be integers"""
+    def test_the_server_id_is_an_integer(self):
+        """discord.py matches guilds on int; a quoted ID resolves to nothing."""
         assert isinstance(bot.CONFIG["guild_id"], int), "guild_id must be integer"
-        assert isinstance(bot.CONFIG["voice_channel_id"], int), "voice_channel_id must be integer"
+
+    def test_the_channel_is_not_configuration_any_more(self):
+        """It is decided per !BATCjoin, so requiring it would block startup."""
+        assert "voice_channel_id" not in bot.REQUIRED_KEYS
 
 
 class TestAudioSource:
@@ -308,12 +307,16 @@ async def test_connect_and_stream_already_connected(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_connect_and_stream_does_not_restart_a_running_stream():
+async def test_connect_and_stream_does_not_restart_a_running_stream(monkeypatch):
     """The other half: already playing means play() must not be called again."""
     guild = MagicMock()
     channel = MagicMock(spec=discord.VoiceChannel)
-    channel.id = bot.CONFIG["voice_channel_id"]
+    channel.id = 555000111222333444
     channel.name = "Test Channel"
+
+    # Without a target, connect_and_stream returns before reaching play() and
+    # this would pass for the wrong reason.
+    monkeypatch.setattr(bot, "target_channel_id", channel.id)
 
     voice_client = AsyncMock()
     voice_client.channel.id = channel.id

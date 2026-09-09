@@ -66,7 +66,10 @@ def load_config() -> dict:
 
 CONFIG = load_config()
 
-REQUIRED_KEYS = ["bot_token", "guild_id", "voice_channel_id", "audio_device_name"]
+# voice_channel_id is deliberately absent. The channel is decided per
+# !BATCjoin, so an installation that still carries the field simply keeps an
+# unused key rather than needing a migration.
+REQUIRED_KEYS = ["bot_token", "guild_id", "audio_device_name"]
 for key in REQUIRED_KEYS:
     if not CONFIG.get(key):
         log.error("Field '%s' is missing or empty in config.json", key)

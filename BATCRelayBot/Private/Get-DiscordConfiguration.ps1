@@ -7,13 +7,16 @@ Collects and validates the Discord credentials the bot needs.
 .DESCRIPTION
 Returns a hashtable keyed the way New-BotConfigFile expects:
 
-    BotToken, GuildId, VoiceChannelId
+    BotToken, GuildId
 
-The names deliberately mirror bot.py's config keys (guild_id,
-voice_channel_id) rather than the Discord UI wording ("Server ID"). The old
-ServerId/ChannelId naming is what let the installer write server_id and
-channel_id into config.json for sixteen releases without anyone noticing
-that bot.py reads neither.
+The names deliberately mirror bot.py's config keys (guild_id) rather than the
+Discord UI wording ("Server ID"). The old ServerId/ChannelId naming is what
+let the installer write server_id and channel_id into config.json for sixteen
+releases without anyone noticing that bot.py reads neither.
+
+The voice channel is no longer asked for. The bot joins the channel the
+caller is in, or one named in `!BATCjoin`, so a channel chosen at install
+time decided nothing and was one more ID to look up before starting.
 #>
 
 function Get-DiscordConfiguration {
@@ -23,13 +26,12 @@ function Get-DiscordConfiguration {
     )
 
     Write-Host "Discord Configuration" -ForegroundColor White -BackgroundColor DarkBlue
-    Write-Host "Three values from the Discord developer portal and your server." -ForegroundColor Gray
+    Write-Host "Two values from the Discord developer portal and your server." -ForegroundColor Gray
     Write-Host ""
 
     $config = @{
-        BotToken       = $null
-        GuildId        = $null
-        VoiceChannelId = $null
+        BotToken = $null
+        GuildId  = $null
     }
 
     $token = Read-DiscordToken -LogPath $LogPath
@@ -41,12 +43,6 @@ function Get-DiscordConfiguration {
         -Hint "Discord: Settings > Advanced > Developer Mode, then right-click the server > Copy Server ID" `
         -LogPath $LogPath
     if (-not $config.GuildId) { return $null }
-
-    $config.VoiceChannelId = Read-DiscordSnowflake `
-        -Label "Voice channel ID" `
-        -Hint "Right-click the VOICE channel the bot should join > Copy Channel ID" `
-        -LogPath $LogPath
-    if (-not $config.VoiceChannelId) { return $null }
 
     return $config
 }

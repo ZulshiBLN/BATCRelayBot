@@ -40,7 +40,6 @@ BeforeAll {
         [ordered]@{
             bot_token                = "AAAAAAAAAAAAAAAAAAAAAAAA.BBBBBB.CCCCCCCCCCCCCCCCCCCCCCCCCCC"
             guild_id                 = 123456789012345678
-            voice_channel_id         = 987654321098765432
             audio_device_name        = "Voicemeeter Out B1 (VB-Audio Voicemeeter VAIO)"
             python_path              = "C:\Python312\python.exe"
             ffmpeg_path              = "C:\ffmpeg\bin\ffmpeg.exe"
@@ -84,9 +83,15 @@ Describe "Get-ConfigFieldMap" {
         (Get-ConfigFieldDefinition -Field 'Token').Json | Should -Be 'bot_token'
     }
 
-    It "declares the Discord IDs as numeric" {
-        (Get-ConfigFieldDefinition -Field 'Guild').Type   | Should -Be 'long'
-        (Get-ConfigFieldDefinition -Field 'Channel').Type | Should -Be 'long'
+    It "declares the server ID numeric and the device a string" {
+        (Get-ConfigFieldDefinition -Field 'Guild').Type       | Should -Be 'long'
+        (Get-ConfigFieldDefinition -Field 'AudioDevice').Type | Should -Be 'string'
+    }
+
+    # The channel is decided per !BATCjoin now. Offering it here would edit a
+    # field nothing reads, which is the defect this map was created to end.
+    It "no longer offers the voice channel" {
+        (Get-ConfigFieldMap).Keys | Should -Not -Contain 'Channel'
     }
 
     It "throws on an unknown field instead of writing nowhere" {
@@ -97,7 +102,7 @@ Describe "Get-ConfigFieldMap" {
 Describe "ConvertTo-ConfigFieldValue" {
 
     It "converts a Discord ID to a number" {
-        $value = ConvertTo-ConfigFieldValue -Field 'Channel' -Value "987654321098765432"
+        $value = ConvertTo-ConfigFieldValue -Field 'Guild' -Value "987654321098765432"
         $value | Should -BeOfType [long]
     }
 
@@ -121,7 +126,7 @@ Describe "Test-ConfigValue" {
     }
 
     It "accepts a Discord snowflake" {
-        (Test-ConfigValue -Field 'Channel' -Value "987654321098765432").Valid | Should -BeTrue
+        (Test-ConfigValue -Field 'Guild' -Value "987654321098765432").Valid | Should -BeTrue
     }
 
     It "rejects a snowflake of the wrong length" {
@@ -150,14 +155,14 @@ Describe "Update-ConfigJson" {
         $parsed.PSObject.Properties.Name | Should -Not -Contain 'token'
     }
 
-    It "writes a changed channel ID as a JSON number" {
-        # A quoted ID leaves discord.py unable to resolve the channel, with
+    It "writes a changed server ID as a JSON number" {
+        # A quoted ID leaves discord.py unable to resolve the server, with
         # nothing in the log but 'not found'.
         $configPath = New-EditorSandbox
-        $json = Update-ConfigJson -ConfigPath $configPath -Field 'Channel' -Value "111111111111111111"
+        $json = Update-ConfigJson -ConfigPath $configPath -Field 'Guild' -Value "111111111111111111"
 
-        $json | Should -Match '"voice_channel_id"\s*:\s*111111111111111111'
-        $json | Should -Not -Match '"voice_channel_id"\s*:\s*"'
+        $json | Should -Match '"guild_id"\s*:\s*111111111111111111'
+        $json | Should -Not -Match '"guild_id"\s*:\s*"'
     }
 
     It "keeps every other field untouched" {
@@ -166,7 +171,6 @@ Describe "Update-ConfigJson" {
         $after = (Update-ConfigJson -ConfigPath $configPath -Field 'Guild' -Value "222222222222222222") | ConvertFrom-Json
 
         $after.bot_token                | Should -Be $before.bot_token
-        $after.voice_channel_id         | Should -Be $before.voice_channel_id
         $after.audio_device_name        | Should -Be $before.audio_device_name
         $after.voicemeeter_process_name | Should -Be $before.voicemeeter_process_name
     }
@@ -192,10 +196,10 @@ Describe "Verify-ConfigChange" {
 
     It "confirms a numeric ID written correctly" {
         $configPath = New-EditorSandbox
-        $json = Update-ConfigJson -ConfigPath $configPath -Field 'Channel' -Value "111111111111111111"
+        $json = Update-ConfigJson -ConfigPath $configPath -Field 'Guild' -Value "111111111111111111"
         Write-ConfigFile -ConfigPath $configPath -JsonContent $json | Out-Null
 
-        (Verify-ConfigChange -ConfigPath $configPath -Field 'Channel' -ExpectedValue "111111111111111111").Verified |
+        (Verify-ConfigChange -ConfigPath $configPath -Field 'Guild' -ExpectedValue "111111111111111111").Verified |
             Should -BeTrue -Because "the stored number and the entered string are the same ID"
     }
 
@@ -228,12 +232,18 @@ Describe "Editing keeps the config loadable by bot.py" {
     It "leaves every required key present and non-empty after each edit" {
         # The contract that matters: whatever the editor touches, the bot must
         # still start afterwards.
-        $edits = @(
-            @{ Field = 'Token';       Value = ("Y" * 60) },
-            @{ Field = 'Guild';       Value = "222222222222222222" },
-            @{ Field = 'Channel';     Value = "333333333333333333" },
-            @{ Field = 'AudioDevice'; Value = "Voicemeeter Out B2 (VB-Audio Voicemeeter VAIO)" }
-        )
+        # Every field the map offers, taken from the map rather than listed
+        # here, so a field added or removed cannot slip past this.
+        $edits = @{
+            Token       = ("Y" * 60)
+            Guild       = "222222222222222222"
+            AudioDevice = "Voicemeeter Out B2 (VB-Audio Voicemeeter VAIO)"
+        }
+
+        (Get-ConfigFieldMap).Keys | Sort-Object |
+            Should -Be (@($edits.Keys) | Sort-Object) -Because "every editable field needs a case here"
+
+        $edits = @($edits.GetEnumerator() | ForEach-Object { @{ Field = $_.Key; Value = $_.Value } })
 
         foreach ($edit in $edits) {
             $configPath = New-EditorSandbox
@@ -247,14 +257,12 @@ Describe "Editing keeps the config loadable by bot.py" {
         }
     }
 
-    It "keeps the IDs numeric after an unrelated edit" {
+    It "keeps the server ID numeric after an unrelated edit" {
         $configPath = New-EditorSandbox
         $json = Update-ConfigJson -ConfigPath $configPath -Field 'Token' -Value ("W" * 60)
         Write-ConfigFile -ConfigPath $configPath -JsonContent $json | Out-Null
 
-        $raw = Get-Content $configPath -Raw
-        $raw | Should -Match '"guild_id"\s*:\s*\d+'
-        $raw | Should -Match '"voice_channel_id"\s*:\s*\d+'
+        (Get-Content $configPath -Raw) | Should -Match '"guild_id"\s*:\s*\d+'
     }
 }
 

@@ -17,6 +17,18 @@ see the commit that made it.
 
 ## [Unreleased]
 
+### Removed
+
+- **`voice_channel_id` is gone from the configuration.** The bot joins the
+  channel you are in when you say `!BATCjoin`, or the one you name, so a
+  channel fixed at install time decided nothing.
+
+  **Nothing breaks on upgrade**: an existing `config.json` keeps the field and
+  the bot ignores it. The installer asks three questions instead of four, and
+  the config editor offers three fields instead of four. If you edited
+  `voice_channel_id` to move the bot, that is now `!BATCjoin <name or id>`
+  instead - no restart, and no file to edit.
+
 ### Changed
 
 - **The commands no longer print their result object.** `Install-BATCRelayBot`,
