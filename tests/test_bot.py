@@ -459,8 +459,10 @@ class TestBATCCommandNaming:
                 f"command '{command.name}' is missing the BATC prefix"
             )
 
-    def test_help_command_is_renamed(self):
-        assert bot.bot.help_command.command_attrs["name"] == "BATChelp"
+    def test_help_is_our_own_command_not_the_built_in_one(self):
+        """The default help printed a flat block with no separation."""
+        assert bot.bot.help_command is None
+        assert bot.bot.get_command("BATChelp") is not None
 
     def test_command_names_are_case_insensitive(self):
         """!batcjoin should work as well as !BATCjoin."""
@@ -613,6 +615,90 @@ class TestResolveTargetChannel:
         assert "server" in reason.lower()
 
 
+class TestReplyWording:
+    """
+    The replies Michel wrote in the findings file, in the radio-callout voice
+    the rest of the bot uses. Each names who asked and where.
+    """
+
+    @pytest.mark.asyncio
+    async def test_help_lists_every_command_with_its_description(self):
+        ctx = make_context(MagicMock())
+        ctx.author.display_name = "Zulshi"
+
+        await bot.batc_help.callback(ctx)
+
+        text = ctx.send.await_args.args[0]
+
+        # Derived, not retyped: a command added later must appear here too.
+        for command in bot.bot.commands:
+            assert command.name in text, f"{command.name} is missing from the help"
+            for line in (command.help or "").splitlines():
+                assert line in text
+
+        assert "ready to copy your selection" in text
+        assert "Say selected option" in text
+
+    @pytest.mark.asyncio
+    async def test_help_puts_each_description_under_its_own_command(self):
+        """The flat block was the complaint: no telling where one ended."""
+        ctx = make_context(MagicMock())
+
+        await bot.batc_help.callback(ctx)
+        lines = ctx.send.await_args.args[0].splitlines()
+
+        index = lines.index("**BATCjoin**")
+        assert lines[index + 1].startswith("    ")
+        assert "Request channel entry" in lines[index + 1]
+
+    @pytest.mark.asyncio
+    async def test_shutdown_help_says_it_needs_an_administrator(self):
+        ctx = make_context(MagicMock())
+
+        await bot.batc_help.callback(ctx)
+
+        assert "Administrator authorization required." in ctx.send.await_args.args[0]
+
+    @pytest.mark.asyncio
+    async def test_leave_names_the_channel_it_left(self, monkeypatch):
+        ctx = make_context(MagicMock())
+        ctx.author.display_name = "Zulshi"
+
+        voice_client = AsyncMock()
+        voice_client.channel.name = "Tower"
+
+        monkeypatch.setattr(bot, "target_channel_id", 111)
+        with patch("bot.configured_voice_client", return_value=voice_client):
+            await bot.batc_leave.callback(ctx)
+
+        reply = ctx.send.await_args.args[0]
+        assert "Zulshi" in reply
+        assert "Tower" in reply
+        assert "Good day" in reply
+
+        # The name is read before disconnecting; afterwards there is none.
+        voice_client.disconnect.assert_awaited_once()
+        assert bot.target_channel_id is None
+
+    @pytest.mark.asyncio
+    async def test_restart_names_the_caller_and_the_channel(self, monkeypatch):
+        ctx = make_context(MagicMock())
+        ctx.author.display_name = "Zulshi"
+
+        voice_client = MagicMock()
+        voice_client.channel.name = "Tower"
+
+        monkeypatch.setattr(bot, "relay_paused", False)
+        with patch("bot.configured_voice_client", return_value=voice_client):
+            with patch("bot.connect_and_stream", new=AsyncMock()):
+                await bot.batc_restart.callback(ctx)
+
+        reply = ctx.send.await_args.args[0]
+        assert "Zulshi" in reply
+        assert "I say again" in reply
+        assert "Tower" in reply
+
+
 def grant(connect=True, speak=True):
     """A channel whose permissions_for() reports the given two."""
     channel = make_voice_channel("Tower", 111)
@@ -722,3 +808,21 @@ class TestJoinPermissions:
 
         assert bot.target_channel_id == channel.id
         assert bot.relay_paused is False
+
+
+def test_bot_py_stays_ascii():
+    """
+    A BOM-less file with non-ASCII is read as ANSI by PowerShell 5.1, and this
+    file is copied by the installer and parsed by the PowerShell tests, which
+    read REQUIRED_KEYS out of it.
+
+    Four non-breaking spaces reached the help indentation through an edit in
+    which they looked exactly like spaces. They render as spaces, compare as
+    something else, and nothing says so.
+    """
+    source = pathlib.Path(bot.__file__).read_text(encoding="utf-8")
+
+    offenders = sorted({ch for ch in source if ord(ch) > 127})
+    assert not offenders, (
+        "non-ASCII in bot.py: " + ", ".join(f"U+{ord(c):04X}" for c in offenders)
+    )

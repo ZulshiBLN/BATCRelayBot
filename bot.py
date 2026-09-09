@@ -77,13 +77,27 @@ intents.message_content = True  # only needed if you want the text commands belo
 
 # Every command carries a BATC prefix so this bot cannot collide with other
 # bots in the same server, and case_insensitive lets !batcjoin work too.
-# The built-in help is renamed for the same reason.
+#
+# The built-in help is switched off in favour of BATChelp below. The default
+# one printed a flat block in which it was not clear where one command ended
+# and the next began.
 bot = commands.Bot(
     command_prefix="!",
     intents=intents,
     case_insensitive=True,
-    help_command=commands.DefaultHelpCommand(command_attrs={"name": "BATChelp"}),
+    help_command=None,
 )
+
+
+def station_name():
+    """
+    What the bot calls itself in replies.
+
+    bot.user is None until the connection is up, and every reply here is sent
+    afterwards - but a test may call these functions without a connection, and
+    "None is now transmitting" would be a poor way to find that out.
+    """
+    return bot.user.display_name if bot.user else "BATCRelayBot"
 
 
 def make_audio_source() -> discord.FFmpegPCMAudio:
@@ -314,7 +328,7 @@ async def on_ready():
         shutdown_watcher.start()
 
 
-@bot.command(name="BATCstatus")
+@bot.command(name="BATCstatus", help="Request current station status.")
 async def batc_status(ctx: commands.Context):
     """Show whether the bot is connected and streaming."""
     vc = configured_voice_client()
@@ -328,9 +342,12 @@ async def batc_status(ctx: commands.Context):
         await ctx.send("Not connected to a voice channel - reconnecting shortly.")
 
 
-@bot.command(name="BATCjoin")
+@bot.command(
+    name="BATCjoin",
+    help="Request channel entry and commence transmissions.",
+)
 async def batc_join(ctx: commands.Context, *, channel_name: str = ""):
-    """Join a voice channel and start relaying. Defaults to yours."""
+    """Join a voice channel and start relaying. Defaults to the caller's."""
     global relay_paused, target_channel_id
 
     channel, reason = resolve_target_channel(ctx, channel_name)
@@ -359,12 +376,18 @@ async def batc_join(ctx: commands.Context, *, channel_name: str = ""):
 
     vc = configured_voice_client()
     if vc and vc.is_connected():
-        await ctx.send(f"Relaying into **{vc.channel.name}**.")
+        await ctx.send(
+            f"{ctx.author.display_name}, {station_name()} is now transmitting "
+            f"from **{vc.channel.name}**."
+        )
     else:
         await ctx.send(f"Could not join **{channel.name}**.")
 
 
-@bot.command(name="BATCleave")
+@bot.command(
+    name="BATCleave",
+    help="Request termination of transmissions and vacate the channel.",
+)
 async def batc_leave(ctx: commands.Context):
     """Leave the channel and stay out until !BATCjoin."""
     global relay_paused, target_channel_id
@@ -376,13 +399,22 @@ async def batc_leave(ctx: commands.Context):
 
     vc = configured_voice_client()
     if vc:
+        # Read before disconnecting: afterwards there is no channel to name.
+        left = vc.channel.name
         await vc.disconnect()
-        await ctx.send("Left the voice channel. Standing by - `!BATCjoin` to resume.")
+        await ctx.send(
+            f"{ctx.author.display_name}, contact {station_name()} again in "
+            f"**{left}**. Good day."
+        )
     else:
         await ctx.send("Wasn't connected. Standing by - `!BATCjoin` to resume.")
 
 
-@bot.command(name="BATCrestart", aliases=["BATCrestart_stream"])
+@bot.command(
+    name="BATCrestart",
+    aliases=["BATCrestart_stream"],
+    help="Request transmission restart.",
+)
 async def batc_restart(ctx: commands.Context):
     """Restart the audio stream without leaving the channel."""
     if relay_paused:
@@ -393,10 +425,16 @@ async def batc_restart(ctx: commands.Context):
     if vc:
         vc.stop()
     await connect_and_stream()
-    await ctx.send("Stream restarted.")
+
+    vc = configured_voice_client()
+    where = f" **{vc.channel.name}**" if vc and vc.channel else ""
+    await ctx.send(f"{ctx.author.display_name}, I say again, cleared to land{where}.")
 
 
-@bot.command(name="BATCshutdown")
+@bot.command(
+    name="BATCshutdown",
+    help="Request station shutdown.\nAdministrator authorization required.",
+)
 @commands.has_permissions(administrator=True)
 async def batc_shutdown(ctx: commands.Context):
     """Stop the bot process entirely (Administrator only)."""
@@ -406,6 +444,31 @@ async def batc_shutdown(ctx: commands.Context):
     # the background and orphaned from its PID file was otherwise unreachable.
     await ctx.send("Shutting down - leaving the channel and stopping the process.")
     STOP_SIGNAL_PATH.touch()
+
+
+@bot.command(name="BATChelp", help="Request available services.")
+async def batc_help(ctx: commands.Context):
+    """
+    Lists the commands, each with its own description underneath it.
+
+    Built from the registered commands rather than from a list written out
+    here, so a command added later cannot be left out of its own help - and
+    each description lives on the command it describes, in one place.
+    """
+    lines = [
+        f"{ctx.author.display_name}, {station_name()} ready to copy your selection.",
+        "Available options follow:",
+        "",
+    ]
+
+    for command in sorted(bot.commands, key=lambda c: c.name.lower()):
+        lines.append(f"**{command.name}**")
+        for line in (command.help or "").splitlines():
+            lines.append(f"    {line}")
+        lines.append("")
+
+    lines.append("Say selected option.")
+    await ctx.send("\n".join(lines))
 
 
 @batc_shutdown.error
