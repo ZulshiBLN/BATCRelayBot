@@ -73,6 +73,16 @@ see the commit that made it.
 - **The confirmation word is `uninstall`, not `yes`.** Nine considered
   characters are a different act from three reflexive ones.
 
+- **The config editor stays open.** It exited after a single change, so
+  correcting two fields meant starting it again and reading the same warnings
+  a second time. It now returns to its menu, which shows the value it just
+  wrote, and `-PassThru` reports every field changed in the session.
+
+- **The editor no longer prints its title twice** - "BATCRelayBot Configuration
+  Editor" directly above "BATCRelayBot Configuration" - and no longer says
+  "No changes made" on the way out when changes were made. The restart reminder
+  for a running bot is given once, at the end, and only if something changed.
+
 - **The manual steps afterwards are correct.** They told users to remove
   VoiceMeeter through Control Panel, which leaves its audio drivers behind;
   VB-Audio's own installer is what removes it. BeyondATC was never mentioned

@@ -157,7 +157,10 @@ Describe "Edit-BATCRelayBotConfig end to end" {
         $env = New-InstalledConfig
 
         # Menu: 3 (channel), the new ID, then confirm.
-        $script:Answers = @('3', '777777777777777777', 'y')
+        # The editor returns to its menu after a change now, so every script
+        # that drives it ends with a q. Relying on the answer list running out
+        # would leave the test passing for a reason it never states.
+        $script:Answers = @('3', '777777777777777777', 'y', 'q')
         $script:AnswerIndex = 0
         Mock -ModuleName BATCRelayBot Read-Host {
             $answer = $script:Answers[$script:AnswerIndex]
@@ -178,7 +181,7 @@ Describe "Edit-BATCRelayBotConfig end to end" {
     It "creates a backup before changing anything" {
         $env = New-InstalledConfig
 
-        $script:Answers = @('2', '888888888888888888', 'y')
+        $script:Answers = @('2', '888888888888888888', 'y', 'q')
         $script:AnswerIndex = 0
         Mock -ModuleName BATCRelayBot Read-Host {
             $answer = $script:Answers[$script:AnswerIndex]
@@ -209,5 +212,53 @@ Describe "Edit-BATCRelayBotConfig end to end" {
 
         $result.Success | Should -BeFalse
         (Get-Content $env.ConfigPath -Raw) | Should -Be $before
+    }
+
+    # The point of the loop: correcting two fields used to mean running the
+    # editor twice and reading the same warnings again.
+    It "applies two changes in one session and reports both" {
+        $env = New-InstalledConfig
+
+        $script:Answers = @(
+            '2', '111111111111111111', 'y',   # server ID
+            '3', '222222222222222222', 'y',   # voice channel ID
+            'q'
+        )
+        $script:AnswerIndex = 0
+        Mock -ModuleName BATCRelayBot Read-Host {
+            $answer = $script:Answers[$script:AnswerIndex]
+            $script:AnswerIndex++
+            return $answer
+        }
+
+        $result = Edit-BATCRelayBotConfig -InstallPath $env.InstallPath -PassThru 6>$null
+
+        $result.Success | Should -BeTrue -Because ($result.Errors -join '; ')
+        $result.UpdatedFields.Keys | Should -Contain 'Guild'
+        $result.UpdatedFields.Keys | Should -Contain 'Channel'
+
+        # Both landed in the file, and the second did not undo the first.
+        $config = Get-Content $env.ConfigPath -Raw | ConvertFrom-Json
+        $config.guild_id         | Should -Be 111111111111111111
+        $config.voice_channel_id | Should -Be 222222222222222222
+        Test-BotCanLoad -ConfigPath $env.ConfigPath | Should -BeTrue
+    }
+
+    It "leaves the editor when the menu is quit straight away" {
+        $env = New-InstalledConfig
+
+        $script:Answers = @('q')
+        $script:AnswerIndex = 0
+        Mock -ModuleName BATCRelayBot Read-Host {
+            $answer = $script:Answers[$script:AnswerIndex]
+            $script:AnswerIndex++
+            return $answer
+        }
+
+        $result = Edit-BATCRelayBotConfig -InstallPath $env.InstallPath -PassThru 6>$null
+
+        $result.Success | Should -BeFalse
+        $result.Errors  | Should -Contain "Cancelled by the user"
+        $result.UpdatedFields.Count | Should -Be 0
     }
 }
