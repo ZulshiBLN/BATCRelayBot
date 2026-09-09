@@ -246,7 +246,12 @@ def resolve_target_channel(ctx, argument=""):
 
         matches = [c for c in guild.voice_channels if c.name.lower() == wanted.lower()]
         if not matches:
-            return None, f'No voice channel called "{wanted}" on this server.'
+            # A channel the bot may not see is not in its cache at all, so it
+            # is indistinguishable from one that does not exist. Say both.
+            return None, (
+                f'No voice channel called "{wanted}" on this server - or I have '
+                f"no View Channel permission on it."
+            )
         return matches[0], None
 
     voice = getattr(ctx.author, "voice", None)
@@ -260,17 +265,42 @@ def resolve_target_channel(ctx, argument=""):
     )
 
 
+# What the bot needs, derived from what it actually does rather than from a
+# list somebody once wrote down.
+#
+#   View Channel   it cannot join, or even see, a channel hidden from it
+#   Connect        channel.connect()
+#   Speak          voice_client.play()
+#
+#   View Channel   a command in a channel it cannot see never reaches it
+#   Send Messages  every command answers with ctx.send()
+#
+# Read Message History is not among them. Commands arrive over the gateway as
+# they are typed; history is for reading messages from before, which nothing
+# here does. Sending a direct message needs no server permission at all - only
+# that the recipient accepts them.
+#
+# Not a permission but required all the same: the Message Content intent in
+# the developer portal. Without it the text of a message never reaches the bot
+# and no prefix command works.
+VOICE_PERMISSIONS = ("View Channel", "Connect", "Speak")
+TEXT_PERMISSIONS = ("View Channel", "Send Messages")
+
+
 def missing_join_permissions(channel, member):
     """
-    Which of the two permissions needed to relay are missing on a channel.
+    Which of the permissions needed to relay are missing on a voice channel.
 
-    Connect gets the bot in, Speak lets it be heard. Without Speak it joins
-    and streams into silence, which looks like a broken installation rather
-    than a permission a server admin can grant in ten seconds.
+    View Channel gets it listed, Connect gets the bot in, Speak lets it be
+    heard. Without Speak it joins and streams into silence, which looks like a
+    broken installation rather than a permission a server admin can grant in
+    ten seconds.
     """
     permissions = channel.permissions_for(member)
 
     missing = []
+    if not permissions.view_channel:
+        missing.append("View Channel")
     if not permissions.connect:
         missing.append("Connect")
     if not permissions.speak:
@@ -294,6 +324,11 @@ async def report_missing_permissions(ctx, channel, missing):
     detail = (
         f"I could not enter **{channel.name}**.\n"
         f"Missing on that channel: **{names}**.\n"
+        f"\n"
+        f"What I need, in full:\n"
+        f"  on a voice channel I should join - {', '.join(VOICE_PERMISSIONS)}\n"
+        f"  on the text channel you type in - {', '.join(TEXT_PERMISSIONS)}\n"
+        f"\n"
         f"A server admin can grant {'them' if len(missing) > 1 else 'it'} under "
         f"Channel Settings > Permissions, for my role. Then say `!BATCjoin` again."
     )

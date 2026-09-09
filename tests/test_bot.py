@@ -784,10 +784,11 @@ class TestReplyWording:
         assert "Tower" in reply
 
 
-def grant(connect=True, speak=True):
-    """A channel whose permissions_for() reports the given two."""
+def grant(connect=True, speak=True, view=True):
+    """A channel whose permissions_for() reports the given three."""
     channel = make_voice_channel("Tower", 111)
     permissions = MagicMock()
+    permissions.view_channel = view
     permissions.connect = connect
     permissions.speak = speak
     channel.permissions_for = Mock(return_value=permissions)
@@ -816,6 +817,27 @@ class TestJoinPermissions:
         missing = bot.missing_join_permissions(grant(connect=False, speak=False), MagicMock())
         assert missing == ["Connect", "Speak"]
 
+    def test_view_channel_is_reported(self):
+        """Without it the channel cannot be joined, or even seen."""
+        assert bot.missing_join_permissions(grant(view=False), MagicMock()) == ["View Channel"]
+
+    def test_the_required_set_matches_what_the_bot_does(self):
+        """
+        Derived from the code, not from a list somebody wrote down: ctx.send
+        in every command, connect() and play() for the voice side. Read
+        Message History is deliberately absent - commands arrive over the
+        gateway as they are typed, and nothing here reads older messages.
+        """
+        assert bot.VOICE_PERMISSIONS == ("View Channel", "Connect", "Speak")
+        assert bot.TEXT_PERMISSIONS == ("View Channel", "Send Messages")
+
+        # Asserted against the calls, not against the prose around them: an
+        # earlier version of this looked for the word "history" and tripped
+        # over the comment explaining why it is not needed.
+        source = pathlib.Path(bot.__file__).read_text(encoding="utf-8")
+        for unused in (".history(", ".fetch_message(", ".add_reaction(", "embed="):
+            assert unused not in source, f"{unused} would need a permission not listed"
+
     @pytest.mark.asyncio
     async def test_the_detail_goes_to_the_caller_by_direct_message(self):
         ctx = make_context(MagicMock())
@@ -827,6 +849,11 @@ class TestJoinPermissions:
         detail = ctx.author.send.await_args.args[0]
         assert "Tower" in detail
         assert "Connect" in detail
+
+        # It named Connect and Speak and stopped there, so an admin fixed one
+        # channel and hit the next wall. The whole requirement is stated.
+        for permission in bot.VOICE_PERMISSIONS + bot.TEXT_PERMISSIONS:
+            assert permission in detail, f"{permission} is not mentioned"
 
     @pytest.mark.asyncio
     async def test_the_channel_is_told_that_a_message_was_sent(self):

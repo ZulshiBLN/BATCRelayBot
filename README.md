@@ -35,12 +35,27 @@ installers. Setup checks for them and tells you what to do.
 1. At [discord.com/developers](https://discord.com/developers/applications),
    create a **New Application**.
 2. Under **Bot**, generate a token. Treat it like a password.
-3. Under **OAuth2 → URL Generator**, tick the **bot** scope and the **Connect**
-   and **Speak** permissions (add **Send Messages** for the chat commands).
-   Open the generated URL and invite the bot to your server.
-4. Right-click your target voice channel → **Edit Channel → Permissions**, and
-   explicitly **Allow** the bot's role to View Channel, Connect and Speak.
-5. Enable **Developer Mode** (Settings → Advanced) so you can copy IDs.
+3. Still under **Bot**, switch on the **Message Content Intent**. Without it
+   the bot never sees the text of a message and no `!BATC…` command works.
+4. Under **OAuth2 → URL Generator**, tick the **bot** scope and these
+   permissions, then open the generated URL and invite the bot:
+
+   | Where | Permission | Why |
+   |---|---|---|
+   | text channel | View Channel | a command in a channel it cannot see never reaches it |
+   | text channel | Send Messages | every command answers in the channel |
+   | voice channel | View Channel | a hidden channel cannot be joined, or even named |
+   | voice channel | Connect | to enter the channel |
+   | voice channel | Speak | to be heard once inside |
+
+   **Read Message History is not needed.** Commands arrive as they are typed;
+   nothing here reads older messages.
+
+5. Right-click each voice channel the bot should be able to join →
+   **Edit Channel → Permissions**, and explicitly **Allow** its role
+   View Channel, Connect and Speak. Server-wide permissions are not enough
+   when a channel overrides them.
+6. Enable **Developer Mode** (Settings → Advanced) so you can copy IDs.
 
 ### 2. Install
 
