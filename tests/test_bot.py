@@ -684,6 +684,88 @@ class TestReplyWording:
         assert bot.target_channel_id is None
 
     @pytest.mark.asyncio
+    async def test_status_reports_transmitting_in_the_words_asked_for(self, monkeypatch):
+        ctx = make_context(MagicMock())
+        ctx.author.display_name = "Zulshi"
+
+        voice_client = MagicMock()
+        voice_client.is_connected = Mock(return_value=True)
+        voice_client.is_playing = Mock(return_value=True)
+        voice_client.channel.name = "Tower"
+
+        monkeypatch.setattr(bot, "relay_paused", False)
+        with patch("bot.configured_voice_client", return_value=voice_client):
+            await bot.batc_status.callback(ctx)
+
+        reply = ctx.send.await_args.args[0]
+        assert reply.startswith("Zulshi, ")
+        assert "is currently transmitting from" in reply
+        assert "Tower" in reply
+
+    @pytest.mark.asyncio
+    async def test_status_separates_connected_from_transmitting(self, monkeypatch):
+        """In the channel with no stream is not the same as relaying."""
+        ctx = make_context(MagicMock())
+        ctx.author.display_name = "Zulshi"
+
+        voice_client = MagicMock()
+        voice_client.is_connected = Mock(return_value=True)
+        voice_client.is_playing = Mock(return_value=False)
+        voice_client.channel.name = "Tower"
+
+        monkeypatch.setattr(bot, "relay_paused", True)
+        with patch("bot.configured_voice_client", return_value=voice_client):
+            await bot.batc_status.callback(ctx)
+
+        reply = ctx.send.await_args.args[0]
+        assert "not transmitting" in reply
+        assert "BATCjoin" in reply, "a paused relay needs the way out of it"
+
+    @pytest.mark.asyncio
+    async def test_status_names_the_caller_when_not_in_a_channel(self, monkeypatch):
+        ctx = make_context(MagicMock())
+        ctx.author.display_name = "Zulshi"
+
+        monkeypatch.setattr(bot, "relay_paused", True)
+        with patch("bot.configured_voice_client", return_value=None):
+            await bot.batc_status.callback(ctx)
+
+        assert ctx.send.await_args.args[0].startswith("Zulshi, ")
+
+    @pytest.mark.asyncio
+    async def test_shutdown_signs_off_before_writing_the_stop_signal(self, tmp_path):
+        """
+        The order matters: shutdown_watcher polls every second and closes the
+        connection, so a message written after the signal never arrives.
+        """
+        ctx = make_context(MagicMock())
+        ctx.author.display_name = "Zulshi"
+
+        signal = tmp_path / "stop.signal"
+        sent_before_signal = []
+        ctx.send = AsyncMock(side_effect=lambda text: sent_before_signal.append(signal.exists()))
+
+        with patch("bot.STOP_SIGNAL_PATH", signal):
+            await bot.batc_shutdown.callback(ctx)
+
+            assert signal.exists(), "the process has to be told to stop"
+            assert sent_before_signal == [False], "the sign-off went out after the signal"
+
+    @pytest.mark.asyncio
+    async def test_shutdown_says_it_is_going_offline(self):
+        ctx = make_context(MagicMock())
+        ctx.author.display_name = "Zulshi"
+
+        with patch("bot.STOP_SIGNAL_PATH", MagicMock()):
+            await bot.batc_shutdown.callback(ctx)
+
+        reply = ctx.send.await_args.args[0]
+        assert reply.startswith("Zulshi, ")
+        assert "is terminating transmission" in reply
+        assert "I repeat" in reply
+        assert "offline now, bye bye!" in reply
+
+    @pytest.mark.asyncio
     async def test_restart_names_the_caller_and_the_channel(self, monkeypatch):
         ctx = make_context(MagicMock())
         ctx.author.display_name = "Zulshi"

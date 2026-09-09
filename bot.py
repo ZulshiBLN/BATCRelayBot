@@ -334,15 +334,27 @@ async def on_ready():
 @bot.command(name="BATCstatus", help="Request current station status.")
 async def batc_status(ctx: commands.Context):
     """Show whether the bot is connected and streaming."""
+    who = ctx.author.display_name
+    station = station_name()
+
     vc = configured_voice_client()
+
     if vc and vc.is_connected():
-        state = "streaming" if vc.is_playing() else "connected, but no active stream"
-        suffix = " (relay paused, `!BATCjoin` to resume)" if relay_paused else ""
-        await ctx.send(f"Connected to **{vc.channel.name}** - {state}{suffix}.")
+        if vc.is_playing():
+            message = f"{who}, {station} is currently transmitting from **{vc.channel.name}**."
+        else:
+            message = f"{who}, {station} is in **{vc.channel.name}** but not transmitting."
+
+        # Paused means the watchdog will not restart the stream on its own, so
+        # the way out of it is worth naming here.
+        if relay_paused:
+            message += " Say BATCjoin to resume."
+
+        await ctx.send(message)
     elif relay_paused:
-        await ctx.send("Standing by - not in a channel. Use `!BATCjoin` to start relaying.")
+        await ctx.send(f"{who}, {station} is standing by. Say BATCjoin for channel entry.")
     else:
-        await ctx.send("Not connected to a voice channel - reconnecting shortly.")
+        await ctx.send(f"{who}, {station} is off the air, reconnecting shortly.")
 
 
 @bot.command(
@@ -445,7 +457,14 @@ async def batc_shutdown(ctx: commands.Context):
     # path is the one already exercised elsewhere: leave the channel cleanly,
     # close the connection, exit the process. Exists because a bot started in
     # the background and orphaned from its PID file was otherwise unreachable.
-    await ctx.send("Shutting down - leaving the channel and stopping the process.")
+    #
+    # Sent before the signal, not after: the watcher checks every second and
+    # closes the connection, and a message written after that never arrives.
+    station = station_name()
+    await ctx.send(
+        f"{ctx.author.display_name}, {station} is terminating transmission. "
+        f"I repeat {station} is offline now, bye bye!"
+    )
     STOP_SIGNAL_PATH.touch()
 
 

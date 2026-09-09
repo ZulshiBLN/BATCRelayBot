@@ -26,7 +26,11 @@ function Find-BotProcess {
 
     .DESCRIPTION
     Matches this installation's own bot.py, so an unrelated Python program is
-    never targeted.
+    never targeted, and neither is a directory that holds no bot at all.
+
+    The one case it cannot separate is two installations both running a bare
+    "bot.py" from their own working directory with no absolute path and no
+    python_path to tell them apart.
 
     .OUTPUTS
     Array of process ids. Empty when nothing matches.
@@ -77,8 +81,22 @@ function Find-BotProcess {
             }
         } catch {}
 
-        # Last resort: a bare "bot.py" command line with no other installation
-        # on this machine to confuse it.
+        # Last resort: a bare "bot.py" command line, started with the
+        # installation directory as its working directory, which
+        # Win32_Process does not expose.
+        #
+        # Only for a path that actually holds a bot. Without that condition
+        # this claimed any running bot.py for whatever path it was asked
+        # about - so asking about an empty directory reported a bot there,
+        # and the uninstaller and Stop-BATCRelayBot of one installation would
+        # stop another one's process. It also made three tests depend on
+        # whether a bot happened to be running on the machine.
+        #
+        # Two installations both running are still indistinguishable this way
+        # when neither writes an absolute path; that needs the pid file, which
+        # is what bot.pid is for.
+        if (-not (Test-Path (Join-Path $normalisedBotPath 'bot.py'))) { continue }
+
         if ($process.CommandLine -match '(^|[\s"])bot\.py("|\s|$)') {
             $matchesFound += [int]$process.ProcessId
         }
