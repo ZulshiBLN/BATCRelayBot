@@ -51,10 +51,18 @@ installers. Setup checks for them and tells you what to do.
    **Read Message History is not needed.** Commands arrive as they are typed;
    nothing here reads older messages.
 
-5. Right-click each voice channel the bot should be able to join →
-   **Edit Channel → Permissions**, and explicitly **Allow** its role
-   View Channel, Connect and Speak. Server-wide permissions are not enough
-   when a channel overrides them.
+5. Server-wide permissions are not enough where a channel overrides them, so
+   check the channels themselves — **Edit Channel → Permissions**, and
+   explicitly **Allow** the bot's role:
+
+   - every **voice** channel it should be able to join: View Channel,
+     Connect, Speak
+   - every **text** channel you type commands in: View Channel, Send Messages
+
+   A voice channel has its own built-in chat. If that is where you type
+   `!BATCjoin`, the voice channel needs Send Messages as well — it is the text
+   channel in that case.
+
 6. Enable **Developer Mode** (Settings → Advanced) so you can copy IDs.
 
 ### 2. Install
