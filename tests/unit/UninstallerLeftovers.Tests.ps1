@@ -99,6 +99,56 @@ Describe "A handle that clears" {
     }
 }
 
+Describe "Uninstalling while something still holds a file" {
+
+    # End to end with a real second process, which is what Michel's run was: a
+    # process holding logs\bot_error.log, stopped, and the directory removed a
+    # moment later while Windows had not yet let the handle go.
+    #
+    # This is not the proof that the retry works - the handle can clear before
+    # the removal even starts, and a test that depends on losing a race is a
+    # test that passes for the wrong reason. That proof is the mocked case
+    # above. This one checks the whole path holds together.
+    It "removes everything once the process is gone" {
+        $sandbox = New-Sandbox
+        $locked = Join-Path $sandbox 'logs\bot_error.log'
+
+        $holder = Start-Process powershell -PassThru -WindowStyle Hidden -ArgumentList @(
+            '-NoProfile', '-Command',
+            "`$f = [System.IO.File]::Open('$locked','Open','Read','None'); Start-Sleep -Seconds 60"
+        )
+
+        try {
+            # Wait until it genuinely has the file, or the test means nothing.
+            $held = $false
+            for ($i = 0; $i -lt 100 -and -not $held; $i++) {
+                try {
+                    $probe = [System.IO.File]::Open($locked, 'Open', 'Read', 'None')
+                    $probe.Close()
+                    Start-Sleep -Milliseconds 100
+                } catch {
+                    $held = $true
+                }
+            }
+            $held | Should -Be $true -Because "the fixture must hold the log before this proves anything"
+
+            # Ending the process stands in for the bot being stopped. No pause
+            # afterwards: the removal starts into the same race the uninstaller
+            # hits in real use.
+            Stop-Process -Id $holder.Id -Force
+            $result = Invoke-SecureUninstall -BotPath $sandbox -DependencyChoices @{} `
+                -LogDirectory $sandbox 6>$null
+
+            $result.Success | Should -Be $true -Because ($result.Errors -join '; ')
+            $result.Leftovers.Count | Should -Be 0
+            @(Get-ChildItem $sandbox -Recurse -File).Name | Should -Be @('uninstall.log')
+        } finally {
+            Stop-Process -Id $holder.Id -Force -ErrorAction SilentlyContinue
+            Remove-Item $sandbox -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+}
+
 Describe "What the uninstaller reports afterwards" {
 
     It "names what is left instead of claiming there is nothing to clean up" {
@@ -128,6 +178,31 @@ Describe "What the uninstaller reports afterwards" {
             $result.Leftovers | Should -Not -BeNullOrEmpty
         } finally {
             $handle.Close()
+            Remove-Item $sandbox -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    # Found by the end-to-end test above, which failed on every run while all
+    # 481 others passed: their fixtures happened to spell the path the same way
+    # Get-ChildItem reports it. $env:TEMP hands back the 8.3 short form on some
+    # machines - C:\Users\MICHEL~1\... against C:\Users\MichelBrosche\... - and
+    # comparing the two as strings made the uninstaller fail to recognise its
+    # own log, list it as a leftover and call a clean removal a failure.
+    # Casing alone would do it too.
+    #
+    # "$path\." is the same directory spelled differently on every machine, so
+    # this reproduces it without depending on 8.3 names being enabled.
+    It "recognises its own log however the path is spelled" {
+        $sandbox = New-Sandbox
+        try {
+            $sameDirectory = Join-Path $sandbox '.'
+
+            $result = Invoke-SecureUninstall -BotPath $sandbox -DependencyChoices @{} `
+                -LogDirectory $sameDirectory 6>$null
+
+            $result.Leftovers.Count | Should -Be 0
+            $result.Success | Should -Be $true -Because ($result.Errors -join '; ')
+        } finally {
             Remove-Item $sandbox -Recurse -Force -ErrorAction SilentlyContinue
         }
     }

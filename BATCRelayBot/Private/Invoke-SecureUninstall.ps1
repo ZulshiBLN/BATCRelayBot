@@ -131,10 +131,17 @@ function Invoke-SecureUninstall {
     # ---- 4: what is left --------------------------------------------------
     Write-Host "  [4/5] Checking what is left" -ForegroundColor Gray
 
+    # Identified by name, exactly as Remove-BotContent keeps it. Comparing full
+    # paths looked safer and was not: $env:TEMP hands back the 8.3 short form
+    # on some machines while Get-ChildItem reports the long one, so the
+    # uninstaller failed to recognise its own log and reported it as a
+    # leftover - a clean removal calling itself a failure.
+    $keepName = Split-Path $logPath -Leaf
+
     $leftovers = @()
     if (Test-Path $BotPath) {
         $leftovers = @(Get-ChildItem -Path $BotPath -Recurse -File -ErrorAction SilentlyContinue |
-            Where-Object { $_.FullName -ne $logPath } |
+            Where-Object { $_.Name -ne $keepName } |
             Select-Object -ExpandProperty FullName)
     }
 
