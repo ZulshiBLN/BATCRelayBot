@@ -3,8 +3,8 @@ title: Troubleshooting
 description: Symptoms, their usual causes, and how to fix them.
 document_type: reference
 audience: users
-applies_to: BATCRelayBot 1.4.0
-updated: 2026-09-08
+applies_to: BATCRelayBot 1.5.0
+updated: 2026-09-09
 ---
 
 # Troubleshooting
@@ -62,6 +62,23 @@ Work outwards from the source:
    If `test.wav` is silent the problem is the routing, not the bot.
 4. Is `audio_device_name` a **B** bus? An A bus feeds your speakers and
    carries nothing for the bot to capture.
+
+**No audio anywhere on the machine after stopping the bot**
+Not a bot problem any more by the time you notice it: VoiceMeeter's audio
+engine is stuck, and because your default playback device is one of its
+virtual inputs, *everything* fails — a browser video will not start, a stream
+reports a decoding error, the Media Player refuses a local file.
+
+Right-click the VoiceMeeter tray icon → **Restart Audio Engine**. Killing the
+VoiceMeeter process and starting it again does **not** help: a terminated
+process never shuts its engine down, and the new one attaches to the same
+stuck state. Shutting VoiceMeeter down from that tray menu works because it
+stops the engine properly.
+
+It happens when the bot is terminated rather than stopped, because ffmpeg then
+loses its capture of the VoiceMeeter bus without closing it. Stopping the bot
+with `Stop-BATCRelayBot` or `!BATCshutdown` closes the capture first; the
+command tells you when it had to terminate instead.
 
 **"Timed out connecting to voice"**
 Almost always channel permissions rather than the network. The bot's role

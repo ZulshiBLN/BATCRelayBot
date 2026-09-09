@@ -117,6 +117,59 @@ Describe "Find-BotProcess" {
         @(Find-BotProcess -BotPath $absent).Count | Should -Be 0
     }
 
+    # The last-resort branch matches a bare "bot.py" command line, because a
+    # bot started from its own directory records no path anywhere the process
+    # list can be asked about. It used to do that for any path it was given,
+    # so an empty directory reported a bot, and one installation's uninstaller
+    # would stop another installation's process. It also made this file's
+    # tests depend on whether a bot happened to be running on the machine -
+    # which they did, intermittently, on 2026-09-09.
+    #
+    # Mocked rather than started for real: the point is what the matching does
+    # with a given process list, not whether python can be launched.
+    Context "a bare bot.py command line" {
+
+        BeforeAll {
+            $script:Elsewhere = @([pscustomobject]@{
+                Name           = 'python.exe'
+                ProcessId      = 4242
+                CommandLine    = 'python bot.py'
+                ExecutablePath = 'C:\Python312\python.exe'
+            })
+        }
+
+        It "is not claimed for a directory that holds no bot" {
+            InModuleScope BATCRelayBot -Parameters @{ Processes = $script:Elsewhere } {
+                param($Processes)
+                Mock Get-CimInstance { $Processes }
+
+                $empty = Join-Path $env:TEMP ("nobot-" + [guid]::NewGuid().ToString('N'))
+                New-Item -ItemType Directory -Path $empty -Force | Out-Null
+                try {
+                    @(Find-BotProcess -BotPath $empty).Count | Should -Be 0
+                } finally {
+                    Remove-Item $empty -Recurse -Force -ErrorAction SilentlyContinue
+                }
+            }
+        }
+
+        It "is claimed for a directory that does hold one" {
+            InModuleScope BATCRelayBot -Parameters @{ Processes = $script:Elsewhere } {
+                param($Processes)
+                Mock Get-CimInstance { $Processes }
+
+                $installed = Join-Path $env:TEMP ("withbot-" + [guid]::NewGuid().ToString('N'))
+                New-Item -ItemType Directory -Path $installed -Force | Out-Null
+                "print('bot')" | Set-Content (Join-Path $installed 'bot.py')
+                try {
+                    @(Find-BotProcess -BotPath $installed) | Should -Be @(4242)
+                } finally {
+                    Remove-Item $installed -Recurse -Force -ErrorAction SilentlyContinue
+                }
+            }
+        }
+    }
+
     It "looks at pythonw.exe as well as python.exe" {
         # Start-BATCRelayBot launches the windowless interpreter, so a
         # detector that only knows python.exe never sees a backgrounded bot.

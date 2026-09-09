@@ -3,8 +3,8 @@ title: Configuration Reference
 description: Every field in config.json, which component reads it, and how to change it safely.
 document_type: reference
 audience: users
-applies_to: BATCRelayBot 1.4.0
-updated: 2026-09-08
+applies_to: BATCRelayBot 1.5.0
+updated: 2026-09-09
 ---
 
 # Configuration Reference
@@ -23,12 +23,14 @@ The bot exits at startup if any of these is missing or empty.
 |---|---|---|
 | `bot_token` | string | Treat like a password |
 | `guild_id` | **number** | Discord server ID, unquoted |
-| `voice_channel_id` | **number** | Voice channel ID, unquoted |
 | `audio_device_name` | string | Exactly as ffmpeg names it |
 
-The two IDs must be JSON numbers. A quoted ID leaves discord.py unable to
-resolve the guild or channel, and the only symptom is a "not found" line in
-the log.
+`guild_id` must be a JSON number. A quoted ID leaves discord.py unable to
+resolve the server, and the only symptom is a "not found" line in the log.
+
+There is no voice channel here. The bot joins the channel you are in when you
+say `!BATCjoin`, or the one you name — `!BATCjoin Tower` or `!BATCjoin <id>`.
+A `voice_channel_id` left over from an earlier version is ignored.
 
 `audio_device_name` must be a VoiceMeeter **B** bus — those are virtual and
 can be captured. The **A** buses feed your speakers and cannot. List what
@@ -86,9 +88,9 @@ notepad $env:LOCALAPPDATA\BATCRelayBot\config.json
 Start-BATCRelayBot
 ```
 
-Keep the file valid JSON, and keep `guild_id` and `voice_channel_id`
-unquoted. Re-running `Install-BATCRelayBot` regenerates the whole file if you
-would rather start over.
+Keep the file valid JSON, and keep `guild_id` unquoted. Re-running
+`Install-BATCRelayBot` regenerates the whole file if you would rather start
+over.
 
 ## Upgrading from 1.3.x
 
@@ -97,7 +99,7 @@ The field names changed in 1.4.0:
 | Before | Now |
 |---|---|
 | `server_id` | `guild_id` |
-| `channel_id` | `voice_channel_id` |
+| `channel_id` | gone - the channel is chosen per `!BATCjoin` |
 | — | `audio_device_name` (new) |
 
 `Install-BATCRelayBot` migrates the names and converts the IDs to numbers

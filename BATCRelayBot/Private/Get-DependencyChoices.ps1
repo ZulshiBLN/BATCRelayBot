@@ -15,7 +15,12 @@ it was not installed. And only the literal string "yes" was accepted, so a "y"
 fell through to the default and silently meant no.
 
 VoiceMeeter is never offered: it ships audio drivers and must be removed with
-VB-Audio's own uninstaller.
+VB-Audio's own uninstaller. It is named once, in the manual steps after the
+removal, rather than here as well.
+
+Neither is the PowerShell module. Uninstalling the module that is running the
+uninstaller is a different decision from removing an installation, and the way
+to do it - Uninstall-Module BATCRelayBot - is one line the summary can print.
 #>
 
 function Get-DependencyChoices {
@@ -27,15 +32,13 @@ function Get-DependencyChoices {
     $choices = @{
         RemovePython          = $false
         RemoveFFmpeg          = $false
-        RemoveModule          = $false
         PythonPackages        = @()
         FFmpegPackages        = @()
         SkipDependencyPrompts = $false
     }
 
-    Write-Host ""
-    Write-Host "Optional components" -ForegroundColor Yellow
-    Write-Host "Nothing here is removed unless you say so." -ForegroundColor Gray
+    # The caller has already printed "[3/5] Optional components" above this.
+    Write-Host "        Nothing here is removed unless you say so." -ForegroundColor Gray
     Write-Host ""
 
     if (-not (Test-WingetPresent)) {
@@ -86,25 +89,6 @@ function Get-DependencyChoices {
             $choices.FFmpegPackages = $ffmpegPackages
         }
     }
-    Write-Host ""
-
-    # --- PowerShell module ----------------------------------------------
-    Write-Host "3. BATCRelayBot PowerShell module" -ForegroundColor Cyan
-    $moduleInstalled = [bool](Get-Module -ListAvailable -Name BATCRelayBot -ErrorAction SilentlyContinue)
-
-    if (-not $moduleInstalled) {
-        Write-Host "   Not installed from PSGallery (running from a local copy)." -ForegroundColor Gray
-    } else {
-        Write-Host "   Found: BATCRelayBot module" -ForegroundColor Gray
-        Write-Host ""
-        if (Read-YesNo -Question "   Remove the PowerShell module?") {
-            $choices.RemoveModule = $true
-        }
-    }
-    Write-Host ""
-
-    Write-Host "VoiceMeeter is never removed here - it installs audio drivers and has" -ForegroundColor Gray
-    Write-Host "to go through VB-Audio's own uninstaller (Settings > Apps)." -ForegroundColor Gray
     Write-Host ""
 
     return $choices

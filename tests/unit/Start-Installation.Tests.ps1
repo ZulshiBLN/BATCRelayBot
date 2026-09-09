@@ -33,7 +33,6 @@ BeforeAll {
         return @{
             BotToken        = "test-token-value"
             GuildId         = "123456789012345678"
-            VoiceChannelId  = "987654321098765432"
             AudioDeviceName = "VoiceMeeter Output (VB-Audio Voicemeeter VAIO)"
         }
     }
@@ -84,8 +83,10 @@ Describe "Start-Installation" {
             $config = Get-Content $script:Result.ConfigPath -Raw | ConvertFrom-Json
             $config.bot_token         | Should -Be "test-token-value"
             $config.guild_id          | Should -Be 123456789012345678
-            $config.voice_channel_id  | Should -Be 987654321098765432
             $config.audio_device_name | Should -Be "VoiceMeeter Output (VB-Audio Voicemeeter VAIO)"
+
+            # No channel: it is decided per !BATCjoin.
+            $config.PSObject.Properties.Name | Should -Not -Contain 'voice_channel_id'
         }
 
         It "writes a log" {
@@ -122,7 +123,6 @@ Describe "Test-InstallationResult" {
         @{
             bot_token         = "t"
             guild_id          = 123456789012345678
-            voice_channel_id  = 987654321098765432
             audio_device_name = "VoiceMeeter Output"
         } | ConvertTo-Json | Set-Content $script:VerifyConfig -Encoding UTF8
 
@@ -146,7 +146,6 @@ Describe "Test-InstallationResult" {
         @{
             bot_token         = "t"
             guild_id          = 123456789012345678
-            voice_channel_id  = 987654321098765432
             audio_device_name = ""
         } | ConvertTo-Json | Set-Content $script:VerifyConfig -Encoding UTF8
 

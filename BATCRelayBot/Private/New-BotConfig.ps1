@@ -7,7 +7,7 @@ Builds and writes config.json in the schema the bot and launcher actually read.
 .DESCRIPTION
 Single source of truth for the config file layout. Two consumers depend on it:
 
-  bot.py                : bot_token, guild_id, voice_channel_id, audio_device_name
+  bot.py                : bot_token, guild_id, audio_device_name
   Start-BATCRelayBot    : python_path, voicemeeter_path, voicemeeter_process_name,
                           batc_path, batc_process_name
 
@@ -33,7 +33,6 @@ function New-BotConfigFile {
     # Discord IDs must be JSON numbers: discord.py matches guilds and channels
     # on int, and a quoted ID resolves to None with only a 'not found' log line.
     $guildId = [long]::Parse($DiscordConfig.GuildId)
-    $channelId = [long]::Parse($DiscordConfig.VoiceChannelId)
 
     $vm = $Prerequisites.VoiceMeeter
     $batc = $Prerequisites.BeyondATC
@@ -43,7 +42,6 @@ function New-BotConfigFile {
     $config = [ordered]@{
         bot_token                 = $DiscordConfig.BotToken
         guild_id                  = $guildId
-        voice_channel_id          = $channelId
         audio_device_name         = $DiscordConfig.AudioDeviceName
 
         python_path               = if ($Prerequisites.Python.Found) { $Prerequisites.Python.Path } else { "" }
@@ -110,10 +108,14 @@ function Convert-LegacyBotConfig {
     Migrates a pre-1.4.0 config.json to the schema the bot can read.
 
     .DESCRIPTION
-    Renames server_id -> guild_id and channel_id -> voice_channel_id and
-    converts both to JSON numbers. Fields that the old installer never wrote
-    (notably audio_device_name) cannot be invented here; the caller is
-    responsible for collecting them.
+    Renames server_id -> guild_id and converts it to a JSON number. Fields
+    that the old installer never wrote (notably audio_device_name) cannot be
+    invented here; the caller is responsible for collecting them.
+
+    channel_id is left where it is. It used to be renamed to
+    voice_channel_id, which nothing reads any more - migrating a value into a
+    field no consumer looks at is work that appears to have done something.
+    An old config keeps the key, unused, and the bot ignores it.
 
     Returns Migrated=$false when there is nothing to do, including when the
     file is absent or unreadable - migration must never block an install.
@@ -148,26 +150,18 @@ function Convert-LegacyBotConfig {
                     $changes += "server_id -> guild_id"
                 }
             }
-            'channel_id' {
-                if ($names -notcontains 'voice_channel_id') {
-                    $migrated['voice_channel_id'] = ConvertTo-DiscordId $prop.Value
-                    $changes += "channel_id -> voice_channel_id"
-                }
-            }
             default {
                 $migrated[$prop.Name] = $prop.Value
             }
         }
     }
 
-    # Quoted IDs are as broken as misnamed ones - normalise them too.
-    foreach ($idField in @('guild_id', 'voice_channel_id')) {
-        if ($migrated.Contains($idField) -and $migrated[$idField] -is [string]) {
-            $converted = ConvertTo-DiscordId $migrated[$idField]
-            if ($null -ne $converted) {
-                $migrated[$idField] = $converted
-                $changes += "$idField converted from string to number"
-            }
+    # A quoted ID is as broken as a misnamed one - normalise it too.
+    if ($migrated.Contains('guild_id') -and $migrated['guild_id'] -is [string]) {
+        $converted = ConvertTo-DiscordId $migrated['guild_id']
+        if ($null -ne $converted) {
+            $migrated['guild_id'] = $converted
+            $changes += "guild_id converted from string to number"
         }
     }
 

@@ -7,13 +7,16 @@ Collects and validates the Discord credentials the bot needs.
 .DESCRIPTION
 Returns a hashtable keyed the way New-BotConfigFile expects:
 
-    BotToken, GuildId, VoiceChannelId
+    BotToken, GuildId
 
-The names deliberately mirror bot.py's config keys (guild_id,
-voice_channel_id) rather than the Discord UI wording ("Server ID"). The old
-ServerId/ChannelId naming is what let the installer write server_id and
-channel_id into config.json for sixteen releases without anyone noticing
-that bot.py reads neither.
+The names deliberately mirror bot.py's config keys (guild_id) rather than the
+Discord UI wording ("Server ID"). The old ServerId/ChannelId naming is what
+let the installer write server_id and channel_id into config.json for sixteen
+releases without anyone noticing that bot.py reads neither.
+
+The voice channel is no longer asked for. The bot joins the channel the
+caller is in, or one named in `!BATCjoin`, so a channel chosen at install
+time decided nothing and was one more ID to look up before starting.
 #>
 
 function Get-DiscordConfiguration {
@@ -23,13 +26,12 @@ function Get-DiscordConfiguration {
     )
 
     Write-Host "Discord Configuration" -ForegroundColor White -BackgroundColor DarkBlue
-    Write-Host "Three values from the Discord developer portal and your server." -ForegroundColor Gray
+    Write-Host "Two values from the Discord developer portal and your server." -ForegroundColor Gray
     Write-Host ""
 
     $config = @{
-        BotToken       = $null
-        GuildId        = $null
-        VoiceChannelId = $null
+        BotToken = $null
+        GuildId  = $null
     }
 
     $token = Read-DiscordToken -LogPath $LogPath
@@ -38,15 +40,10 @@ function Get-DiscordConfiguration {
 
     $config.GuildId = Read-DiscordSnowflake `
         -Label "Server ID (guild)" `
+        -Step "Step 2/2" `
         -Hint "Discord: Settings > Advanced > Developer Mode, then right-click the server > Copy Server ID" `
         -LogPath $LogPath
     if (-not $config.GuildId) { return $null }
-
-    $config.VoiceChannelId = Read-DiscordSnowflake `
-        -Label "Voice channel ID" `
-        -Hint "Right-click the VOICE channel the bot should join > Copy Channel ID" `
-        -LogPath $LogPath
-    if (-not $config.VoiceChannelId) { return $null }
 
     return $config
 }
@@ -65,7 +62,7 @@ function Read-DiscordToken {
     $maxAttempts = 3
 
     for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
-        Write-Host "Step 1/3: Bot token" -ForegroundColor Cyan
+        Write-Host "Step 1/2: Bot token" -ForegroundColor Cyan
         Write-Host "  https://discord.com/developers/applications > your app > Bot > Reset Token" -ForegroundColor Gray
 
         $secure = Read-Host "  Token (hidden)" -AsSecureString
@@ -119,13 +116,19 @@ function Read-DiscordSnowflake {
     param(
         [Parameter(Mandatory = $true)][string]$Label,
         [Parameter(Mandatory = $true)][string]$Hint,
-        [string]$LogPath
+        [string]$LogPath,
+
+        # Passed in rather than worked out from the label. It used to pick the
+        # numbering itself, out of a total that counted a voice channel
+        # question no longer asked - so the caller announced two values and
+        # then numbered them out of three. The count belongs where the steps
+        # are, which is the caller.
+        [string]$Step
     )
 
-    $step = if ($Label -like "Server*") { "Step 2/3" } else { "Step 3/3" }
-
     while ($true) {
-        Write-Host "${step}: $Label" -ForegroundColor Cyan
+        $heading = if ($Step) { "${Step}: $Label" } else { $Label }
+        Write-Host $heading -ForegroundColor Cyan
         Write-Host "  $Hint" -ForegroundColor Gray
         $value = Read-Host "  $Label"
 

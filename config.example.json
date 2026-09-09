@@ -1,7 +1,6 @@
 {
   "bot_token": "YOUR_BOT_TOKEN_HERE",
   "guild_id": 123456789012345678,
-  "voice_channel_id": 123456789012345678,
   "audio_device_name": "VoiceMeeter Output (VB-Audio Voicemeeter VAIO)",
   "python_path": "C:\\Path\\To\\Python\\python.exe",
   "voicemeeter_path": "C:\\Program Files (x86)\\VB\\Voicemeeter\\voicemeeter_x64.exe",

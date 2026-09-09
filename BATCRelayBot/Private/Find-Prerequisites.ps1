@@ -396,6 +396,19 @@ function Find-VoiceMeeter {
         $method = "Running process"
     }
 
+    # Only the registry carries DisplayVersion, so an install found through the
+    # filesystem reported "Unknown" and the status line showed a bare FOUND
+    # while BeyondATC beside it showed its version. The executable knows.
+    if ($version -eq "Unknown" -and $resolved.ExePath) {
+        try {
+            $fileVersion = (Get-Item $resolved.ExePath -ErrorAction Stop).VersionInfo.FileVersion
+            # VB writes it as "1, 1, 2, 2".
+            if ($fileVersion) { $version = ($fileVersion -replace '[,\s]+', '.') }
+        } catch {
+            # Keep "Unknown"; a missing version is not worth failing detection.
+        }
+    }
+
     if (-not $installDir) {
         return @{
             Found = $false; Path = $null; ExePath = $null; ProcessName = $null

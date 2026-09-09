@@ -51,13 +51,21 @@ function Show-ConfigEditorMenu {
         Write-Host ""
         Write-Host "  1. Bot token          [REDACTED]" -ForegroundColor Gray
         Write-Host "  2. Server ID          $(Format-ConfigValue $config.guild_id)" -ForegroundColor Gray
-        Write-Host "  3. Voice channel ID   $(Format-ConfigValue $config.voice_channel_id)" -ForegroundColor Gray
-        Write-Host "  4. Audio device       $(Format-ConfigValue $config.audio_device_name)" -ForegroundColor Gray
+        Write-Host "  3. Audio device       $(Format-ConfigValue $config.audio_device_name)" -ForegroundColor Gray
         Write-Host ""
-        Write-Host "  q. Quit without changes" -ForegroundColor Gray
+        Write-Host "  q. Quit" -ForegroundColor Gray
         Write-Host ""
 
-        $selection = (Read-Host "Select field to edit (1-4) or q").Trim()
+        # Read-Host returns "" for a bare Enter and $null only when there is no
+        # input to be had. The difference matters now that the caller loops:
+        # "" re-prompts, $null would otherwise re-prompt forever on a host that
+        # cannot answer - and .Trim() on it threw before it got that far.
+        $raw = try { Read-Host "Select field to edit (1-3) or q" } catch { $null }
+        if ($null -eq $raw) {
+            Write-Host "  (no input available - leaving the editor)" -ForegroundColor Yellow
+            return $null
+        }
+        $selection = "$raw".Trim()
 
         $result = $null
         switch ($selection) {
@@ -66,15 +74,15 @@ function Show-ConfigEditorMenu {
                 $result = Read-ConfigSnowflake -Field "Guild" -CurrentValue $config.guild_id
             }
             "3" {
-                $result = Read-ConfigSnowflake -Field "Channel" -CurrentValue $config.voice_channel_id
-            }
-            "4" {
                 $result = Read-ConfigAudioDevice -FFmpegPath $FFmpegPath -CurrentValue $config.audio_device_name
             }
-            "q" { Write-Host "No changes made." -ForegroundColor Yellow; return $null }
-            "Q" { Write-Host "No changes made." -ForegroundColor Yellow; return $null }
+            # Neither branch may claim nothing was changed: the caller returns
+            # here after every change, so by the time q is pressed there may
+            # have been several. Only the caller knows.
+            "q" { return $null }
+            "Q" { return $null }
             default {
-                Write-Host "  Please choose 1-4, or q to quit." -ForegroundColor Yellow
+                Write-Host "  Please choose 1-3, or q to quit." -ForegroundColor Yellow
                 continue
             }
         }

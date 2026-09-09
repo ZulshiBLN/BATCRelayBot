@@ -130,7 +130,7 @@ Describe "Config File Safety Functions" {
             $configFile = Join-Path $testDir "config.json"
             $config = @{
                 bot_token         = "abc123def456"
-                voice_channel_id  = 123456789012345678
+                guild_id  = 123456789012345678
                 audio_device_name = "Voicemeeter Out B1 (VB-Audio Voicemeeter VAIO)"
             }
             $config | ConvertTo-Json | Set-Content -Path $configFile -Force
@@ -153,7 +153,7 @@ Describe "Config File Safety Functions" {
             $testDir = Join-Path $env:TEMP "ConfigUpdateTest_$([System.Guid]::NewGuid())"
             New-Item -ItemType Directory -Path $testDir -Force | Out-Null
             $configFile = Join-Path $testDir "config.json"
-            @{ bot_token = "oldtoken"; voice_channel_id = "123456789012345678" } | ConvertTo-Json | Set-Content $configFile
+            @{ bot_token = "oldtoken"; guild_id = "123456789012345678" } | ConvertTo-Json | Set-Content $configFile
 
             try {
                 # Act
@@ -168,20 +168,20 @@ Describe "Config File Safety Functions" {
             }
         }
 
-        It "Should update voice_channel_id field correctly" {
-            # Arrange
+        It "Should update guild_id field correctly" {
+            # Was written against voice_channel_id, which the editor no longer
+            # offers - the channel is decided per !BATCjoin. guild_id is the
+            # remaining numeric ID and exercises the same path.
             $testDir = Join-Path $env:TEMP "ConfigUpdateTest_$([System.Guid]::NewGuid())"
             New-Item -ItemType Directory -Path $testDir -Force | Out-Null
             $configFile = Join-Path $testDir "config.json"
-            @{ bot_token = "abc"; voice_channel_id = "111111111111111111" } | ConvertTo-Json | Set-Content $configFile
+            @{ bot_token = "abc"; guild_id = "111111111111111111" } | ConvertTo-Json | Set-Content $configFile
 
             try {
-                # Act
-                $newJson = Update-ConfigJson -ConfigPath $configFile -Field "Channel" -Value "999999999999999999"
+                $newJson = Update-ConfigJson -ConfigPath $configFile -Field "Guild" -Value "999999999999999999"
                 $parsed = $newJson | ConvertFrom-Json
 
-                # Assert
-                $parsed.voice_channel_id | Should -Be "999999999999999999"
+                $parsed.guild_id | Should -Be "999999999999999999"
             }
             finally {
                 Remove-Item -Path $testDir -Recurse -Force -ErrorAction SilentlyContinue
@@ -195,7 +195,7 @@ Describe "Config File Safety Functions" {
             $testDir = Join-Path $env:TEMP "ConfigUpdateTest_$([System.Guid]::NewGuid())"
             New-Item -ItemType Directory -Path $testDir -Force | Out-Null
             $configFile = Join-Path $testDir "config.json"
-            @{ bot_token = "abc"; voice_channel_id = 123456789012345678 } | ConvertTo-Json | Set-Content $configFile
+            @{ bot_token = "abc"; guild_id = 123456789012345678 } | ConvertTo-Json | Set-Content $configFile
 
             try {
                 { Update-ConfigJson -ConfigPath $configFile -Field "Format" -Value "verbose" } | Should -Throw

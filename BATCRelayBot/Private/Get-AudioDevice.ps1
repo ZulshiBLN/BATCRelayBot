@@ -261,7 +261,7 @@ function Select-AudioDevice {
         }
         Write-Host ""
         Write-Host "  B1 is the bus the setup guide routes audio to (README step 3)." -ForegroundColor DarkGray
-        Write-Host "  Physical outputs and microphones are not listed - the bot cannot use them." -ForegroundColor DarkGray
+        Write-Host "  Setting VoiceMeeter up: https://vb-audio.com/Voicemeeter/" -ForegroundColor DarkGray
         Write-Host ""
     } else {
         # No B bus at all, almost always because VoiceMeeter is not running.

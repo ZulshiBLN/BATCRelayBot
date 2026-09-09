@@ -35,12 +35,35 @@ installers. Setup checks for them and tells you what to do.
 1. At [discord.com/developers](https://discord.com/developers/applications),
    create a **New Application**.
 2. Under **Bot**, generate a token. Treat it like a password.
-3. Under **OAuth2 → URL Generator**, tick the **bot** scope and the **Connect**
-   and **Speak** permissions (add **Send Messages** for the chat commands).
-   Open the generated URL and invite the bot to your server.
-4. Right-click your target voice channel → **Edit Channel → Permissions**, and
-   explicitly **Allow** the bot's role to View Channel, Connect and Speak.
-5. Enable **Developer Mode** (Settings → Advanced) so you can copy IDs.
+3. Still under **Bot**, switch on the **Message Content Intent**. Without it
+   the bot never sees the text of a message and no `!BATC…` command works.
+4. Under **OAuth2 → URL Generator**, tick the **bot** scope and these
+   permissions, then open the generated URL and invite the bot:
+
+   | Where | Permission | Why |
+   |---|---|---|
+   | text channel | View Channel | a command in a channel it cannot see never reaches it |
+   | text channel | Send Messages | every command answers in the channel |
+   | voice channel | View Channel | a hidden channel cannot be joined, or even named |
+   | voice channel | Connect | to enter the channel |
+   | voice channel | Speak | to be heard once inside |
+
+   **Read Message History is not needed.** Commands arrive as they are typed;
+   nothing here reads older messages.
+
+5. Server-wide permissions are not enough where a channel overrides them, so
+   check the channels themselves — **Edit Channel → Permissions**, and
+   explicitly **Allow** the bot's role:
+
+   - every **voice** channel it should be able to join: View Channel,
+     Connect, Speak
+   - every **text** channel you type commands in: View Channel, Send Messages
+
+   A voice channel has its own built-in chat. If that is where you type
+   `!BATCjoin`, the voice channel needs Send Messages as well — it is the text
+   channel in that case.
+
+6. Enable **Developer Mode** (Settings → Advanced) so you can copy IDs.
 
 ### 2. Install
 
@@ -53,8 +76,11 @@ Install-BATCRelayBot
 ```
 
 Setup detects what is present, offers to install what is missing, and only
-then asks for your bot token, server ID, voice channel ID and audio device.
-Nothing you type can be discarded by a missing tool.
+then asks for your bot token, server ID and audio device. Nothing you type can
+be discarded by a missing tool.
+
+There is no voice channel to configure: the bot joins whichever channel you
+are in when you call it.
 
 For the audio device, pick **B1** unless you have a reason not to — that is
 the bus step 3 routes audio to. Everything is logged to `install.log` in the
@@ -77,8 +103,9 @@ installation directory.
 Start-BATCRelayBot
 ```
 
-The bot comes **online but stays out of the channel**. In Discord, type
-`!BATCjoin` to start relaying. Stop it with `Stop-BATCRelayBot`.
+The bot comes **online but stays out of the channel**. Join a voice channel
+yourself, type `!BATCjoin` in Discord, and it follows you in — or name one
+with `!BATCjoin Tower`. Stop it with `Stop-BATCRelayBot`.
 
 ## Commands
 
@@ -97,7 +124,8 @@ The bot comes **online but stays out of the channel**. In Discord, type
 
 | Command | Effect |
 |---|---|
-| `!BATCjoin` | Join the configured channel and start relaying |
+| `!BATCjoin` | Join **your** voice channel and start relaying |
+| `!BATCjoin <name or id>` | Join that channel instead |
 | `!BATCleave` | Leave and **stay out** until `!BATCjoin` |
 | `!BATCstatus` | Connection and stream state |
 | `!BATCrestart` | Restart the stream without leaving |
@@ -117,13 +145,15 @@ PowerShell module, so closing the terminal does not stop it.
 Uninstall-BATCRelayBot
 ```
 
-Stops the bot, removes the installation directory, and asks **separately**
-about Python and FFmpeg — neither is removed unless you confirm it. Add
-`-Force` to skip the final confirmation; the optional components still need an
-explicit yes.
+Stops the bot, deletes everything it installed, and asks **separately** about
+Python and FFmpeg — neither is removed unless you confirm it. Add `-Force` to
+skip the final confirmation; the optional components still need an explicit
+yes. The installation directory itself stays, holding `uninstall.log` and
+nothing else.
 
-**VoiceMeeter is never removed.** Use VB-Audio's own uninstaller
-(Settings → Apps), then reboot.
+**VoiceMeeter and BeyondATC are never removed.** Use each vendor's own
+installer to uninstall them — for VoiceMeeter, Settings → Apps leaves its
+audio drivers behind.
 
 **Reset your bot token afterwards.** `config.json` is overwritten before
 deletion, but overwriting does not reliably erase a file on an SSD. Invalidating

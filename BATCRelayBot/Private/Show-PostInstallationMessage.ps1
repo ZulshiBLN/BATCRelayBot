@@ -1,6 +1,27 @@
 #Requires -Version 5.1
 
 function Show-PostInstallationMessage {
+    <#
+    .SYNOPSIS
+    Closes a successful installation: what was written, what to run next, where
+    to read more.
+
+    .DESCRIPTION
+    This used to say the installation had succeeded three times over - a banner,
+    a heading and a sentence - then list four troubleshooting recipes that
+    belong in the documentation, then two competing "next steps" lists, one of
+    which told the user to start the bot with a raw python command the module
+    has a command for.
+
+    It also returned a hashtable that nothing consumed, and was called without
+    Out-Null, so PowerShell printed those fields to the screen on top of the
+    result Install-BATCRelayBot returned. That is why the Name/Value dump after
+    an install showed every key twice. It returns nothing now.
+
+    Troubleshooting lives in docs/TROUBLESHOOTING.md, which is linked rather
+    than summarised: a copy in the terminal is a copy that goes stale.
+    #>
+    [OutputType([void])]
     param(
         [Parameter(Mandatory = $true)]
         [string]$InstallPath,
@@ -10,99 +31,34 @@ function Show-PostInstallationMessage {
         [string]$LogPath
     )
 
+    $repo = "https://github.com/ZulshiBLN/BATCRelayBot"
+
     Write-Host ""
-    Write-Host "========================================================" -ForegroundColor Green -BackgroundColor DarkGreen
-    Write-Host "           INSTALLATION SUCCESSFUL!" -ForegroundColor Green -BackgroundColor DarkGreen
-    Write-Host "========================================================" -ForegroundColor Green -BackgroundColor DarkGreen
+    Write-Host "  INSTALLATION SUCCESSFUL!" -ForegroundColor Green
     Write-Host ""
 
-    Write-Host "Installation Complete" -ForegroundColor Green
-    Write-Host "=====================" -ForegroundColor Green
-    Write-Host ""
-    Write-Host "BATCRelayBot has been installed successfully!" -ForegroundColor White
-    Write-Host ""
-
-    Write-Host "Installation Details:" -ForegroundColor Cyan
-    Write-Host "=====================" -ForegroundColor Cyan
-    Write-Host "  Installation Path: $InstallPath" -ForegroundColor Gray
-    Write-Host "  Configuration File: $ConfigPath" -ForegroundColor Gray
-    Write-Host "  Installation Log: $LogPath" -ForegroundColor Gray
+    Write-Host "  Installation Details:" -ForegroundColor Cyan
+    Write-Host "    Installation Path   $InstallPath" -ForegroundColor Gray
+    Write-Host "    Configuration File  $ConfigPath" -ForegroundColor Gray
+    Write-Host "    Installation Log    $LogPath" -ForegroundColor Gray
     Write-Host ""
 
-    Write-Host "Next Steps:" -ForegroundColor Yellow
-    Write-Host "===========" -ForegroundColor Yellow
+    Write-Host "  What's Next:" -ForegroundColor Cyan
+    Write-Host "    Start-BATCRelayBot       starts the bot and connects it to Discord" -ForegroundColor Gray
+    Write-Host "    Get-BATCRelayBotStatus   reports whether it is running" -ForegroundColor Gray
+    Write-Host "    Stop-BATCRelayBot        stops it and leaves the voice channel" -ForegroundColor Gray
+    Write-Host "    Edit-BATCRelayBotConfig  changes the token, server, channel or device" -ForegroundColor Gray
+    Write-Host "    Uninstall-BATCRelayBot   removes this installation" -ForegroundColor Gray
     Write-Host ""
-    Write-Host "1. VERIFY INSTALLATION" -ForegroundColor Cyan
-    Write-Host "   Check the installation log for any warnings:" -ForegroundColor Gray
-    Write-Host "   View-Content '$LogPath'" -ForegroundColor DarkGray
-    Write-Host ""
-
-    Write-Host "2. START THE BOT" -ForegroundColor Cyan
-    Write-Host "   Run the bot with:" -ForegroundColor Gray
-    Write-Host "   python '$InstallPath\bot.py'" -ForegroundColor DarkGray
+    Write-Host "    Start it, then type !batchelp in your Discord server. If the bot" -ForegroundColor Gray
+    Write-Host "    answers, it is connected - !batcjoin then brings it into voice." -ForegroundColor Gray
     Write-Host ""
 
-    Write-Host "3. VERIFY BOT CONNECTION" -ForegroundColor Cyan
-    Write-Host "   The bot will connect to your Discord server" -ForegroundColor Gray
-    Write-Host "   Check the Discord channel for a connection message" -ForegroundColor Gray
+    Write-Host "  Documentation & Support:" -ForegroundColor Cyan
+    Write-Host "    Setup and usage   $repo#readme" -ForegroundColor DarkGray
+    Write-Host "    Configuration     $repo/blob/main/docs/CONFIGURATION.md" -ForegroundColor DarkGray
+    Write-Host "    Troubleshooting   $repo/blob/main/docs/TROUBLESHOOTING.md" -ForegroundColor DarkGray
     Write-Host ""
-
-    Write-Host "Troubleshooting:" -ForegroundColor Yellow
-    Write-Host "================" -ForegroundColor Yellow
-    Write-Host ""
-
-    Write-Host "If you encounter issues:" -ForegroundColor Gray
-    Write-Host ""
-    Write-Host "  Problem: Bot won't start" -ForegroundColor Red
-    Write-Host "  Solution: Check Python is installed" -ForegroundColor Yellow
-    Write-Host "  python --version" -ForegroundColor DarkGray
-    Write-Host ""
-
-    Write-Host "  Problem: Bot connects then disconnects" -ForegroundColor Red
-    Write-Host "  Solution: Verify Discord token in config.json" -ForegroundColor Yellow
-    Write-Host "  Check file: $ConfigPath" -ForegroundColor DarkGray
-    Write-Host ""
-
-    Write-Host "  Problem: No audio is captured" -ForegroundColor Red
-    Write-Host "  Solution: Verify VoiceMeeter is installed and configured" -ForegroundColor Yellow
-    Write-Host "  Download: https://vb-audio.com/Voicemeeter/" -ForegroundColor DarkGray
-    Write-Host ""
-
-    Write-Host "  Problem: Missing Python dependencies" -ForegroundColor Red
-    Write-Host "  Solution: Install dependencies manually" -ForegroundColor Yellow
-    Write-Host "  pip install -r requirements.txt" -ForegroundColor DarkGray
-    Write-Host ""
-
-    Write-Host "Documentation & Support:" -ForegroundColor Yellow
-    Write-Host "========================" -ForegroundColor Yellow
-    Write-Host ""
-    Write-Host "  README: Installation guide and usage" -ForegroundColor Gray
-    Write-Host "  Discord Bot Setup: https://discord.com/developers/applications" -ForegroundColor DarkGray
-    Write-Host ""
-    Write-Host "  Installation Log: Contains detailed setup information" -ForegroundColor Gray
-    Write-Host "  Location: $LogPath" -ForegroundColor DarkGray
-    Write-Host ""
-
-    Write-Host "What's Next:" -ForegroundColor Cyan
-    Write-Host "============" -ForegroundColor Cyan
-    Write-Host ""
-    Write-Host "  1. Start the bot and verify it connects" -ForegroundColor Gray
-    Write-Host "  2. Test audio streaming from your flight sim to Discord" -ForegroundColor Gray
-    Write-Host "  3. Configure optional features (BeyondATC, etc.)" -ForegroundColor Gray
-    Write-Host "  4. Set up automated bot restart if desired" -ForegroundColor Gray
-    Write-Host ""
-
-    Write-Host "========================================================" -ForegroundColor Green
-    Write-Host "      Thank you for using BATCRelayBot!" -ForegroundColor Green
-    Write-Host "========================================================" -ForegroundColor Green
-    Write-Host ""
-
-    return @{
-        InstallPath = $InstallPath
-        ConfigPath = $ConfigPath
-        LogPath = $LogPath
-        Success = $true
-    }
 }
 
 Export-ModuleMember -Function Show-PostInstallationMessage

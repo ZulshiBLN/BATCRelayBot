@@ -22,13 +22,15 @@ Describe "Show-RemovalSummary" {
             Remove-Item $testPath -Recurse -Force
         }
 
-        It "Returns hashtable with Ready property" {
+        # It used to return @{ Ready = $true } that nothing read, and the
+        # caller piped it to Out-Null. The contract now is that it displays
+        # and writes nothing to the pipeline.
+        It "writes nothing to the success stream" {
             $testPath = "$env:TEMP\removal_summary_test"
             if (Test-Path $testPath) { Remove-Item $testPath -Recurse -Force }
             New-Item -ItemType Directory -Path $testPath -Force | Out-Null
 
-            $result = Show-RemovalSummary -BotPath $testPath
-            $result.Ready | Should -Be $true
+            @(Show-RemovalSummary -BotPath $testPath 6>$null).Count | Should -Be 0
 
             Remove-Item $testPath -Recurse -Force
         }
@@ -43,9 +45,12 @@ Describe "Show-RemovalSummary" {
             New-Item -ItemType Directory -Path $testPath -Force | Out-Null
             "test" | Set-Content (Join-Path $testPath "config.json")
 
-            # Should display without requiring input
-            $result = Show-RemovalSummary -BotPath $testPath
-            $result.Ready | Should -Be $true
+            # Asserted against the source. A completed call proves nothing:
+            # Read-Host on a non-interactive host returns rather than blocking.
+            $source = Get-Content "$PSScriptRoot\..\..\BATCRelayBot\Private\Show-RemovalSummary.ps1" -Raw
+            $source | Should -Not -Match 'Read-Host'
+
+            { Show-RemovalSummary -BotPath $testPath } | Should -Not -Throw
 
             Remove-Item $testPath -Recurse -Force
         }
@@ -169,14 +174,36 @@ Describe "Phase 2: Removal Summary Display" {
         { Get-Command Show-RemovalSummary -ErrorAction Stop } | Should -Not -Throw
     }
 
-    It "Function is read-only (no prompts)" {
-        # Verify by successful execution without input
-        $result = Show-RemovalSummary -BotPath "$env:TEMP"
-        $result.Ready | Should -Be $true
+    # Pointed at $env:TEMP itself until 2026-09-09, which now means listing
+    # every file the machine has in there. A sandbox with known contents also
+    # lets the assertion say something.
+    It "names the files it is about to delete" {
+        $sandbox = Join-Path $env:TEMP ("removal-list-" + [guid]::NewGuid().ToString('N'))
+        New-Item -ItemType Directory -Path $sandbox -Force | Out-Null
+        "x" | Set-Content (Join-Path $sandbox "bot.py")
+        "x" | Set-Content (Join-Path $sandbox "config.json")
+
+        try {
+            $out = ((Show-RemovalSummary -BotPath $sandbox 6>&1) | ForEach-Object { "$_" }) -join "`n"
+            $out | Should -Match 'bot\.py'
+            $out | Should -Match 'config\.json'
+            $out | Should -Match '2 files'
+        } finally {
+            Remove-Item $sandbox -Recurse -Force -ErrorAction SilentlyContinue
+        }
     }
 
-    It "Displays removal information clearly" {
-        { Show-RemovalSummary -BotPath "$env:TEMP" } | Should -Not -Throw
+    It "warns about the token exactly once" {
+        $sandbox = Join-Path $env:TEMP ("removal-token-" + [guid]::NewGuid().ToString('N'))
+        New-Item -ItemType Directory -Path $sandbox -Force | Out-Null
+        "x" | Set-Content (Join-Path $sandbox "config.json")
+
+        try {
+            $out = ((Show-RemovalSummary -BotPath $sandbox 6>&1) | ForEach-Object { "$_" }) -join "`n"
+            ([regex]::Matches($out, '(?i)bot token')).Count | Should -Be 1
+        } finally {
+            Remove-Item $sandbox -Recurse -Force -ErrorAction SilentlyContinue
+        }
     }
 
     It "Handles various directory states" {

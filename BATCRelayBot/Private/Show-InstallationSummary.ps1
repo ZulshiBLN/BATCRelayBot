@@ -49,7 +49,6 @@ function Show-InstallationSummary {
     # installer and often ends up pasted into a bug report.
     Write-Host "  Bot token     [REDACTED]" -ForegroundColor Gray
     Write-Host "  Server ID     $($DiscordConfig.GuildId)" -ForegroundColor Gray
-    Write-Host "  Voice channel $($DiscordConfig.VoiceChannelId)" -ForegroundColor Gray
 
     if ([string]::IsNullOrWhiteSpace($DiscordConfig.AudioDeviceName)) {
         Write-Host "  Audio device  not set - the bot will stream silence" -ForegroundColor Yellow
@@ -62,8 +61,9 @@ function Show-InstallationSummary {
     if (-not $Prerequisites.Python.Found) { $blocking += "Python is missing" }
     if (-not $Prerequisites.FFmpeg.Found) { $blocking += "FFmpeg is missing" }
     if ([string]::IsNullOrWhiteSpace($DiscordConfig.BotToken)) { $blocking += "the bot token is missing" }
+    # No check for a voice channel: the bot is not given one at install time,
+    # so blocking on its absence would refuse every installation.
     if ([string]::IsNullOrWhiteSpace($DiscordConfig.GuildId)) { $blocking += "the server ID is missing" }
-    if ([string]::IsNullOrWhiteSpace($DiscordConfig.VoiceChannelId)) { $blocking += "the voice channel ID is missing" }
 
     if ($blocking.Count -gt 0) {
         Write-Host "  Cannot proceed: $($blocking -join ', ')" -ForegroundColor Red

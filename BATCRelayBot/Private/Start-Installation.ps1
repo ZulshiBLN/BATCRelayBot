@@ -169,7 +169,7 @@ function Test-InstallationResult {
         return @{ Valid = $false; Problems = @("config.json is not valid JSON: $($_.Exception.Message)") }
     }
 
-    $requiredKeys = @('bot_token', 'guild_id', 'voice_channel_id', 'audio_device_name')
+    $requiredKeys = @('bot_token', 'guild_id', 'audio_device_name')
     try {
         $botSource = Get-Content $botPath -Raw -ErrorAction Stop
         if ($botSource -match 'REQUIRED_KEYS\s*=\s*\[(.*?)\]') {

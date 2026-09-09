@@ -27,20 +27,30 @@ function Uninstall-BATCRelayBot {
     Skip the final confirmation. For unattended cleanup; optional components
     are still only removed when explicitly chosen.
 
+    .PARAMETER PassThru
+    Returns the result object. Without it nothing is written to the pipeline,
+    so the run ends with its own summary instead of a table of fields under it.
+
     .EXAMPLE
     Uninstall-BATCRelayBot
 
     .EXAMPLE
     Uninstall-BATCRelayBot -InstallPath "D:\MyBot"
 
+    .EXAMPLE
+    $result = Uninstall-BATCRelayBot -Force -PassThru
+    if (-not $result.Success) { $result.Errors }
+
     .OUTPUTS
-    Hashtable with Success, DeletedFiles, RemovedDependencies, Errors, LogPath.
+    With -PassThru, a hashtable with Success, DeletedFiles,
+    RemovedDependencies, Errors, LogPath.
     #>
     [CmdletBinding()]
     [OutputType([hashtable])]
     param(
         [string]$InstallPath = (Join-Path $env:LOCALAPPDATA "BATCRelayBot"),
-        [switch]$Force
+        [switch]$Force,
+        [switch]$PassThru
     )
 
     $version = Get-ModuleVersion
@@ -67,7 +77,8 @@ function Uninstall-BATCRelayBot {
         Write-Host ""
         Write-Host "Nothing was changed." -ForegroundColor Yellow
         Write-Host ""
-        return @{ Success = $false; Errors = $prerequisites.Errors }
+        return (Out-CommandResult -PassThru:$PassThru `
+            -Result @{ Success = $false; Errors = $prerequisites.Errors })
     }
 
     Write-Host "      Installation found at $($prerequisites.InstallPath)" -ForegroundColor Green
@@ -75,7 +86,7 @@ function Uninstall-BATCRelayBot {
 
     # ---- Phase 2: what will go -----------------------------------------
     Write-Host "[2/5] What will be removed" -ForegroundColor Cyan
-    Show-RemovalSummary -BotPath $prerequisites.InstallPath | Out-Null
+    Show-RemovalSummary -BotPath $prerequisites.InstallPath
 
     # ---- Phase 3: optional components ----------------------------------
     Write-Host "[3/5] Optional components" -ForegroundColor Cyan
@@ -94,7 +105,8 @@ function Uninstall-BATCRelayBot {
         if (-not $confirmation.Confirmed) {
             Write-Host "Nothing was changed." -ForegroundColor Yellow
             Write-Host ""
-            return @{ Success = $false; Errors = @("Cancelled by the user") }
+            return (Out-CommandResult -PassThru:$PassThru `
+                -Result @{ Success = $false; Errors = @("Cancelled by the user") })
         }
     }
 
@@ -106,7 +118,7 @@ function Uninstall-BATCRelayBot {
 
     Show-PostRemovalSummary -RemovalResult $removalResult
 
-    return $removalResult
+    return (Out-CommandResult -Result $removalResult -PassThru:$PassThru)
 }
 
 Export-ModuleMember -Function Uninstall-BATCRelayBot

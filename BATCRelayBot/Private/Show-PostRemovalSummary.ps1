@@ -3,134 +3,94 @@
 function Show-PostRemovalSummary {
     <#
     .SYNOPSIS
-    Displays post-removal summary and cleanup instructions (Phase 6).
+    Reports what the removal actually did (uninstaller, after phase 5).
 
     .DESCRIPTION
-    Shows removal completion status and next steps for user.
-    - Confirms successful removal or displays errors
-    - Lists manual cleanup steps (VoiceMeeter)
-    - Provides next action suggestions
-    - Displays removal log location
+    This was four banner-separated sections over a hundred lines. Worse than the
+    length: it told users to remove VoiceMeeter through Control Panel, which
+    leaves its audio drivers behind - VB-Audio's own installer is the only thing
+    that removes it properly - and it never mentioned BeyondATC, which is not
+    removed either.
 
-    .PARAMETER RemovalResult
-    Hashtable from Invoke-SecureUninstall with removal status.
-
-    .PARAMETER LogPath
-    Path to removal log file.
-
-    .EXAMPLE
-    Show-PostRemovalSummary -RemovalResult $result
+    Anything still on disk is named. A removal that failed on a locked file used
+    to be followed by "Nothing to clean up", and then by a summary that said
+    Success: False in a block the user could not read.
     #>
-
+    [OutputType([void])]
     param(
-        [hashtable]$RemovalResult = @{},
-        [string]$LogPath = ""
+        [hashtable]$RemovalResult = @{}
     )
 
-    Write-Host ""
-    Write-Host "===============================================================" -ForegroundColor Green
-    Write-Host "       BATCRelayBot Uninstallation Complete" -ForegroundColor Green
-    Write-Host "===============================================================" -ForegroundColor Green
-    Write-Host ""
+    $leftovers = @($RemovalResult.Leftovers)
+    $errors    = @($RemovalResult.Errors)
 
-    # Removal status
+    Write-Host ""
     if ($RemovalResult.Success) {
-        Write-Host "Status: " -ForegroundColor Green -NoNewline
-        Write-Host "Successfully removed" -ForegroundColor Green
-        Write-Host ""
-        Write-Host "All BATCRelayBot installation files have been deleted." -ForegroundColor Green
-        Write-Host ""
-        Write-Host "IMPORTANT - reset your bot token:" -ForegroundColor Yellow
-        Write-Host "  config.json was overwritten and deleted, but overwriting a file" -ForegroundColor Gray
-        Write-Host "  does not reliably erase it on an SSD. Resetting the token is the" -ForegroundColor Gray
-        Write-Host "  only way to be certain it is worthless:" -ForegroundColor Gray
-        Write-Host "  https://discord.com/developers/applications > your app > Bot > Reset Token" -ForegroundColor Cyan
+        Write-Host "  BATCRelayBot has been removed." -ForegroundColor Green
     } else {
-        Write-Host "Status: " -ForegroundColor Yellow -NoNewline
-        Write-Host "Removal completed with issues" -ForegroundColor Yellow
-        Write-Host ""
+        Write-Host "  BATCRelayBot was only partly removed." -ForegroundColor Yellow
+    }
+    Write-Host ""
 
-        if ($RemovalResult.Errors -and $RemovalResult.Errors.Count -gt 0) {
-            Write-Host "Errors encountered:" -ForegroundColor Yellow
-            foreach ($removalError in $RemovalResult.Errors) {
-                Write-Host "  * $removalError" -ForegroundColor Yellow
+    # A path that could not be removed appears once, with its reason attached.
+    # Listing it under "what went wrong" and again under "still on disk" said
+    # the same thing twice in different words.
+    if ($leftovers.Count -gt 0) {
+        Write-Host "  Still on disk - delete these by hand:" -ForegroundColor Yellow
+        foreach ($item in $leftovers) {
+            Write-Host "    $item" -ForegroundColor Yellow
+
+            $reason = $errors | Where-Object { "$_".Contains($item) } | Select-Object -First 1
+            if ($reason) {
+                Write-Host "      $($reason -replace '^Could not remove .*?: ', '')" -ForegroundColor DarkYellow
             }
-            Write-Host ""
         }
-    }
-
-    # Files deleted
-    if ($RemovalResult.DeletedFiles -and $RemovalResult.DeletedFiles.Count -gt 0) {
-        Write-Host "Removed:" -ForegroundColor Cyan
-        foreach ($entry in $RemovalResult.DeletedFiles) {
-            Write-Host "  - $entry" -ForegroundColor Gray
-        }
-    }
-
-    if ($RemovalResult.RemovedDependencies -and $RemovalResult.RemovedDependencies.Count -gt 0) {
         Write-Host ""
-        Write-Host "Optional components removed:" -ForegroundColor Cyan
+    }
+
+    # Whatever is left: a dependency that would not uninstall, a bot that would
+    # not stop. These have no path of their own to hang from.
+    $unexplained = @($errors | Where-Object {
+        $problem = "$_"
+        -not ($leftovers | Where-Object { $problem.Contains($_) })
+    })
+
+    if ($unexplained.Count -gt 0) {
+        Write-Host "  What went wrong:" -ForegroundColor Yellow
+        foreach ($problem in $unexplained) {
+            Write-Host "    $problem" -ForegroundColor Yellow
+        }
+        Write-Host ""
+    }
+
+    if (@($RemovalResult.RemovedDependencies).Count -gt 0) {
+        Write-Host "  Also removed:" -ForegroundColor Cyan
         foreach ($dependency in $RemovalResult.RemovedDependencies) {
-            Write-Host "  - $dependency" -ForegroundColor Gray
+            Write-Host "    $dependency" -ForegroundColor Gray
         }
-    }
-
-    Write-Host ""
-    Write-Host "===============================================================" -ForegroundColor Cyan
-    Write-Host "MANUAL CLEANUP REQUIRED" -ForegroundColor Cyan
-    Write-Host "===============================================================" -ForegroundColor Cyan
-    Write-Host ""
-
-    Write-Host "VoiceMeeter (if installed)" -ForegroundColor Yellow
-    Write-Host "  VoiceMeeter is a manual installation and was NOT removed." -ForegroundColor Gray
-    Write-Host "  To uninstall:" -ForegroundColor Gray
-    Write-Host "    1. Open Control Panel" -ForegroundColor Gray
-    Write-Host "    2. Go to Programs > Programs and Features" -ForegroundColor Gray
-    Write-Host "    3. Find 'VB-Audio VoiceMeeter'" -ForegroundColor Gray
-    Write-Host "    4. Click 'Uninstall', then reboot" -ForegroundColor Gray
-    Write-Host ""
-    Write-Host "  Note: Only remove VoiceMeeter if no other applications need it." -ForegroundColor DarkGray
-    Write-Host ""
-
-    # Removal log location
-    if ($RemovalResult.LogPath -and (Test-Path $RemovalResult.LogPath)) {
-        Write-Host "===============================================================" -ForegroundColor Cyan
-        Write-Host "REMOVAL LOG" -ForegroundColor Cyan
-        Write-Host "===============================================================" -ForegroundColor Cyan
-        Write-Host ""
-        Write-Host "A detailed removal log has been saved for your records:" -ForegroundColor Gray
-        Write-Host ""
-        Write-Host "  $($RemovalResult.LogPath)" -ForegroundColor White
-        Write-Host ""
-        Write-Host "This log contains all files that were deleted and any errors encountered." -ForegroundColor Gray
         Write-Host ""
     }
 
-    # Next steps
-    Write-Host "===============================================================" -ForegroundColor Cyan
-    Write-Host "NEXT STEPS" -ForegroundColor Cyan
-    Write-Host "===============================================================" -ForegroundColor Cyan
+    # The token outlives the file. Overwriting is not erasure on an SSD, so this
+    # stays even when everything else was cut.
+    Write-Host "  Reset your bot token" -ForegroundColor Yellow
+    Write-Host "    config.json was overwritten and deleted, which an SSD may not honour." -ForegroundColor Gray
+    Write-Host "    https://discord.com/developers/applications > your app > Bot > Reset Token" -ForegroundColor Gray
     Write-Host ""
 
-    if ($RemovalResult.Success) {
-        Write-Host "BATCRelayBot has been successfully uninstalled." -ForegroundColor Green
-        Write-Host ""
-        Write-Host "To reinstall in the future:" -ForegroundColor Gray
-        Write-Host "  PowerShell> Install-Module -Name BATCRelayBot -Repository PSGallery" -ForegroundColor White
-        Write-Host "  PowerShell> Install-BATCRelayBot" -ForegroundColor White
-        Write-Host ""
-    } else {
-        Write-Host "Uninstallation completed with errors (see above)." -ForegroundColor Yellow
-        Write-Host ""
-        Write-Host "To retry or get support:" -ForegroundColor Gray
-        Write-Host "  - Check the removal log for details" -ForegroundColor Gray
-        Write-Host "  - Review error messages above" -ForegroundColor Gray
-        Write-Host "  - Manual deletion may be needed for any remaining files" -ForegroundColor Gray
+    Write-Host "  Not removed by this uninstaller:" -ForegroundColor Cyan
+    Write-Host "    1. VoiceMeeter - use VB-Audio's own installer to uninstall it." -ForegroundColor Gray
+    Write-Host "       Settings > Apps leaves its audio drivers behind." -ForegroundColor Gray
+    Write-Host "       https://vb-audio.com/Voicemeeter/" -ForegroundColor DarkGray
+    Write-Host "    2. BeyondATC - use its own uninstaller." -ForegroundColor Gray
+    Write-Host "       https://beyondatc.net/" -ForegroundColor DarkGray
+    Write-Host "    3. This PowerShell module - Uninstall-Module BATCRelayBot" -ForegroundColor Gray
+    Write-Host ""
+
+    if ($RemovalResult.LogPath) {
+        Write-Host "  Removal log kept at $($RemovalResult.LogPath)" -ForegroundColor DarkGray
         Write-Host ""
     }
-
-    Write-Host "===============================================================" -ForegroundColor Green
-    Write-Host ""
 }
 
 Export-ModuleMember -Function Show-PostRemovalSummary

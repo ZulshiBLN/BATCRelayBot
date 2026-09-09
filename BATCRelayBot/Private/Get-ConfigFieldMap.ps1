@@ -13,7 +13,9 @@ old one. Keeping one definition is what stops that recurring.
 
 Only fields bot.py actually consumes are listed. `output_format` and
 `bot_activity` were editable in earlier versions but appear nowhere in
-bot.py, so editing them changed nothing.
+bot.py, so editing them changed nothing. `voice_channel_id` left for the same
+reason: the bot joins the channel the caller is in, or one named in
+`!BATCjoin`, so a channel fixed at install time decided nothing.
 
 Type matters as much as the name: since 1.4.0 the Discord IDs are JSON
 numbers. Writing one back as a string leaves the bot unable to resolve the
@@ -40,12 +42,6 @@ function Get-ConfigFieldMap {
             Type  = 'long'
             Label = 'Server ID'
             Hint  = 'Enable Developer Mode, then right-click the server > Copy Server ID'
-        }
-        Channel = @{
-            Json  = 'voice_channel_id'
-            Type  = 'long'
-            Label = 'Voice channel ID'
-            Hint  = 'Right-click the VOICE channel the bot should join > Copy Channel ID'
         }
         AudioDevice = @{
             Json  = 'audio_device_name'

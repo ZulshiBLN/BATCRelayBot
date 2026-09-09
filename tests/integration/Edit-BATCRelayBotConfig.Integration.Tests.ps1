@@ -54,7 +54,6 @@ BeforeAll {
         $discord = @{
             BotToken        = ("A" * 24) + "." + ("B" * 6) + "." + ("C" * 27)
             GuildId         = "123456789012345678"
-            VoiceChannelId  = "987654321098765432"
             AudioDeviceName = "Voicemeeter Out B3 (VB-Audio Voicemeeter VAIO)"
         }
 
@@ -107,7 +106,6 @@ Describe "Editor against an installer-generated config" {
         foreach ($edit in @(
             @{ Field = 'Token';       Value = ("Q" * 24) + "." + ("R" * 6) + "." + ("S" * 27) },
             @{ Field = 'Guild';       Value = "222222222222222222" },
-            @{ Field = 'Channel';     Value = "333333333333333333" },
             @{ Field = 'AudioDevice'; Value = "Voicemeeter Out B1 (VB-Audio Voicemeeter VAIO)" }
         )) {
             $env = New-InstalledConfig
@@ -119,14 +117,14 @@ Describe "Editor against an installer-generated config" {
         }
     }
 
-    It "keeps the Discord IDs numeric after editing the channel" {
+    It "keeps the server ID numeric after editing it" {
         $env = New-InstalledConfig
-        $json = Update-ConfigJson -ConfigPath $env.ConfigPath -Field 'Channel' -Value "444444444444444444"
+        $json = Update-ConfigJson -ConfigPath $env.ConfigPath -Field 'Guild' -Value "444444444444444444"
         Write-ConfigFile -ConfigPath $env.ConfigPath -JsonContent $json | Out-Null
 
         $raw = Get-Content $env.ConfigPath -Raw
-        $raw | Should -Match '"voice_channel_id"\s*:\s*444444444444444444'
-        $raw | Should -Not -Match '"voice_channel_id"\s*:\s*"'
+        $raw | Should -Match '"guild_id"\s*:\s*444444444444444444'
+        $raw | Should -Not -Match '"guild_id"\s*:\s*"'
     }
 
     It "preserves the fields Start-BATCRelayBot needs" {
@@ -156,8 +154,15 @@ Describe "Edit-BATCRelayBotConfig end to end" {
     It "applies a channel change and reports it" {
         $env = New-InstalledConfig
 
-        # Menu: 3 (channel), the new ID, then confirm.
-        $script:Answers = @('3', '777777777777777777', 'y')
+        # Menu: 2 (server ID), the new ID, then confirm.
+        # The editor returns to its menu after a change now, so every script
+        # that drives it ends with a q. Relying on the answer list running out
+        # would leave the test passing for a reason it never states.
+        #
+        # Driven through the server ID rather than the token or the audio
+        # device: those reach the Discord API and ffmpeg respectively, and a
+        # test of the editor should not depend on either being reachable.
+        $script:Answers = @('2', '777777777777777777', 'y', 'q')
         $script:AnswerIndex = 0
         Mock -ModuleName BATCRelayBot Read-Host {
             $answer = $script:Answers[$script:AnswerIndex]
@@ -165,20 +170,20 @@ Describe "Edit-BATCRelayBotConfig end to end" {
             return $answer
         }
 
-        $result = Edit-BATCRelayBotConfig -InstallPath $env.InstallPath 6>$null
+        $result = Edit-BATCRelayBotConfig -InstallPath $env.InstallPath -PassThru 6>$null
 
         $result.Success | Should -BeTrue -Because ($result.Errors -join '; ')
-        $result.UpdatedFields.Keys | Should -Contain 'Channel'
+        $result.UpdatedFields.Keys | Should -Contain 'Guild'
 
         $config = Get-Content $env.ConfigPath -Raw | ConvertFrom-Json
-        $config.voice_channel_id | Should -Be 777777777777777777
+        $config.guild_id | Should -Be 777777777777777777
         Test-BotCanLoad -ConfigPath $env.ConfigPath | Should -BeTrue
     }
 
     It "creates a backup before changing anything" {
         $env = New-InstalledConfig
 
-        $script:Answers = @('2', '888888888888888888', 'y')
+        $script:Answers = @('2', '888888888888888888', 'y', 'q')
         $script:AnswerIndex = 0
         Mock -ModuleName BATCRelayBot Read-Host {
             $answer = $script:Answers[$script:AnswerIndex]
@@ -186,7 +191,7 @@ Describe "Edit-BATCRelayBotConfig end to end" {
             return $answer
         }
 
-        $result = Edit-BATCRelayBotConfig -InstallPath $env.InstallPath 6>$null
+        $result = Edit-BATCRelayBotConfig -InstallPath $env.InstallPath -PassThru 6>$null
 
         $result.BackupPath | Should -Not -BeNullOrEmpty
         Test-Path $result.BackupPath | Should -BeTrue
@@ -205,9 +210,65 @@ Describe "Edit-BATCRelayBotConfig end to end" {
             return $answer
         }
 
-        $result = Edit-BATCRelayBotConfig -InstallPath $env.InstallPath 6>$null
+        $result = Edit-BATCRelayBotConfig -InstallPath $env.InstallPath -PassThru 6>$null
 
         $result.Success | Should -BeFalse
         (Get-Content $env.ConfigPath -Raw) | Should -Be $before
+    }
+
+    # The point of the loop: correcting two fields used to mean running the
+    # editor twice and reading the same warnings again.
+    It "applies more than one change in a session" {
+        $env = New-InstalledConfig
+
+        # Twice through the same field, because it is the only one that reaches
+        # neither the Discord API nor ffmpeg. What is being proved is that the
+        # menu comes back and the second change is applied at all - the editor
+        # used to exit after the first.
+        $script:Answers = @(
+            '2', '111111111111111111', 'y',
+            '2', '222222222222222222', 'y',
+            'q'
+        )
+        $script:AnswerIndex = 0
+        Mock -ModuleName BATCRelayBot Read-Host {
+            $answer = $script:Answers[$script:AnswerIndex]
+            $script:AnswerIndex++
+            return $answer
+        }
+
+        $result = Edit-BATCRelayBotConfig -InstallPath $env.InstallPath -PassThru 6>$null
+
+        $result.Success | Should -BeTrue -Because ($result.Errors -join '; ')
+        $result.UpdatedFields.Keys | Should -Contain 'Guild'
+
+        # The second value is in the file, which a single pass cannot produce:
+        # it would have stopped after writing the first.
+        #
+        # Counting backups would be the other proof and is not used - the file
+        # name carries a whole-second timestamp, so two changes in the same
+        # second write the same name.
+        $config = Get-Content $env.ConfigPath -Raw | ConvertFrom-Json
+        $config.guild_id | Should -Be 222222222222222222
+
+        Test-BotCanLoad -ConfigPath $env.ConfigPath | Should -BeTrue
+    }
+
+    It "leaves the editor when the menu is quit straight away" {
+        $env = New-InstalledConfig
+
+        $script:Answers = @('q')
+        $script:AnswerIndex = 0
+        Mock -ModuleName BATCRelayBot Read-Host {
+            $answer = $script:Answers[$script:AnswerIndex]
+            $script:AnswerIndex++
+            return $answer
+        }
+
+        $result = Edit-BATCRelayBotConfig -InstallPath $env.InstallPath -PassThru 6>$null
+
+        $result.Success | Should -BeFalse
+        $result.Errors  | Should -Contain "Cancelled by the user"
+        $result.UpdatedFields.Count | Should -Be 0
     }
 }

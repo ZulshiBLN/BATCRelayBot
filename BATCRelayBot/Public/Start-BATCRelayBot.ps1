@@ -127,12 +127,26 @@ function Start-BATCRelayBot {
     $errorLogFile = Join-Path $logsDir "bot_error.log"
     $pidFile = Join-Path $BotPath "bot.pid"
 
+    # bot.pid is a hint, not the authority - the same lesson Stop-BATCRelayBot
+    # learned and this function did not. A stale pid file let a second bot
+    # start beside a running one on 2026-09-09. Both answered every chat
+    # command, the second start truncated the first one's log, and
+    # Stop-BATCRelayBot then waited fifteen seconds for a process that was
+    # never going to answer and terminated it - which is how ffmpeg came to be
+    # killed without releasing the VoiceMeeter bus it was capturing, taking
+    # the machine's audio with it.
+    $alreadyRunning = @(Find-BotProcess -BotPath $BotPath)
+
+    if ($alreadyRunning.Count -gt 0) {
+        Write-Host "Bot is already running (PID $($alreadyRunning -join ', '))." -ForegroundColor Yellow
+        Write-Host "Stop it first with Stop-BATCRelayBot." -ForegroundColor Yellow
+        return
+    }
+
+    # Left over from a bot that is gone. Removing it keeps the next reader
+    # from trusting it.
     if (Test-Path $pidFile) {
-        $oldPid = Get-Content $pidFile -ErrorAction SilentlyContinue
-        if ($oldPid -and (Get-Process -Id $oldPid -ErrorAction SilentlyContinue)) {
-            Write-Host "Bot is already running (PID $oldPid). Stop it first with Stop-BATCRelayBot." -ForegroundColor Yellow
-            return
-        }
+        Remove-Item $pidFile -Force -ErrorAction SilentlyContinue
     }
 
     $process = Start-Process `

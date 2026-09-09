@@ -13,7 +13,8 @@ the bot start with Windows does not put it in a voice channel.
 Chat commands (all prefixed with BATC so they cannot collide with other bots
 in the same server; command names are case-insensitive):
 
-  !BATCjoin      join the configured channel and start relaying
+  !BATCjoin      join a channel and start relaying - yours by default,
+                 or !BATCjoin <name or id> for a particular one
   !BATCleave     leave and stay out until !BATCjoin
   !BATCstatus    connection and stream state
   !BATCrestart   restart the stream without leaving
@@ -34,20 +35,70 @@ Configuration: config.json (see config.example.json)
 import asyncio
 import json
 import logging
+import os
 import pathlib
+import re
 import sys
 
 import discord
 from discord.ext import commands, tasks
 
+# A Discord snowflake: 17 to 20 digits, not part of a longer number and not
+# part of a version or a path. The same shape Remove-SensitiveData redacts
+# from install.log, because it is the same rule.
+SNOWFLAKE_PATTERN = re.compile(r"(?<![\d.\\/])\d{17,20}(?![\d.])")
+
+# A bot token, in case one ever reaches a message. Nothing here logs one, but
+# a library or a traceback might.
+TOKEN_PATTERN = re.compile(r"\b[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{20,}\b")
+
+
+class RedactSecrets(logging.Filter):
+    """
+    Keeps Discord IDs out of the log, whoever wrote them.
+
+    discord.py logs lines like "The voice handshake is being terminated for
+    Channel ID 1535343588567683122 (Guild ID 631480440548753408)", which is
+    exactly what the secrets rule forbids - and bot_error.log travels into bug
+    reports and screenshots the same way install.log does. That one was fixed
+    in 1.4.1; this log was not looked at.
+
+    Attached to the handler rather than to a logger: every library's records
+    propagate to the root handler, and a filter on our own logger would only
+    ever see our own lines.
+
+    It does not reach into exception tracebacks. An ID in a traceback frame
+    would still get through.
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        message = record.getMessage()
+
+        redacted = TOKEN_PATTERN.sub("[REDACTED-TOKEN]", message)
+        redacted = SNOWFLAKE_PATTERN.sub("[REDACTED-ID]", redacted)
+
+        if redacted != message:
+            # The arguments are already folded in, so they must not be
+            # applied a second time when the record is formatted.
+            record.msg = redacted
+            record.args = ()
+
+        return True
+
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
 )
+
+for _handler in logging.getLogger().handlers:
+    _handler.addFilter(RedactSecrets())
+
 log = logging.getLogger("atc-relay")
 
 CONFIG_PATH = pathlib.Path(__file__).parent / "config.json"
 STOP_SIGNAL_PATH = pathlib.Path(__file__).parent / "stop.signal"
+PID_FILE_PATH = pathlib.Path(__file__).parent / "bot.pid"
 
 
 def load_config() -> dict:
@@ -65,7 +116,10 @@ def load_config() -> dict:
 
 CONFIG = load_config()
 
-REQUIRED_KEYS = ["bot_token", "guild_id", "voice_channel_id", "audio_device_name"]
+# voice_channel_id is deliberately absent. The channel is decided per
+# !BATCjoin, so an installation that still carries the field simply keeps an
+# unused key rather than needing a migration.
+REQUIRED_KEYS = ["bot_token", "guild_id", "audio_device_name"]
 for key in REQUIRED_KEYS:
     if not CONFIG.get(key):
         log.error("Field '%s' is missing or empty in config.json", key)
@@ -76,13 +130,27 @@ intents.message_content = True  # only needed if you want the text commands belo
 
 # Every command carries a BATC prefix so this bot cannot collide with other
 # bots in the same server, and case_insensitive lets !batcjoin work too.
-# The built-in help is renamed for the same reason.
+#
+# The built-in help is switched off in favour of BATChelp below. The default
+# one printed a flat block in which it was not clear where one command ended
+# and the next began.
 bot = commands.Bot(
     command_prefix="!",
     intents=intents,
     case_insensitive=True,
-    help_command=commands.DefaultHelpCommand(command_attrs={"name": "BATChelp"}),
+    help_command=None,
 )
+
+
+def station_name():
+    """
+    What the bot calls itself in replies.
+
+    bot.user is None until the connection is up, and every reply here is sent
+    afterwards - but a test may call these functions without a connection, and
+    "None is now transmitting" would be a poor way to find that out.
+    """
+    return bot.user.display_name if bot.user else "BATCRelayBot"
 
 
 def make_audio_source() -> discord.FFmpegPCMAudio:
@@ -114,12 +182,187 @@ def configured_voice_client():
     """
     The voice client for the configured guild.
 
-    The bot only ever relays into the one channel from config.json, so state
-    is read from that guild rather than from wherever a command was typed -
-    otherwise running a command in a second server reports the wrong state.
+    State is read from that guild rather than from wherever a command was
+    typed - otherwise running a command in a second server reports the wrong
+    state. The guild is still configuration; the channel is not.
     """
     guild = bot.get_guild(CONFIG["guild_id"])
     return guild.voice_client if guild else None
+
+
+# Where the bot is going. Decided by !BATCjoin rather than at install time, and
+# kept here because the watchdog reconnects to it every ten seconds - it has to
+# outlive the command that set it. None means nobody has asked yet.
+target_channel_id = None
+
+# The ffmpeg process behind the stream, kept so it can be ended deliberately.
+#
+# discord.py kills it from the audio player's thread, which is a daemon
+# thread: if the interpreter exits first, that thread is torn down before its
+# cleanup runs and ffmpeg keeps holding the recording device. An orphan on a
+# VoiceMeeter bus is not a tidiness problem - it takes the machine's audio
+# with it until somebody kills the process by hand.
+current_source = None
+
+
+def release_pid_file():
+    """
+    Removes bot.pid, but only when it names this process.
+
+    Stop-BATCRelayBot removes it; a shutdown from chat left it behind naming a
+    process that had exited. Nothing treats it as the authority any more -
+    that is what the process list is for - but a file stating something untrue
+    is still something somebody will eventually read.
+
+    The identity check matters: two installations have their own directories,
+    but a file that has been rewritten by someone else is not ours to delete.
+    """
+    try:
+        if PID_FILE_PATH.read_text().strip() == str(os.getpid()):
+            PID_FILE_PATH.unlink()
+    except OSError:
+        pass
+
+
+def release_audio_source():
+    """Ends the ffmpeg process now, rather than hoping a thread gets to it."""
+    global current_source
+
+    source = current_source
+    current_source = None
+    if source is None:
+        return
+
+    try:
+        source.cleanup()
+        log.info("Audio source released.")
+    except Exception:
+        log.exception("Could not release the audio source")
+
+
+def resolve_target_channel(ctx, argument=""):
+    """
+    Works out which voice channel a !BATCjoin means.
+
+    In order: the channel named in the argument, otherwise the one the caller
+    is sitting in. Whoever types the command is almost always already there.
+
+    Returns (channel, reason) with exactly one of them set, so the caller can
+    say why nothing happened instead of failing silently.
+    """
+    guild = getattr(ctx, "guild", None)
+    if guild is None:
+        return None, "That only works in a server, not in a direct message."
+
+    wanted = (argument or "").strip()
+
+    if wanted:
+        # An ID is exact. A name is not: Discord lets two channels share one,
+        # so the first match wins and the reply names what it joined.
+        if wanted.isdigit():
+            channel = guild.get_channel(int(wanted))
+            if isinstance(channel, discord.VoiceChannel):
+                return channel, None
+            return None, f"No voice channel with the ID {wanted} on this server."
+
+        matches = [c for c in guild.voice_channels if c.name.lower() == wanted.lower()]
+        if not matches:
+            # A channel the bot may not see is not in its cache at all, so it
+            # is indistinguishable from one that does not exist. Say both.
+            return None, (
+                f'No voice channel called "{wanted}" on this server - or I have '
+                f"no View Channel permission on it."
+            )
+        return matches[0], None
+
+    voice = getattr(ctx.author, "voice", None)
+    channel = getattr(voice, "channel", None)
+    if channel is not None:
+        return channel, None
+
+    return None, (
+        "You are not in a voice channel. Join one and say `!BATCjoin` again, "
+        "or name it: `!BATCjoin <name or id>`."
+    )
+
+
+# What the bot needs, derived from what it actually does rather than from a
+# list somebody once wrote down.
+#
+#   View Channel   it cannot join, or even see, a channel hidden from it
+#   Connect        channel.connect()
+#   Speak          voice_client.play()
+#
+#   View Channel   a command in a channel it cannot see never reaches it
+#   Send Messages  every command answers with ctx.send()
+#
+# Read Message History is not among them. Commands arrive over the gateway as
+# they are typed; history is for reading messages from before, which nothing
+# here does. Sending a direct message needs no server permission at all - only
+# that the recipient accepts them.
+#
+# Not a permission but required all the same: the Message Content intent in
+# the developer portal. Without it the text of a message never reaches the bot
+# and no prefix command works.
+VOICE_PERMISSIONS = ("View Channel", "Connect", "Speak")
+TEXT_PERMISSIONS = ("View Channel", "Send Messages")
+
+
+def missing_join_permissions(channel, member):
+    """
+    Which of the permissions needed to relay are missing on a voice channel.
+
+    View Channel gets it listed, Connect gets the bot in, Speak lets it be
+    heard. Without Speak it joins and streams into silence, which looks like a
+    broken installation rather than a permission a server admin can grant in
+    ten seconds.
+    """
+    permissions = channel.permissions_for(member)
+
+    missing = []
+    if not permissions.view_channel:
+        missing.append("View Channel")
+    if not permissions.connect:
+        missing.append("Connect")
+    if not permissions.speak:
+        missing.append("Speak")
+    return missing
+
+
+async def report_missing_permissions(ctx, channel, missing):
+    """
+    Tells the caller what is missing where, by direct message.
+
+    The detail goes to the person who asked rather than into the channel:
+    they are the one who can pass it to an admin, and a permissions lecture
+    in a busy channel helps nobody. The channel gets one line saying a
+    message was sent, so the command does not look ignored.
+
+    If their direct messages are closed, the detail goes to the channel
+    instead - failing to deliver it at all would be the worst of the three.
+    """
+    names = " and ".join(missing)
+    detail = (
+        f"I could not enter **{channel.name}**.\n"
+        f"Missing on that channel: **{names}**.\n"
+        f"\n"
+        f"What I need, in full:\n"
+        f"  on a voice channel I should join - {', '.join(VOICE_PERMISSIONS)}\n"
+        f"  on the text channel you type in - {', '.join(TEXT_PERMISSIONS)}\n"
+        f"\n"
+        f"A server admin can grant {'them' if len(missing) > 1 else 'it'} under "
+        f"Channel Settings > Permissions, for my role. Then say `!BATCjoin` again."
+    )
+
+    try:
+        await ctx.author.send(detail)
+    except discord.Forbidden:
+        await ctx.send(detail)
+        return
+
+    await ctx.send(
+        f"Cannot enter **{channel.name}** - I have sent you the details."
+    )
 
 
 async def connect_and_stream():
@@ -128,9 +371,13 @@ async def connect_and_stream():
         log.error("Guild %s not found - is the bot on that server?", CONFIG["guild_id"])
         return
 
-    channel = guild.get_channel(CONFIG["voice_channel_id"])
+    if target_channel_id is None:
+        log.error("No target channel - !BATCjoin decides where the bot goes")
+        return
+
+    channel = guild.get_channel(target_channel_id)
     if channel is None or not isinstance(channel, discord.VoiceChannel):
-        log.error("Voice channel %s not found", CONFIG["voice_channel_id"])
+        log.error("Voice channel %s not found", target_channel_id)
         return
 
     voice_client = guild.voice_client
@@ -143,7 +390,9 @@ async def connect_and_stream():
         log.info("Moved to voice channel: %s", channel.name)
 
     if not voice_client.is_playing():
+        global current_source
         source = make_audio_source()
+        current_source = source
         voice_client.play(source, after=lambda e: log.warning("Stream ended: %s", e))
         log.info("Audio stream started (device: %s)", CONFIG["audio_device_name"])
 
@@ -179,8 +428,20 @@ async def shutdown_watcher():
     either Stop-BATCRelayBot or !BATCshutdown. If so: leave the voice channel
     cleanly, close the bot connection, and exit the process instead of just
     being force-killed.
+
+    The whole body is guarded. A discord.py task loop that raises an unhandled
+    exception stops, and stops quietly - after which nothing can end this
+    process gracefully any more: !BATCshutdown writes a signal nobody reads,
+    Stop-BATCRelayBot waits fifteen seconds and terminates the process, and
+    ffmpeg is orphaned holding the recording device. The log from 2026-09-09
+    shows exactly that shape: a join, then twenty seconds, then nothing, with
+    no "Stop signal detected" line anywhere.
     """
-    if not STOP_SIGNAL_PATH.exists():
+    try:
+        if not STOP_SIGNAL_PATH.exists():
+            return
+    except OSError:
+        log.exception("Could not check for the stop signal")
         return
 
     log.info("Stop signal detected, leaving voice channel and shutting down...")
@@ -195,12 +456,40 @@ async def shutdown_watcher():
         except Exception:
             log.exception("Error while leaving the voice channel")
 
+    # Not left to disconnect(). It ends the player thread, which is a daemon
+    # thread, and the ffmpeg process is only killed by that thread's finally.
+    # If the interpreter exits first the thread is torn down and ffmpeg
+    # survives, holding the dshow capture of the VoiceMeeter bus.
+    release_audio_source()
+
     try:
         STOP_SIGNAL_PATH.unlink()
-    except FileNotFoundError:
+    except OSError:
         pass
 
+    release_pid_file()
+
     await bot.close()
+
+
+@shutdown_watcher.error
+async def shutdown_watcher_error(error: Exception):
+    """
+    A loop that dies silently takes the only graceful exit with it.
+
+    discord.py stops a task loop on an unhandled exception and says nothing
+    unless a handler like this one exists. Restarting it is right: the failure
+    is far more likely to be transient - a file lock on stop.signal - than a
+    reason to give up the ability to shut down at all.
+    """
+    log.exception("shutdown_watcher failed, restarting it", exc_info=error)
+    shutdown_watcher.restart()
+
+
+@watchdog.error
+async def watchdog_error(error: Exception):
+    log.exception("watchdog failed, restarting it", exc_info=error)
+    watchdog.restart()
 
 
 @bot.event
@@ -213,24 +502,55 @@ async def on_ready():
         shutdown_watcher.start()
 
 
-@bot.command(name="BATCstatus")
+@bot.command(name="BATCstatus", help="Request current station status.")
 async def batc_status(ctx: commands.Context):
     """Show whether the bot is connected and streaming."""
+    who = ctx.author.display_name
+    station = station_name()
+
     vc = configured_voice_client()
+
     if vc and vc.is_connected():
-        state = "streaming" if vc.is_playing() else "connected, but no active stream"
-        suffix = " (relay paused, `!BATCjoin` to resume)" if relay_paused else ""
-        await ctx.send(f"Connected to **{vc.channel.name}** - {state}{suffix}.")
+        if vc.is_playing():
+            message = f"{who}, {station} is currently transmitting from **{vc.channel.name}**."
+        else:
+            message = f"{who}, {station} is in **{vc.channel.name}** but not transmitting."
+
+        # Paused means the watchdog will not restart the stream on its own, so
+        # the way out of it is worth naming here.
+        if relay_paused:
+            message += " Say BATCjoin to resume."
+
+        await ctx.send(message)
     elif relay_paused:
-        await ctx.send("Standing by - not in a channel. Use `!BATCjoin` to start relaying.")
+        await ctx.send(f"{who}, {station} is standing by. Say BATCjoin for channel entry.")
     else:
-        await ctx.send("Not connected to a voice channel - reconnecting shortly.")
+        await ctx.send(f"{who}, {station} is off the air, reconnecting shortly.")
 
 
-@bot.command(name="BATCjoin")
-async def batc_join(ctx: commands.Context):
-    """Join the configured voice channel and start relaying."""
-    global relay_paused
+@bot.command(
+    name="BATCjoin",
+    help="Request channel entry and commence transmissions.",
+)
+async def batc_join(ctx: commands.Context, *, channel_name: str = ""):
+    """Join a voice channel and start relaying. Defaults to the caller's."""
+    global relay_paused, target_channel_id
+
+    channel, reason = resolve_target_channel(ctx, channel_name)
+    if channel is None:
+        await ctx.send(reason)
+        return
+
+    # Before the target is remembered and the relay unpaused. Setting them
+    # first would leave the watchdog retrying a channel the bot may not enter,
+    # every ten seconds, for as long as the process runs.
+    missing = missing_join_permissions(channel, ctx.guild.me)
+    if missing:
+        log.warning("Cannot join %s - missing %s", channel.name, ", ".join(missing))
+        await report_missing_permissions(ctx, channel, missing)
+        return
+
+    target_channel_id = channel.id
     relay_paused = False
 
     try:
@@ -242,26 +562,46 @@ async def batc_join(ctx: commands.Context):
 
     vc = configured_voice_client()
     if vc and vc.is_connected():
-        await ctx.send(f"Relaying into **{vc.channel.name}**.")
+        await ctx.send(
+            f"{ctx.author.display_name}, {station_name()} is now transmitting "
+            f"from **{vc.channel.name}**."
+        )
     else:
-        await ctx.send("Could not join the configured voice channel - check guild_id and voice_channel_id.")
+        await ctx.send(f"Could not join **{channel.name}**.")
 
 
-@bot.command(name="BATCleave")
+@bot.command(
+    name="BATCleave",
+    help="Request termination of transmissions and vacate the channel.",
+)
 async def batc_leave(ctx: commands.Context):
     """Leave the channel and stay out until !BATCjoin."""
-    global relay_paused
+    global relay_paused, target_channel_id
     relay_paused = True
+
+    # Cleared too: the next !BATCjoin decides where the bot goes, and leaving
+    # a stale target here would let the watchdog pull it back on its own.
+    target_channel_id = None
 
     vc = configured_voice_client()
     if vc:
+        # Read before disconnecting: afterwards there is no channel to name.
+        left = vc.channel.name
         await vc.disconnect()
-        await ctx.send("Left the voice channel. Standing by - `!BATCjoin` to resume.")
+        release_audio_source()
+        await ctx.send(
+            f"{ctx.author.display_name}, contact {station_name()} again in "
+            f"**{left}**. Good day."
+        )
     else:
         await ctx.send("Wasn't connected. Standing by - `!BATCjoin` to resume.")
 
 
-@bot.command(name="BATCrestart", aliases=["BATCrestart_stream"])
+@bot.command(
+    name="BATCrestart",
+    aliases=["BATCrestart_stream"],
+    help="Request transmission restart.",
+)
 async def batc_restart(ctx: commands.Context):
     """Restart the audio stream without leaving the channel."""
     if relay_paused:
@@ -272,10 +612,16 @@ async def batc_restart(ctx: commands.Context):
     if vc:
         vc.stop()
     await connect_and_stream()
-    await ctx.send("Stream restarted.")
+
+    vc = configured_voice_client()
+    where = f" **{vc.channel.name}**" if vc and vc.channel else ""
+    await ctx.send(f"{ctx.author.display_name}, I say again, cleared to land{where}.")
 
 
-@bot.command(name="BATCshutdown")
+@bot.command(
+    name="BATCshutdown",
+    help="Request station shutdown.\nAdministrator authorization required.",
+)
 @commands.has_permissions(administrator=True)
 async def batc_shutdown(ctx: commands.Context):
     """Stop the bot process entirely (Administrator only)."""
@@ -283,8 +629,46 @@ async def batc_shutdown(ctx: commands.Context):
     # path is the one already exercised elsewhere: leave the channel cleanly,
     # close the connection, exit the process. Exists because a bot started in
     # the background and orphaned from its PID file was otherwise unreachable.
-    await ctx.send("Shutting down - leaving the channel and stopping the process.")
+    #
+    # Sent before the signal, not after: the watcher checks every second and
+    # closes the connection, and a message written after that never arrives.
+    station = station_name()
+    await ctx.send(
+        f"{ctx.author.display_name}, {station} is terminating transmission. "
+        f"I repeat {station} is offline now, bye bye!"
+    )
+
+    # Logged without naming who asked - the secrets rule covers user
+    # identities. What matters here is that the command ran at all: the log of
+    # 2026-09-09 showed neither this line nor the watcher's, which is what
+    # made it impossible to tell whether the signal was written or ignored.
+    log.info("Shutdown requested from chat, writing the stop signal")
     STOP_SIGNAL_PATH.touch()
+
+
+@bot.command(name="BATChelp", help="Request available services.")
+async def batc_help(ctx: commands.Context):
+    """
+    Lists the commands, each with its own description underneath it.
+
+    Built from the registered commands rather than from a list written out
+    here, so a command added later cannot be left out of its own help - and
+    each description lives on the command it describes, in one place.
+    """
+    lines = [
+        f"{ctx.author.display_name}, {station_name()} ready to copy your selection.",
+        "Available options follow:",
+        "",
+    ]
+
+    for command in sorted(bot.commands, key=lambda c: c.name.lower()):
+        lines.append(f"**{command.name}**")
+        for line in (command.help or "").splitlines():
+            lines.append(f"    {line}")
+        lines.append("")
+
+    lines.append("Say selected option.")
+    await ctx.send("\n".join(lines))
 
 
 @batc_shutdown.error

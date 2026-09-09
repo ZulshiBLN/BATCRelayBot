@@ -14,7 +14,6 @@ Describe "Show-InstallationSummary" {
         $discord = @{
             BotToken = "test_bot_token_1234567890abcdef"
             GuildId = "123456789012345678"
-            VoiceChannelId = "987654321098765432"
         }
     }
 
@@ -70,7 +69,6 @@ Describe "Phase 4: Summary Screen Integration" {
         $discord = @{
             BotToken = "token"
             GuildId = "123456789012345678"
-            VoiceChannelId = "987654321098765432"
         }
 
         { Show-InstallationSummary -Prerequisites $prereqs -DiscordConfig $discord } | Should -Not -Throw
@@ -87,7 +85,6 @@ Describe "Phase 4: Summary Screen Integration" {
         $discord = @{
             BotToken = "token"
             GuildId = "123456789012345678"
-            VoiceChannelId = "987654321098765432"
         }
 
         $result = Show-InstallationSummary -Prerequisites $prereqs -DiscordConfig $discord
@@ -105,7 +102,6 @@ Describe "Phase 4: Summary Screen Integration" {
         $discord = @{
             BotToken = "token"
             GuildId = "123456789012345678"
-            VoiceChannelId = "987654321098765432"
         }
 
         $result = Show-InstallationSummary -Prerequisites $allOk -DiscordConfig $discord
