@@ -36,15 +36,63 @@ import asyncio
 import json
 import logging
 import pathlib
+import re
 import sys
 
 import discord
 from discord.ext import commands, tasks
 
+# A Discord snowflake: 17 to 20 digits, not part of a longer number and not
+# part of a version or a path. The same shape Remove-SensitiveData redacts
+# from install.log, because it is the same rule.
+SNOWFLAKE_PATTERN = re.compile(r"(?<![\d.\\/])\d{17,20}(?![\d.])")
+
+# A bot token, in case one ever reaches a message. Nothing here logs one, but
+# a library or a traceback might.
+TOKEN_PATTERN = re.compile(r"\b[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{20,}\b")
+
+
+class RedactSecrets(logging.Filter):
+    """
+    Keeps Discord IDs out of the log, whoever wrote them.
+
+    discord.py logs lines like "The voice handshake is being terminated for
+    Channel ID 1535343588567683122 (Guild ID 631480440548753408)", which is
+    exactly what the secrets rule forbids - and bot_error.log travels into bug
+    reports and screenshots the same way install.log does. That one was fixed
+    in 1.4.1; this log was not looked at.
+
+    Attached to the handler rather than to a logger: every library's records
+    propagate to the root handler, and a filter on our own logger would only
+    ever see our own lines.
+
+    It does not reach into exception tracebacks. An ID in a traceback frame
+    would still get through.
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        message = record.getMessage()
+
+        redacted = TOKEN_PATTERN.sub("[REDACTED-TOKEN]", message)
+        redacted = SNOWFLAKE_PATTERN.sub("[REDACTED-ID]", redacted)
+
+        if redacted != message:
+            # The arguments are already folded in, so they must not be
+            # applied a second time when the record is formatted.
+            record.msg = redacted
+            record.args = ()
+
+        return True
+
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
 )
+
+for _handler in logging.getLogger().handlers:
+    _handler.addFilter(RedactSecrets())
+
 log = logging.getLogger("atc-relay")
 
 CONFIG_PATH = pathlib.Path(__file__).parent / "config.json"

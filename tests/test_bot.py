@@ -962,6 +962,69 @@ class TestShutdownSurvivesFailure:
         source.cleanup.assert_called_once()
 
 
+class TestLogRedaction:
+    """
+    bot_error.log travels the same way install.log does - into bug reports and
+    screenshots - and the secrets rule covers both. install.log was fixed in
+    1.4.1; this one still carried lines like
+
+        The voice handshake is being terminated for Channel ID
+        1535343588567683122 (Guild ID 631480440548753408)
+
+    written by discord.py rather than by us, which is why a redactor on our
+    own logger would not have caught them.
+    """
+
+    @staticmethod
+    def record(message, *args, name="discord.voice_state"):
+        return logging.LogRecord(name, logging.INFO, "bot.py", 1, message, args, None)
+
+    def test_a_library_line_loses_its_ids(self):
+        entry = self.record(
+            "The voice handshake is being terminated for Channel ID %s (Guild ID %s)",
+            1535343588567683122,
+            631480440548753408,
+        )
+
+        bot.RedactSecrets().filter(entry)
+        rendered = entry.getMessage()
+
+        assert "1535343588567683122" not in rendered
+        assert "631480440548753408" not in rendered
+        assert rendered.count("[REDACTED-ID]") == 2
+
+    def test_a_token_would_not_get_through_either(self):
+        token = ("M" * 24) + "." + ("G" * 6) + "." + ("f" * 27)
+        entry = self.record("Using %s", token)
+
+        bot.RedactSecrets().filter(entry)
+
+        assert token not in entry.getMessage()
+
+    def test_the_log_stays_readable(self):
+        """A redactor that eats timestamps, versions and pids gets turned off."""
+        for line in (
+            "Installation session started 2026-09-09 10:10:01",
+            "BATCRelayBot 1.4.1 on Python 3.12.10",
+            "ffmpeg process 33836 should have terminated with a return code of 1",
+            "Python at C:\\Users\\x\\AppData\\Local\\Programs\\Python\\Python312",
+        ):
+            entry = self.record(line)
+            bot.RedactSecrets().filter(entry)
+            assert entry.getMessage() == line
+
+    # The filter existing is not the filter running. It has to sit on the
+    # handler every logger's records pass through, not on ours.
+    def test_it_is_attached_where_the_library_records_pass(self):
+        handlers = logging.getLogger().handlers
+        assert handlers, "nothing would be written at all"
+
+        assert any(
+            any(isinstance(f, bot.RedactSecrets) for f in handler.filters)
+            for handler in handlers
+        ), "the filter is not on the root handler, so library lines bypass it"
+
+
 def test_bot_py_stays_ascii():
     """
     A BOM-less file with non-ASCII is read as ANSI by PowerShell 5.1, and this

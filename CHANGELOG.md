@@ -17,6 +17,29 @@ see the commit that made it.
 
 ## [Unreleased]
 
+### Security
+
+- **The bot log no longer records Discord IDs.** discord.py writes lines such
+  as "The voice handshake is being terminated for Channel ID … (Guild ID …)",
+  and `bot_error.log` travels into bug reports and screenshots exactly as
+  `install.log` does. That log was redacted in 1.4.1; this one was not looked
+  at. Redaction now sits on the log handler, so a library's lines are covered
+  as well as the bot's own.
+
+### Fixed
+
+- **`!BATCshutdown` no longer leaves the machine's audio broken.** The watcher
+  that reads the stop signal had no error handling, and a discord.py task loop
+  stops silently when it raises. After that nothing could end the bot
+  gracefully: the chat command wrote a signal nobody read, `Stop-BATCRelayBot`
+  waited fifteen seconds and terminated the process, and ffmpeg was left
+  running on the VoiceMeeter bus it was capturing.
+
+  Both loops now report a failure and restart. The audio source is ended
+  explicitly on shutdown and on leave rather than left to a daemon thread that
+  the exiting process can cut short, and a forced stop takes any ffmpeg child
+  with it.
+
 ### Removed
 
 - **`voice_channel_id` is gone from the configuration.** The bot joins the
