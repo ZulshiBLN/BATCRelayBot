@@ -13,7 +13,8 @@ the bot start with Windows does not put it in a voice channel.
 Chat commands (all prefixed with BATC so they cannot collide with other bots
 in the same server; command names are case-insensitive):
 
-  !BATCjoin      join the configured channel and start relaying
+  !BATCjoin      join a channel and start relaying - yours by default,
+                 or !BATCjoin <name or id> for a particular one
   !BATCleave     leave and stay out until !BATCjoin
   !BATCstatus    connection and stream state
   !BATCrestart   restart the stream without leaving
@@ -114,12 +115,59 @@ def configured_voice_client():
     """
     The voice client for the configured guild.
 
-    The bot only ever relays into the one channel from config.json, so state
-    is read from that guild rather than from wherever a command was typed -
-    otherwise running a command in a second server reports the wrong state.
+    State is read from that guild rather than from wherever a command was
+    typed - otherwise running a command in a second server reports the wrong
+    state. The guild is still configuration; the channel is not.
     """
     guild = bot.get_guild(CONFIG["guild_id"])
     return guild.voice_client if guild else None
+
+
+# Where the bot is going. Decided by !BATCjoin rather than at install time, and
+# kept here because the watchdog reconnects to it every ten seconds - it has to
+# outlive the command that set it. None means nobody has asked yet.
+target_channel_id = None
+
+
+def resolve_target_channel(ctx, argument=""):
+    """
+    Works out which voice channel a !BATCjoin means.
+
+    In order: the channel named in the argument, otherwise the one the caller
+    is sitting in. Whoever types the command is almost always already there.
+
+    Returns (channel, reason) with exactly one of them set, so the caller can
+    say why nothing happened instead of failing silently.
+    """
+    guild = getattr(ctx, "guild", None)
+    if guild is None:
+        return None, "That only works in a server, not in a direct message."
+
+    wanted = (argument or "").strip()
+
+    if wanted:
+        # An ID is exact. A name is not: Discord lets two channels share one,
+        # so the first match wins and the reply names what it joined.
+        if wanted.isdigit():
+            channel = guild.get_channel(int(wanted))
+            if isinstance(channel, discord.VoiceChannel):
+                return channel, None
+            return None, f"No voice channel with the ID {wanted} on this server."
+
+        matches = [c for c in guild.voice_channels if c.name.lower() == wanted.lower()]
+        if not matches:
+            return None, f'No voice channel called "{wanted}" on this server.'
+        return matches[0], None
+
+    voice = getattr(ctx.author, "voice", None)
+    channel = getattr(voice, "channel", None)
+    if channel is not None:
+        return channel, None
+
+    return None, (
+        "You are not in a voice channel. Join one and say `!BATCjoin` again, "
+        "or name it: `!BATCjoin <name or id>`."
+    )
 
 
 async def connect_and_stream():
@@ -128,9 +176,13 @@ async def connect_and_stream():
         log.error("Guild %s not found - is the bot on that server?", CONFIG["guild_id"])
         return
 
-    channel = guild.get_channel(CONFIG["voice_channel_id"])
+    if target_channel_id is None:
+        log.error("No target channel - !BATCjoin decides where the bot goes")
+        return
+
+    channel = guild.get_channel(target_channel_id)
     if channel is None or not isinstance(channel, discord.VoiceChannel):
-        log.error("Voice channel %s not found", CONFIG["voice_channel_id"])
+        log.error("Voice channel %s not found", target_channel_id)
         return
 
     voice_client = guild.voice_client
@@ -228,9 +280,16 @@ async def batc_status(ctx: commands.Context):
 
 
 @bot.command(name="BATCjoin")
-async def batc_join(ctx: commands.Context):
-    """Join the configured voice channel and start relaying."""
-    global relay_paused
+async def batc_join(ctx: commands.Context, *, channel_name: str = ""):
+    """Join a voice channel and start relaying. Defaults to yours."""
+    global relay_paused, target_channel_id
+
+    channel, reason = resolve_target_channel(ctx, channel_name)
+    if channel is None:
+        await ctx.send(reason)
+        return
+
+    target_channel_id = channel.id
     relay_paused = False
 
     try:
@@ -244,14 +303,18 @@ async def batc_join(ctx: commands.Context):
     if vc and vc.is_connected():
         await ctx.send(f"Relaying into **{vc.channel.name}**.")
     else:
-        await ctx.send("Could not join the configured voice channel - check guild_id and voice_channel_id.")
+        await ctx.send(f"Could not join **{channel.name}**.")
 
 
 @bot.command(name="BATCleave")
 async def batc_leave(ctx: commands.Context):
     """Leave the channel and stay out until !BATCjoin."""
-    global relay_paused
+    global relay_paused, target_channel_id
     relay_paused = True
+
+    # Cleared too: the next !BATCjoin decides where the bot goes, and leaving
+    # a stale target here would let the watchdog pull it back on its own.
+    target_channel_id = None
 
     vc = configured_voice_client()
     if vc:

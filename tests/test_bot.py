@@ -246,10 +246,13 @@ async def test_connect_and_stream_guild_not_found():
 
 
 @pytest.mark.asyncio
-async def test_connect_and_stream_channel_not_found():
+async def test_connect_and_stream_channel_not_found(monkeypatch):
     """connect_and_stream should handle missing channel gracefully"""
     guild = MagicMock()
     guild.get_channel = Mock(return_value=None)
+
+    # The target is set by !BATCjoin now, not read from config.json.
+    monkeypatch.setattr(bot, "target_channel_id", 987654321098765432)
 
     with patch.object(bot.bot, "get_guild", return_value=guild):
         await bot.connect_and_stream()
@@ -257,12 +260,27 @@ async def test_connect_and_stream_channel_not_found():
 
 
 @pytest.mark.asyncio
-async def test_connect_and_stream_already_connected():
+async def test_connect_and_stream_without_a_target_does_nothing():
+    """Nobody has said !BATCjoin, so there is nowhere to go."""
+    guild = MagicMock()
+    guild.get_channel = Mock(return_value=None)
+
+    # target_channel_id is None at import; the watchdog runs on a timer and
+    # must not invent a channel of its own.
+    with patch.object(bot.bot, "get_guild", return_value=guild):
+        await bot.connect_and_stream()
+        guild.get_channel.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_connect_and_stream_already_connected(monkeypatch):
     """connect_and_stream should handle already connected state"""
     guild = MagicMock()
     channel = MagicMock(spec=discord.VoiceChannel)
-    channel.id = bot.CONFIG["voice_channel_id"]
+    channel.id = 555000111222333444
     channel.name = "Test Channel"
+
+    monkeypatch.setattr(bot, "target_channel_id", channel.id)
 
     voice_client = AsyncMock()
     voice_client.channel.id = channel.id
@@ -457,3 +475,135 @@ class TestBATCCommandNaming:
         command = bot.bot.get_command("BATCshutdown")
         assert command is not None
         assert command.checks, "BATCshutdown has no permission check"
+
+
+def make_context(guild=None, author_channel=None):
+    """
+    A command context with just enough of Discord in it.
+
+    guild.voice_channels and guild.get_channel are what resolution reads;
+    ctx.author.voice.channel is where the caller is sitting.
+    """
+    ctx = MagicMock()
+    ctx.guild = guild
+    ctx.author.voice = MagicMock() if author_channel else None
+    if author_channel:
+        ctx.author.voice.channel = author_channel
+    return ctx
+
+
+def make_voice_channel(name, channel_id):
+    channel = MagicMock(spec=discord.VoiceChannel)
+    channel.name = name
+    channel.id = channel_id
+    return channel
+
+
+class TestResolveTargetChannel:
+    """
+    Which channel a !BATCjoin means.
+
+    The bot used to relay into one channel fixed at install time, so moving it
+    meant editing config.json and restarting. Whoever types the command is
+    almost always already in the channel they want it in.
+    """
+
+    def test_defaults_to_the_channel_the_caller_is_in(self):
+        channel = make_voice_channel("Tower", 111)
+        guild = MagicMock()
+        guild.voice_channels = [channel]
+
+        found, reason = bot.resolve_target_channel(make_context(guild, channel))
+
+        assert found is channel
+        assert reason is None
+
+    def test_a_named_channel_wins_over_the_caller_s_own(self):
+        here = make_voice_channel("Tower", 111)
+        there = make_voice_channel("Ground", 222)
+        guild = MagicMock()
+        guild.voice_channels = [here, there]
+
+        found, reason = bot.resolve_target_channel(make_context(guild, here), "Ground")
+
+        assert found is there
+        assert reason is None
+
+    def test_a_name_matches_whatever_case_it_was_typed_in(self):
+        channel = make_voice_channel("Tower", 111)
+        guild = MagicMock()
+        guild.voice_channels = [channel]
+
+        found, _ = bot.resolve_target_channel(make_context(guild), "tower")
+
+        assert found is channel
+
+    def test_an_id_is_taken_exactly(self):
+        channel = make_voice_channel("Tower", 111)
+        guild = MagicMock()
+        guild.voice_channels = [channel]
+        guild.get_channel = Mock(return_value=channel)
+
+        found, reason = bot.resolve_target_channel(make_context(guild), "111")
+
+        assert found is channel
+        assert reason is None
+        guild.get_channel.assert_called_once_with(111)
+
+    def test_duplicate_names_take_the_first_and_do_not_fail(self):
+        """Discord allows two channels to share a name. Refusing helps nobody."""
+        first = make_voice_channel("Tower", 111)
+        second = make_voice_channel("Tower", 222)
+        guild = MagicMock()
+        guild.voice_channels = [first, second]
+
+        found, reason = bot.resolve_target_channel(make_context(guild), "Tower")
+
+        assert found is first
+        assert reason is None
+
+    def test_a_caller_in_no_channel_naming_none_is_told_why(self):
+        guild = MagicMock()
+        guild.voice_channels = []
+
+        found, reason = bot.resolve_target_channel(make_context(guild))
+
+        assert found is None
+        assert "not in a voice channel" in reason.lower()
+        assert "!BATCjoin" in reason
+
+    def test_an_unknown_name_is_refused_saying_what_was_looked_for(self):
+        guild = MagicMock()
+        guild.voice_channels = [make_voice_channel("Tower", 111)]
+
+        found, reason = bot.resolve_target_channel(make_context(guild), "Apron")
+
+        assert found is None
+        assert "Apron" in reason
+
+    def test_an_unknown_id_is_refused_saying_what_was_looked_for(self):
+        guild = MagicMock()
+        guild.voice_channels = []
+        guild.get_channel = Mock(return_value=None)
+
+        found, reason = bot.resolve_target_channel(make_context(guild), "999")
+
+        assert found is None
+        assert "999" in reason
+
+    def test_an_id_naming_a_text_channel_is_refused(self):
+        """get_channel returns any channel type; only a voice one will do."""
+        guild = MagicMock()
+        guild.voice_channels = []
+        guild.get_channel = Mock(return_value=MagicMock(spec=discord.TextChannel))
+
+        found, reason = bot.resolve_target_channel(make_context(guild), "111")
+
+        assert found is None
+        assert "111" in reason
+
+    def test_a_direct_message_has_no_channels_to_search(self):
+        found, reason = bot.resolve_target_channel(make_context(guild=None))
+
+        assert found is None
+        assert "server" in reason.lower()
