@@ -195,7 +195,7 @@ Describe "Config File Safety Functions" {
             $testDir = Join-Path $env:TEMP "ConfigUpdateTest_$([System.Guid]::NewGuid())"
             New-Item -ItemType Directory -Path $testDir -Force | Out-Null
             $configFile = Join-Path $testDir "config.json"
-            @{ bot_token = "abc"; voice_channel_id = 123456789012345678 } | ConvertTo-Json | Set-Content $configFile
+            @{ bot_token = "abc"; guild_id = 123456789012345678 } | ConvertTo-Json | Set-Content $configFile
 
             try {
                 { Update-ConfigJson -ConfigPath $configFile -Field "Format" -Value "verbose" } | Should -Throw
