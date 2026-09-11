@@ -15,6 +15,24 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Entries describe what changed for users. For the reasoning behind a change,
 see the commit that made it.
 
+## [Unreleased]
+
+### Added
+
+- **`!BATCtext` posts what ATC says, as text, in the channel.** BeyondATC
+  shows every transmission as text in its own window; nobody in Discord got
+  it. The bot now reads BeyondATC's log as it is written and posts the
+  controller's lines - `**19:10** · 121.755 · Swiss 874, taxi to holding
+  point A1, runway 28, via N, F, INNER, A.` - into the channel `!BATCjoin`
+  was typed in. Only the controller's side: readbacks and requests, whether
+  the copilot or the pilot speaks them, stay out.
+
+  Off after every `!BATCjoin`; `!BATCtext` switches it on, and again off.
+  The text arrives a few seconds before the audio, because BeyondATC writes
+  the line when its voice starts speaking. Nothing to configure: the log's
+  location is fixed by BeyondATC. With BeyondATC not running there is simply
+  nothing to post.
+
 ## [1.5.0] - 2026-09-09
 
 The bot goes where you are, and the commands stop talking over themselves.

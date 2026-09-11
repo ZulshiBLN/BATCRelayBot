@@ -18,6 +18,8 @@ in the same server; command names are case-insensitive):
   !BATCleave     leave and stay out until !BATCjoin
   !BATCstatus    connection and stream state
   !BATCrestart   restart the stream without leaving
+  !BATCtext      toggle ATC text - what the controller says, as it is said,
+                 posted in the channel !BATCjoin was typed in (off by default)
   !BATCshutdown  stop this process (Administrator only)
   !BATChelp      list the commands
 
@@ -223,6 +225,8 @@ class LogTailer:
         self.path = pathlib.Path(path)
         self._offset = None
         self._partial = b""
+        # Set when the file was replaced, for whoever keeps state per file.
+        self.restarted = False
 
     def read_new_lines(self):
         try:
@@ -231,14 +235,17 @@ class LogTailer:
             # Not installed, not running yet, or rotating this very moment.
             return []
 
-        if self._offset is None or size < self._offset:
-            # First sight of the file, or a new one: nothing before this call
-            # was said while anyone was listening - except on rotation, where
-            # the new file is all new.
-            self._offset = size if self._offset is None else 0
+        if self._offset is None:
+            # First sight of the file: nothing in it was said while anyone
+            # was listening.
+            self._offset = size
+            return []
+
+        if size < self._offset:
+            # A new file - all of it is new.
+            self._offset = 0
             self._partial = b""
-            if size == self._offset:
-                return []
+            self.restarted = True
 
         if size == self._offset:
             return []
@@ -255,6 +262,30 @@ class LogTailer:
         return [piece.decode("utf-8", errors="replace").rstrip("\r") for piece in pieces]
 
 
+class TranscriptFeed:
+    """
+    The tailer and the parser together: poll() returns what ATC has said
+    since the last call. A replaced file gets a fresh parser - voice ids are
+    handed out per session, and yesterday's controller can be today's copilot.
+    """
+
+    def __init__(self, path):
+        self._tailer = LogTailer(path)
+        self._parser = InstructionParser()
+
+    def poll(self):
+        lines = self._tailer.read_new_lines()
+        if self._tailer.restarted:
+            self._parser = InstructionParser()
+            self._tailer.restarted = False
+        found = []
+        for line in lines:
+            transmission = self._parser.feed(line)
+            if transmission is not None:
+                found.append(transmission)
+        return found
+
+
 def batc_log_path():
     """
     Where BeyondATC writes Player.log. Unity fixes the location from company
@@ -268,6 +299,38 @@ def batc_log_path():
         pathlib.Path.home()
         / "AppData" / "LocalLow" / "Skirmish Mode Games, Inc" / "BeyondATC" / "Player.log"
     )
+
+
+def format_transmission(transmission):
+    """
+    `**19:10** . 121.755 . Swiss 874, climb FL100.` with a middle dot as the
+    separator - clock and frequency from the [PlayerState] line, or the text
+    alone when there was none. The dot is escaped because this file has to
+    stay ASCII; see test_bot_py_stays_ascii.
+    """
+    if transmission.sim_time and transmission.com1:
+        clock = transmission.sim_time.split()[-1]
+        return f"**{clock}** \u00b7 {transmission.com1} \u00b7 {transmission.text}"
+    return transmission.text
+
+
+DISCORD_MESSAGE_LIMIT = 2000
+
+
+def messages_from(lines):
+    """Joins lines into as few messages as fit under Discord's limit."""
+    messages = []
+    current = ""
+    for line in lines:
+        candidate = line if not current else current + "\n" + line
+        if current and len(candidate) > DISCORD_MESSAGE_LIMIT:
+            messages.append(current)
+            current = line
+        else:
+            current = candidate
+    if current:
+        messages.append(current)
+    return messages
 
 
 intents = discord.Intents.default()
@@ -551,6 +614,49 @@ async def connect_and_stream():
 relay_paused = True
 
 
+# Where ATC's lines go: the text channel !BATCjoin was typed in, which the bot
+# can already send to because it answered the command there. Off after every
+# join; !BATCtext switches it on, and !BATCleave clears both.
+text_channel_id = None
+text_enabled = False
+transcript_feed = TranscriptFeed(batc_log_path())
+
+
+@tasks.loop(seconds=1)
+async def transcript_relay():
+    """
+    Drains Player.log every second and posts what ATC said. The file is
+    drained even while the feed is off: the parser keeps learning voices, and
+    switching the feed on must not dump a backlog into the channel.
+    """
+    global text_enabled
+    transmissions = transcript_feed.poll()
+    if not transmissions or not text_enabled or text_channel_id is None:
+        return
+
+    channel = bot.get_channel(text_channel_id)
+    if channel is None:
+        return
+
+    try:
+        for message in messages_from([format_transmission(t) for t in transmissions]):
+            await channel.send(message)
+    except discord.Forbidden:
+        # Once, and off - not every second for as long as the process runs.
+        text_enabled = False
+        log.warning(
+            "Cannot post ATC text in #%s - the bot needs Send Messages there. "
+            "Text is off until the next !BATCtext.",
+            getattr(channel, "name", text_channel_id),
+        )
+
+
+@transcript_relay.error
+async def transcript_relay_error(error: Exception):
+    log.exception("transcript_relay failed, restarting it", exc_info=error)
+    transcript_relay.restart()
+
+
 @tasks.loop(seconds=10)
 async def watchdog():
     """
@@ -645,6 +751,8 @@ async def on_ready():
         watchdog.start()
     if not shutdown_watcher.is_running():
         shutdown_watcher.start()
+    if not transcript_relay.is_running():
+        transcript_relay.start()
 
 
 @bot.command(name="BATCstatus", help="Request current station status.")
@@ -679,7 +787,7 @@ async def batc_status(ctx: commands.Context):
 )
 async def batc_join(ctx: commands.Context, *, channel_name: str = ""):
     """Join a voice channel and start relaying. Defaults to the caller's."""
-    global relay_paused, target_channel_id
+    global relay_paused, target_channel_id, text_channel_id, text_enabled
 
     channel, reason = resolve_target_channel(ctx, channel_name)
     if channel is None:
@@ -697,6 +805,12 @@ async def batc_join(ctx: commands.Context, *, channel_name: str = ""):
 
     target_channel_id = channel.id
     relay_paused = False
+
+    # The transcript goes where this command was typed, and stays off until
+    # someone asks for it - a text feed nobody wanted is noise in a shared
+    # channel.
+    text_channel_id = ctx.channel.id
+    text_enabled = False
 
     try:
         await connect_and_stream()
@@ -721,12 +835,14 @@ async def batc_join(ctx: commands.Context, *, channel_name: str = ""):
 )
 async def batc_leave(ctx: commands.Context):
     """Leave the channel and stay out until !BATCjoin."""
-    global relay_paused, target_channel_id
+    global relay_paused, target_channel_id, text_channel_id, text_enabled
     relay_paused = True
 
     # Cleared too: the next !BATCjoin decides where the bot goes, and leaving
     # a stale target here would let the watchdog pull it back on its own.
     target_channel_id = None
+    text_channel_id = None
+    text_enabled = False
 
     vc = configured_voice_client()
     if vc:
@@ -761,6 +877,28 @@ async def batc_restart(ctx: commands.Context):
     vc = configured_voice_client()
     where = f" **{vc.channel.name}**" if vc and vc.channel else ""
     await ctx.send(f"{ctx.author.display_name}, I say again, cleared to land{where}.")
+
+
+@bot.command(
+    name="BATCtext",
+    help="Toggle ATC text - what the controller says, posted in the channel BATCjoin was called from.",
+)
+async def batc_text(ctx: commands.Context):
+    """Switch the transcript on or off. One command, so it is a toggle."""
+    global text_enabled
+    who = ctx.author.display_name
+    station = station_name()
+
+    if text_channel_id is None:
+        await ctx.send(f"{who}, {station} is standing by. Say BATCjoin first, then BATCtext.")
+        return
+
+    text_enabled = not text_enabled
+    if text_enabled:
+        where = getattr(bot.get_channel(text_channel_id), "name", None) or ctx.channel.name
+        await ctx.send(f"{who}, ATC text is on. Read you in **{where}**.")
+    else:
+        await ctx.send(f"{who}, ATC text is off. Radio only.")
 
 
 @bot.command(
