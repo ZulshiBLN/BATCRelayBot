@@ -3,8 +3,8 @@ title: Changelog
 description: Release history for the BATCRelayBot PowerShell module and Discord bot.
 document_type: history
 audience: users
-applies_to: BATCRelayBot 1.5.0
-updated: 2026-09-09
+applies_to: BATCRelayBot 1.6.0
+updated: 2026-09-11
 ---
 
 # Changelog
@@ -15,7 +15,9 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Entries describe what changed for users. For the reasoning behind a change,
 see the commit that made it.
 
-## [Unreleased]
+## [1.6.0] - 2026-09-11
+
+What the controller says, as text, beside the audio.
 
 ### Added
 

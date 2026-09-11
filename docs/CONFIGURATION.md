@@ -3,7 +3,7 @@ title: Configuration Reference
 description: Every field in config.json, which component reads it, and how to change it safely.
 document_type: reference
 audience: users
-applies_to: BATCRelayBot 1.5.0
+applies_to: BATCRelayBot 1.6.0
 updated: 2026-09-11
 ---
 
