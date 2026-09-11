@@ -19,6 +19,11 @@ see the commit that made it.
 
 What the controller says, as text, beside the audio.
 
+**To get it, run `Install-BATCRelayBot` again after `Update-Module`.** The
+change is in the bot file, which only setup copies into the installation;
+`Update-Module` alone leaves the 1.5.0 bot running, and `!BATCtext` does not
+exist there. Setup asks for the token, server ID and audio device again.
+
 ### Added
 
 - **`!BATCtext` posts what ATC says, as text, in the channel.** BeyondATC

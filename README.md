@@ -86,6 +86,20 @@ For the audio device, pick **B1** unless you have a reason not to — that is
 the bus step 3 routes audio to. Everything is logged to `install.log` in the
 installation directory.
 
+**Upgrading.** `Update-Module BATCRelayBot` fetches the new module, but the
+bot itself is a file setup copies into the installation, and only setup
+replaces it:
+
+```powershell
+Stop-BATCRelayBot
+Update-Module BATCRelayBot
+Install-BATCRelayBot
+```
+
+Setup asks for the token, server ID and audio device again. Skip it and a
+chat command added in the new version answers with nothing — the old bot is
+still the one running.
+
 ### 3. Route audio in VoiceMeeter
 
 1. **Send your app's audio to VoiceMeeter.** Settings → System → Sound →
