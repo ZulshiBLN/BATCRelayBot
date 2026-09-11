@@ -4,7 +4,7 @@ description: Symptoms, their usual causes, and how to fix them.
 document_type: reference
 audience: users
 applies_to: BATCRelayBot 1.5.0
-updated: 2026-09-09
+updated: 2026-09-11
 ---
 
 # Troubleshooting
@@ -79,6 +79,32 @@ It happens when the bot is terminated rather than stopped, because ffmpeg then
 loses its capture of the VoiceMeeter bus without closing it. Stopping the bot
 with `Stop-BATCRelayBot` or `!BATCshutdown` closes the capture first; the
 command tells you when it had to terminate instead.
+
+**`!BATCtext` is on but no text appears**
+The bot posts only what it finds in BeyondATC's `Player.log`, so work along
+that chain:
+
+1. Is BeyondATC running, with a flight loaded? Nothing is written until the
+   controller speaks to *you* — traffic talking to other aircraft is not
+   posted, and neither is your own side of the exchange.
+2. Did you switch it on *after* `!BATCjoin`? Every join starts with text off,
+   and `!BATCleave` clears it; the reply to `!BATCtext` says which state it
+   switched to.
+3. Does the bot have **Send Messages** in the channel you typed `!BATCjoin`
+   in? A refused post switches the feed off and writes one line to
+   `bot_error.log` saying so. Grant the permission, then `!BATCtext` again.
+4. Is the log where the bot looks? By default
+   `%USERPROFILE%\AppData\LocalLow\Skirmish Mode Games, Inc\BeyondATC\Player.log`.
+   If BeyondATC writes elsewhere, set `batc_log_path` — see
+   [CONFIGURATION.md](CONFIGURATION.md).
+5. Still nothing, with all of the above in order: a BeyondATC update may have
+   changed the log's format. The feed reads an undocumented file and goes
+   quiet, rather than wrong, when its shape moves. Report it with a copy of
+   `Player.log` from the flight.
+
+**Text appears before the audio**
+Expected. BeyondATC writes the line when its synthetic voice starts speaking,
+so the text leads the audio by the length of the transmission.
 
 **"Timed out connecting to voice"**
 Almost always channel permissions rather than the network. The bot's role

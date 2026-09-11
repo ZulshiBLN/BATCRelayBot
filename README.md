@@ -107,6 +107,19 @@ The bot comes **online but stays out of the channel**. Join a voice channel
 yourself, type `!BATCjoin` in Discord, and it follows you in — or name one
 with `!BATCjoin Tower`. Stop it with `Stop-BATCRelayBot`.
 
+### ATC as text
+
+With BeyondATC running, `!BATCtext` posts what the controller says, as it is
+said, into the channel you typed `!BATCjoin` in:
+
+> **19:10** · 121.755 · Swiss 874, taxi to holding point A1, runway 28, via N, F, INNER, A.
+
+Only the controller's side — readbacks and requests stay out. It is off after
+every `!BATCjoin`; `!BATCtext` switches it on, and again off. Type the join in
+the voice channel's own chat and the text sits beside the audio. The line
+appears a few seconds *before* you hear it, because BeyondATC writes it when
+its voice starts speaking.
+
 ## Commands
 
 ### PowerShell
@@ -129,6 +142,7 @@ with `!BATCjoin Tower`. Stop it with `Stop-BATCRelayBot`.
 | `!BATCleave` | Leave and **stay out** until `!BATCjoin` |
 | `!BATCstatus` | Connection and stream state |
 | `!BATCrestart` | Restart the stream without leaving |
+| `!BATCtext` | Toggle ATC as text — what the controller says, posted where `!BATCjoin` was typed |
 | `!BATCshutdown` | Stop the bot process (Administrator only) |
 | `!BATChelp` | List the commands |
 
