@@ -3,8 +3,8 @@ title: Configuration Reference
 description: Every field in config.json, which component reads it, and how to change it safely.
 document_type: reference
 audience: users
-applies_to: BATCRelayBot 1.5.0
-updated: 2026-09-09
+applies_to: BATCRelayBot 1.6.0
+updated: 2026-09-11
 ---
 
 # Configuration Reference
@@ -55,6 +55,25 @@ ffmpeg -list_devices true -f dshow -i dummy
 
 Empty `batc_*` fields mean "skip"; the bot works without BeyondATC.
 
+### Optional, by hand only
+
+| Field | Read by | Notes |
+|---|---|---|
+| `batc_log_path` | `bot.py` | Where BeyondATC writes `Player.log`. Absent means the default below |
+
+`!BATCtext` reads what the controller says out of BeyondATC's own log, which
+Unity places at
+
+```
+%USERPROFILE%\AppData\LocalLow\Skirmish Mode Games, Inc\BeyondATC\Player.log
+```
+
+That location is fixed by BeyondATC, so setup neither asks for it nor writes
+the field. Set `batc_log_path` only if your copy writes elsewhere — a
+relocated profile, say — and use the full path to the file, not the
+directory. The editor does not offer this field; add it by hand and restart
+the bot.
+
 ## Changing a setting
 
 ### With the editor
@@ -63,7 +82,7 @@ Empty `batc_*` fields mean "skip"; the bot works without BeyondATC.
 Edit-BATCRelayBotConfig
 ```
 
-Covers the bot token, server ID, voice channel ID and audio device. The audio
+Covers the bot token, server ID and audio device. The audio
 device comes from the same filtered ffmpeg list the installer uses, so you
 cannot pick a bus the bot is unable to capture, and a new token is checked
 against the Discord API before it is saved.

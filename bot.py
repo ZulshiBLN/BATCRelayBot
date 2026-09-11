@@ -18,6 +18,8 @@ in the same server; command names are case-insensitive):
   !BATCleave     leave and stay out until !BATCjoin
   !BATCstatus    connection and stream state
   !BATCrestart   restart the stream without leaving
+  !BATCtext      toggle ATC text - what the controller says, as it is said,
+                 posted in the channel !BATCjoin was typed in (off by default)
   !BATCshutdown  stop this process (Administrator only)
   !BATChelp      list the commands
 
@@ -124,6 +126,212 @@ for key in REQUIRED_KEYS:
     if not CONFIG.get(key):
         log.error("Field '%s' is missing or empty in config.json", key)
         sys.exit(1)
+
+# --- BeyondATC transcript ----------------------------------------------------
+#
+# BeyondATC has no API and no transcript file, but Unity writes Player.log as
+# the game runs, and every transmission involving the player lands there as
+# one block:
+#
+#   [LocalVoiceInput] sid=173 ls=1.258 | "Swiss eight seven four, taxi ..."
+#   [LocalVoicePhonemes] sid=173 | "..."
+#   ------------------------------
+#   [PlayerState] Friday 19:10, lat: ..., com1: 121.755(On), ...
+#   [Instruction] Swiss 874, taxi to holding point A1, runway 28, via N, F, INNER, A.
+#   ------------------------------
+#
+# [Instruction] is the clean text; [PlayerState] beside it carries the sim
+# clock and COM1. The log never says who is speaking, and readbacks by the
+# copilot look exactly like the controller's lines. What does tell them
+# apart: a [ControllerScript] line precedes each exchange with the player, and
+# the first [LocalVoiceInput] after it is always the controller. Voices seen
+# there are controllers; a block whose last voice is one of them is ATC.
+# Checked against a full flight, LSZH-EDDS with a go-around: 29 posted, 33
+# skipped, none wrong. What the player says himself is a
+# [Speech Transcription] block and never an [Instruction].
+
+VOICE_ID_PATTERN = re.compile(r"^\[LocalVoiceInput\] sid=(\d+)")
+PLAYER_STATE_PATTERN = re.compile(
+    r"^\[PlayerState\] (?P<sim_time>[A-Za-z]+ \d\d:\d\d),.*?com1: (?P<com1>[\d.]+)"
+)
+
+
+class Transmission:
+    """One thing ATC said to the player, with the sim clock and frequency."""
+
+    __slots__ = ("sim_time", "com1", "text")
+
+    def __init__(self, sim_time, com1, text):
+        self.sim_time = sim_time
+        self.com1 = com1
+        self.text = text
+
+
+class InstructionParser:
+    """
+    Feed it Player.log lines; it returns a Transmission for each controller
+    line and None for everything else. Learns which voices are controllers as
+    it goes, so it needs the lines in order and from the start of a session
+    - which is what tailing a live file gives it.
+    """
+
+    def __init__(self):
+        self._controller_voices = set()
+        self._next_voice_is_controller = False
+        self._last_voice = None
+        self._sim_time = None
+        self._com1 = None
+
+    def feed(self, line):
+        line = line.rstrip("\r\n")
+
+        if line.startswith("[ControllerScript]"):
+            self._next_voice_is_controller = True
+            return None
+
+        voice = VOICE_ID_PATTERN.match(line)
+        if voice:
+            self._last_voice = voice.group(1)
+            if self._next_voice_is_controller:
+                self._controller_voices.add(self._last_voice)
+                self._next_voice_is_controller = False
+            return None
+
+        state = PLAYER_STATE_PATTERN.match(line)
+        if state:
+            self._sim_time = state.group("sim_time")
+            self._com1 = state.group("com1")
+            return None
+
+        if line.startswith("[Instruction] "):
+            # Consumed either way: an [Instruction] with no voice of its own
+            # must not inherit the previous speaker.
+            voice, self._last_voice = self._last_voice, None
+            if voice in self._controller_voices:
+                return Transmission(self._sim_time, self._com1, line[len("[Instruction] "):])
+
+        return None
+
+
+class LogTailer:
+    """
+    Follows a file that another process is writing, returning whole new lines
+    on each call. Starts at the end: a bot started mid-flight must not replay
+    the flight. A file that shrinks has been replaced - BeyondATC rotates
+    Player.log on launch - and is read from the beginning.
+    """
+
+    def __init__(self, path):
+        self.path = pathlib.Path(path)
+        self._offset = None
+        self._partial = b""
+        # Set when the file was replaced, for whoever keeps state per file.
+        self.restarted = False
+
+    def read_new_lines(self):
+        try:
+            size = self.path.stat().st_size
+        except OSError:
+            # Not installed, not running yet, or rotating this very moment.
+            return []
+
+        if self._offset is None:
+            # First sight of the file: nothing in it was said while anyone
+            # was listening.
+            self._offset = size
+            return []
+
+        if size < self._offset:
+            # A new file - all of it is new.
+            self._offset = 0
+            self._partial = b""
+            self.restarted = True
+
+        if size == self._offset:
+            return []
+
+        with open(self.path, "rb") as f:
+            f.seek(self._offset)
+            data = f.read()
+            self._offset = f.tell()
+
+        # Unity writes UTF-8 without BOM; phoneme lines carry IPA and a read
+        # may cut one in half, so bytes are split first and decoded per line.
+        pieces = (self._partial + data).split(b"\n")
+        self._partial = pieces.pop()
+        return [piece.decode("utf-8", errors="replace").rstrip("\r") for piece in pieces]
+
+
+class TranscriptFeed:
+    """
+    The tailer and the parser together: poll() returns what ATC has said
+    since the last call. A replaced file gets a fresh parser - voice ids are
+    handed out per session, and yesterday's controller can be today's copilot.
+    """
+
+    def __init__(self, path):
+        self._tailer = LogTailer(path)
+        self._parser = InstructionParser()
+
+    def poll(self):
+        lines = self._tailer.read_new_lines()
+        if self._tailer.restarted:
+            self._parser = InstructionParser()
+            self._tailer.restarted = False
+        found = []
+        for line in lines:
+            transmission = self._parser.feed(line)
+            if transmission is not None:
+                found.append(transmission)
+        return found
+
+
+def batc_log_path():
+    """
+    Where BeyondATC writes Player.log. Unity fixes the location from company
+    and product name, so it is derived rather than asked for; batc_log_path in
+    config.json overrides it for the rare case.
+    """
+    configured = CONFIG.get("batc_log_path")
+    if configured:
+        return pathlib.Path(configured)
+    return (
+        pathlib.Path.home()
+        / "AppData" / "LocalLow" / "Skirmish Mode Games, Inc" / "BeyondATC" / "Player.log"
+    )
+
+
+def format_transmission(transmission):
+    """
+    `**19:10** . 121.755 . Swiss 874, climb FL100.` with a middle dot as the
+    separator - clock and frequency from the [PlayerState] line, or the text
+    alone when there was none. The dot is escaped because this file has to
+    stay ASCII; see test_bot_py_stays_ascii.
+    """
+    if transmission.sim_time and transmission.com1:
+        clock = transmission.sim_time.split()[-1]
+        return f"**{clock}** \u00b7 {transmission.com1} \u00b7 {transmission.text}"
+    return transmission.text
+
+
+DISCORD_MESSAGE_LIMIT = 2000
+
+
+def messages_from(lines):
+    """Joins lines into as few messages as fit under Discord's limit."""
+    messages = []
+    current = ""
+    for line in lines:
+        candidate = line if not current else current + "\n" + line
+        if current and len(candidate) > DISCORD_MESSAGE_LIMIT:
+            messages.append(current)
+            current = line
+        else:
+            current = candidate
+    if current:
+        messages.append(current)
+    return messages
+
 
 intents = discord.Intents.default()
 intents.message_content = True  # only needed if you want the text commands below
@@ -406,6 +614,49 @@ async def connect_and_stream():
 relay_paused = True
 
 
+# Where ATC's lines go: the text channel !BATCjoin was typed in, which the bot
+# can already send to because it answered the command there. Off after every
+# join; !BATCtext switches it on, and !BATCleave clears both.
+text_channel_id = None
+text_enabled = False
+transcript_feed = TranscriptFeed(batc_log_path())
+
+
+@tasks.loop(seconds=1)
+async def transcript_relay():
+    """
+    Drains Player.log every second and posts what ATC said. The file is
+    drained even while the feed is off: the parser keeps learning voices, and
+    switching the feed on must not dump a backlog into the channel.
+    """
+    global text_enabled
+    transmissions = transcript_feed.poll()
+    if not transmissions or not text_enabled or text_channel_id is None:
+        return
+
+    channel = bot.get_channel(text_channel_id)
+    if channel is None:
+        return
+
+    try:
+        for message in messages_from([format_transmission(t) for t in transmissions]):
+            await channel.send(message)
+    except discord.Forbidden:
+        # Once, and off - not every second for as long as the process runs.
+        text_enabled = False
+        log.warning(
+            "Cannot post ATC text in #%s - the bot needs Send Messages there. "
+            "Text is off until the next !BATCtext.",
+            getattr(channel, "name", text_channel_id),
+        )
+
+
+@transcript_relay.error
+async def transcript_relay_error(error: Exception):
+    log.exception("transcript_relay failed, restarting it", exc_info=error)
+    transcript_relay.restart()
+
+
 @tasks.loop(seconds=10)
 async def watchdog():
     """
@@ -500,6 +751,8 @@ async def on_ready():
         watchdog.start()
     if not shutdown_watcher.is_running():
         shutdown_watcher.start()
+    if not transcript_relay.is_running():
+        transcript_relay.start()
 
 
 @bot.command(name="BATCstatus", help="Request current station status.")
@@ -534,7 +787,7 @@ async def batc_status(ctx: commands.Context):
 )
 async def batc_join(ctx: commands.Context, *, channel_name: str = ""):
     """Join a voice channel and start relaying. Defaults to the caller's."""
-    global relay_paused, target_channel_id
+    global relay_paused, target_channel_id, text_channel_id, text_enabled
 
     channel, reason = resolve_target_channel(ctx, channel_name)
     if channel is None:
@@ -552,6 +805,12 @@ async def batc_join(ctx: commands.Context, *, channel_name: str = ""):
 
     target_channel_id = channel.id
     relay_paused = False
+
+    # The transcript goes where this command was typed, and stays off until
+    # someone asks for it - a text feed nobody wanted is noise in a shared
+    # channel.
+    text_channel_id = ctx.channel.id
+    text_enabled = False
 
     try:
         await connect_and_stream()
@@ -576,12 +835,14 @@ async def batc_join(ctx: commands.Context, *, channel_name: str = ""):
 )
 async def batc_leave(ctx: commands.Context):
     """Leave the channel and stay out until !BATCjoin."""
-    global relay_paused, target_channel_id
+    global relay_paused, target_channel_id, text_channel_id, text_enabled
     relay_paused = True
 
     # Cleared too: the next !BATCjoin decides where the bot goes, and leaving
     # a stale target here would let the watchdog pull it back on its own.
     target_channel_id = None
+    text_channel_id = None
+    text_enabled = False
 
     vc = configured_voice_client()
     if vc:
@@ -616,6 +877,28 @@ async def batc_restart(ctx: commands.Context):
     vc = configured_voice_client()
     where = f" **{vc.channel.name}**" if vc and vc.channel else ""
     await ctx.send(f"{ctx.author.display_name}, I say again, cleared to land{where}.")
+
+
+@bot.command(
+    name="BATCtext",
+    help="Toggle ATC text - what the controller says, posted in the channel BATCjoin was called from.",
+)
+async def batc_text(ctx: commands.Context):
+    """Switch the transcript on or off. One command, so it is a toggle."""
+    global text_enabled
+    who = ctx.author.display_name
+    station = station_name()
+
+    if text_channel_id is None:
+        await ctx.send(f"{who}, {station} is standing by. Say BATCjoin first, then BATCtext.")
+        return
+
+    text_enabled = not text_enabled
+    if text_enabled:
+        where = getattr(bot.get_channel(text_channel_id), "name", None) or ctx.channel.name
+        await ctx.send(f"{who}, ATC text is on. Read you in **{where}**.")
+    else:
+        await ctx.send(f"{who}, ATC text is off. Radio only.")
 
 
 @bot.command(
