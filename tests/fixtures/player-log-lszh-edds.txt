@@ -1,0 +1,1491 @@
+--------------------FLIGHT INFORMATION--------------------
+Version: 1.8.21.EA
+MSFS: 2024
+Import Source: Simbrief
+Player Callsign: SWR874
+ICAO Airline: SWR
+Flight Number: 874
+Player Tail: HBCJO
+Flight Rules: IFR
+Departure Airport: LSZH
+Departure Runway: 28
+SimBrief Planned Departure Runway: 28
+Departure METAR: METAR LSZH 111820Z VRB01KT CAVOK 17/08 Q1023 NOSIG
+Off blocks: 10 19:20Z
+Destination Airport: EDDS
+Arrival Runway: 25
+SimBrief Planned Arrival Runway: 25
+Arrival METAR: METAR EDDS 111820Z AUTO 32004KT CAVOK 18/07 Q1022 NOSIG
+On blocks: 10 19:47Z
+Route RAW: DEGE2Y DEGES Z1 ALAGO Z4 ARSUT T125 REUTL REUT1W
+Route Fixes: DEGES(47.4125,9.2019) ROMGA(47.4906,9.4036) BODAN(47.5875,9.4514) ALAGO(47.7997,9.4628) ARSUT(48.1667,9.3285) REUTL(48.3688,9.3612)
+Plan has SID: True
+SID: DEGE2Y
+SID Trans: DEGES
+Plan has STAR: True
+STAR: REUT5A
+STAR Trans: REUTL
+Aircraft Type: BCS3
+Initial Cruise Altitude: 19000
+Zulu Sim Time: Friday 18:32
+SimBrief flight plan URL: https://dispatch.simbrief.com/options/custom?airline=SWR&fltnum=874&orig=LSZH&dest=EDDS&origrwy=28&destrwy=25&type=BCS3&fl=19000&reg=HBCJO&route=DEGE2Y+DEGES+Z1+ALAGO+Z4+ARSUT+T125+REUTL+REUT1W
+------------------FLIGHT INFORMATION END------------------
+
+[DynamicCopilot] Selected copilot voice 'France_3' based on airline 'SWR', gender Female
+----------------------------
+[CommunityFolder] D:\MSFS AddOns\community\
+----------------------------
+
+[Traffic] Settings: Parked-10 Departure-10 Arrival-10 Enroute-10
+[Traffic] Available liveries 2611 FSLTL, 0 AIG, 0 FS Traffic and 0 BravoATG
+[Traffic] Data load - Loaded 900 flights and filtered to 359 by reg flight groups for traffic 
+Finding network interfaces
+Found nic 'Ethernet'.
+Found nic 'Wi-Fi'.
+Will send via 192.168.10.20:5353
+Will send via 192.168.10.21:5353
+[Traffic] No livery found for departure BCS4620 (B752) at EDDS
+[AirportData] Loaded IATA mapping: 6733 entries.
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[VFR - Debug] CircuitManager: Unregistered Swiss 1886
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[VFR - Debug] CircuitManager: Unregistered Swiss 464L
+Look rotation viewing vector is zero
+[VFR - Debug] CircuitManager: Unregistered Platoon 458T
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[VFR - Debug] CircuitManager: Unregistered Swiss 1844
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[VFR - Debug] CircuitManager: Unregistered Air Cairo 2920
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[Planning] GoAround EKCH/22L: charted procedure REJECTED — top alt 500 vs terrain 6+1000 on leg 0. Falling back to the generated pattern.
+[ATIS] Refreshing all metars.
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[Traffic] LHX4KK live enroute injected past its entire path (no waypoint ahead of the live position) - dropping injection.
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[Comms] Set Frequency Com1: 129005000
+[LocalVoiceInput] sid=165 ls=1.221 | "Zurich airport information sierra, one eight tree two zulu, surface winnd variable, one knots. Ceiling and visibility ok, temperature one seven degrees, doo point zero eight degrees, q n h one zero two tree, landing runway one four, departing runways one six,two eight, transition level zero seven zero, advise on initial contact you have information sierra."
+[LocalVoicePhonemes] sid=165 | "zjˈʊɹɪk ˈɛɹpoːɹt ˌɪnfɚmˈeɪʃən siːˈɛɹə, wˌʌn ˈeɪt tɹˈiː tˈuː zˈuːluː, sˈɜːfɪs wˈɪnd vˈɛɹɪəbəl, wˌʌn nˈɑːts. sˈiːlɪŋ ænd vˌɪzᵻbˈɪlᵻɾi ˌoʊkˈeɪ, tˈɛmpɹɪtʃɚ wˌʌn sˈɛvən dᵻɡɹˈiːz, dˈuː pˈɔɪnt zˈiəɹoʊ ˈeɪt dᵻɡɹˈiːz, kjˈuː ˈɛn ˈeɪtʃ wˌʌn zˈiəɹoʊ tˈuː tɹˈiː, lˈændɪŋ ɹˈʌnweɪ wˌʌn fˈoːɹ, dᵻpˈɑːɹɾɪŋ ɹˈʌnweɪz wˌʌn sˈɪks,tˈuː ˈeɪt, tɹænsˈɪʃən lˈɛvəl zˈiəɹoʊ sˈɛvən zˈiəɹoʊ, ɐdvˈaɪz ˈɔn ɪnˈɪʃəl kˈɑːntækt juː hˈæv ˌɪnfɚmˈeɪʃən siːˈɛɹə."
+[SpeechGenerator] LoadAudioClip failed: HTTP/1.1 404 Not Found
+0x00007ff81e2f350d (UnityPlayer) UnityMain
+0x00007ff81e2f3288 (UnityPlayer) UnityMain
+0x00007ff81e2d9cd9 (UnityPlayer) UnityMain
+0x00007ff81e979e51 (UnityPlayer) UnityMain
+0x00007ff81d95b105 (UnityPlayer) 
+0x0000017d747208d3 (Mono JIT Code) (wrapper managed-to-native) UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+0x0000017d747207eb (Mono JIT Code) UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
+0x0000017d74720530 (Mono JIT Code) UnityEngine.Logger:Log (UnityEngine.LogType,object)
+0x0000017d202b0ba5 (Mono JIT Code) UnityEngine.Debug:LogError (object)
+0x0000017d202b0b4b (Mono JIT Code) EventLogger:LogError (string)
+0x0000017d2020fc93 (Mono JIT Code) SpeechEngine.SpeechGenerator/<LoadAudioClipCoroutine>d__78:MoveNext ()
+0x0000017d746b0330 (Mono JIT Code) UnityEngine.SetupCoroutine:InvokeMoveNext (System.Collections.IEnumerator,intptr)
+0x0000017d746b045f (Mono JIT Code) (wrapper runtime-invoke) <Module>:runtime_invoke_void_object_intptr (object,intptr,intptr,intptr)
+0x00007ff81d114b7e (mono-2.0-bdwgc) mono_jit_set_domain
+0x00007ff81d04d204 (mono-2.0-bdwgc) mono_object_get_virtual_method
+0x00007ff81d04d37c (mono-2.0-bdwgc) mono_runtime_invoke
+0x00007ff81e05ca87 (UnityPlayer) 
+0x00007ff81de88e23 (UnityPlayer) 
+0x00007ff81e517ae2 (UnityPlayer) UnityMain
+0x00007ff81e51937f (UnityPlayer) UnityMain
+0x00007ff81de537fe (UnityPlayer) 
+0x00007ff81de9f778 (UnityPlayer) 
+0x00007ff81de9f964 (UnityPlayer) 
+0x00007ff81de9fe82 (UnityPlayer) 
+0x00007ff81e0f33db (UnityPlayer) 
+0x00007ff81e0f5dab (UnityPlayer) 
+0x00007ff81e0f910b (UnityPlayer) 
+0x00007ff81e0f93ab (UnityPlayer) UnityMain
+0x00007ff7cdde11f6 (BeyondATC) 
+0x00007ff9341ccd87 (KERNEL32) BaseThreadInitThunk
+0x00007ff935b8caec (ntdll) RtlUserThreadStart
+
+ERROR DIALOG: An error occurred contacting the speech service. BeyondATC may not work as expected.
+[Comms] Set Frequency Com1: 121930000
+[Planning] GoAround LFMN/04L: charted procedure REJECTED — top alt 400 vs terrain 0+1000 on leg 0. Falling back to the generated pattern.
+[Planning] GoAround turn: rwy=04L|sign=1|source=terrainVeto|conventionSide=4192ft|chosenSide=1958ft|rightHigh=1958|leftHigh=4192
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[LocalVoiceInput] sid=25 ls=1.279 | "Zurich delivery, oman air one  five  four,boeing seven thirty seven max eight, gate echo four four,request i f r clearance to seeb airport, information sierra."
+[LocalVoicePhonemes] sid=25 | "zjˈʊɹɪk dᵻlˈɪvɚɹi, oʊmˈæn ˈɛɹ wˌʌn fˈaɪv fˈoːɹ,bˈoʊɪŋ sˈɛvən θˈɜːɾi sˈɛvən mˈæks ˈeɪt, ɡˈeɪt ˈɛkoʊ fˈoːɹ fˈoːɹ,ɹᵻkwˈɛst ˈaɪ ˈɛf ˈɑːɹ klˈɪɹəns tuː sib ˈɛɹpoːɹt, ˌɪnfɚmˈeɪʃən siːˈɛɹə."
+[Planning] GoAround LEPA/24L: charted procedure REJECTED — top alt 400 vs terrain 32+1000 on leg 0. Falling back to the generated pattern.
+[Jetway] Jetway docking: OFF (disabled in build settings).
+[LocalVoiceInput] sid=162 ls=1.089 | "Oman air one  five  four,zurich delivery, cleared to seeb via the deges two x ray departure, runway two eight,climb to seven thousand feet, squawk six zero one zero."
+[LocalVoicePhonemes] sid=162 | "oʊmˈæn ˈɛɹ wˌʌn fˈaɪv fˈoːɹ,zjˈʊɹɪk dᵻlˈɪvɚɹi, klˈɪɹd tuː sib vˈaɪə ðə dᵻdʒˈɛz tˈuː ˈɛks ɹˈeɪ dᵻpˈɑːɹtʃɚ, ɹˈʌnweɪ tˈuː ˈeɪt,klˈaɪm tuː sˈɛvən θˈaʊzənd fˈiːt, skwˈɔːk sˈɪks zˈiəɹoʊ wˌʌn zˈiəɹoʊ."
+[LocalVoiceInput] sid=25 ls=1.279 | "Cleared to seeb via the deges two x ray departure, runway two eight,climb to seven thousand feet, squawk six zero one zero,oman air one  five  four."
+[LocalVoicePhonemes] sid=25 | "klˈɪɹd tuː sib vˈaɪə ðə dᵻdʒˈɛz tˈuː ˈɛks ɹˈeɪ dᵻpˈɑːɹtʃɚ, ɹˈʌnweɪ tˈuː ˈeɪt,klˈaɪm tuː sˈɛvən θˈaʊzənd fˈiːt, skwˈɔːk sˈɪks zˈiəɹoʊ wˌʌn zˈiəɹoʊ,oʊmˈæn ˈɛɹ wˌʌn fˈaɪv fˈoːɹ."
+[LocalVoiceInput] sid=162 ls=1.089 | "Oman air one  five  four,reedback correct. Contact ground one two one decimal seven five five when ready for push or start."
+[LocalVoicePhonemes] sid=162 | "oʊmˈæn ˈɛɹ wˌʌn fˈaɪv fˈoːɹ,ɹˈiːdbæk kɚɹˈɛkt. kˈɑːntækt ɡɹˈaʊnd wˌʌn tˈuː wˌʌn dˈɛsɪməl sˈɛvən fˈaɪv fˈaɪv wˌɛn ɹˈɛdi fɔːɹ pˈʊʃ ɔːɹ stˈɑːɹt."
+[LocalVoiceInput] sid=25 ls=1.279 | "We'll contact ground one two one decimal seven five five when ready for pushback or engine start, oman air one  five  four,bye bye, thanks"
+[LocalVoicePhonemes] sid=25 | "wiːl kˈɑːntækt ɡɹˈaʊnd wˌʌn tˈuː wˌʌn dˈɛsɪməl sˈɛvən fˈaɪv fˈaɪv wˌɛn ɹˈɛdi fɔːɹ pˈʊʃbæk ɔːɹ ˈɛndʒɪn stˈɑːɹt, oʊmˈæn ˈɛɹ wˌʌn fˈaɪv fˈoːɹ,bˈaɪ bˈaɪ, θˈæŋks"
+Look rotation viewing vector is zero
+[METAR] Historic batch fetch for 44 ambient fields at 20260911_1837
+[ATIS] Refreshing all metars.
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[LocalVoiceInput] sid=169 ls=0.736 | "Eurowings niner hotel, request i f r clearance to hamburg."
+[LocalVoicePhonemes] sid=169 | "jˈʊɹɹoʊwɪŋz nˈaɪnɚ hoʊtˈɛl, ɹᵻkwˈɛst ˈaɪ ˈɛf ˈɑːɹ klˈɪɹəns tuː hˈæmbɜːɡ."
+[LocalVoiceInput] sid=162 ls=1.089 | "Eurowings niner hotel, zurich delivery, information sierra current, cleared to hamburg airport via the zurich east tree victor departure, runway two eight,climb via sidd to six thousand feet, squawk three six five six."
+[LocalVoicePhonemes] sid=162 | "jˈʊɹɹoʊwɪŋz nˈaɪnɚ hoʊtˈɛl, zjˈʊɹɪk dᵻlˈɪvɚɹi, ˌɪnfɚmˈeɪʃən siːˈɛɹə kˈɜːɹənt, klˈɪɹd tuː hˈæmbɜːɡ ˈɛɹpoːɹt vˈaɪə ðə zjˈʊɹɪk ˈiːst tɹˈiː vˈɪktɚ dᵻpˈɑːɹtʃɚ, ɹˈʌnweɪ tˈuː ˈeɪt,klˈaɪm vˈaɪə sˌɪd tuː sˈɪks θˈaʊzənd fˈiːt, skwˈɔːk θɹˈiː sˈɪks fˈaɪv sˈɪks."
+[LocalVoiceInput] sid=169 ls=0.736 | "Cleared to hamburg airport via the zurich east tree victor departure, runway two eight,climb via sidd to six thousand feet, squawk three six five six,eurowings niner hotel."
+[LocalVoicePhonemes] sid=169 | "klˈɪɹd tuː hˈæmbɜːɡ ˈɛɹpoːɹt vˈaɪə ðə zjˈʊɹɪk ˈiːst tɹˈiː vˈɪktɚ dᵻpˈɑːɹtʃɚ, ɹˈʌnweɪ tˈuː ˈeɪt,klˈaɪm vˈaɪə sˌɪd tuː sˈɪks θˈaʊzənd fˈiːt, skwˈɔːk θɹˈiː sˈɪks fˈaɪv sˈɪks,jˈʊɹɹoʊwɪŋz nˈaɪnɚ hoʊtˈɛl."
+[LocalVoiceInput] sid=162 ls=1.089 | "Eurowings niner hotel, reedback correct. Contact ground one two one decimal seven five five when ready for push or start."
+[LocalVoicePhonemes] sid=162 | "jˈʊɹɹoʊwɪŋz nˈaɪnɚ hoʊtˈɛl, ɹˈiːdbæk kɚɹˈɛkt. kˈɑːntækt ɡɹˈaʊnd wˌʌn tˈuː wˌʌn dˈɛsɪməl sˈɛvən fˈaɪv fˈaɪv wˌɛn ɹˈɛdi fɔːɹ pˈʊʃ ɔːɹ stˈɑːɹt."
+[LocalVoiceInput] sid=169 ls=0.736 | "Ground one two one decimal seven five five when ready for pushback or engine start, eurowings niner hotel"
+[LocalVoicePhonemes] sid=169 | "ɡɹˈaʊnd wˌʌn tˈuː wˌʌn dˈɛsɪməl sˈɛvən fˈaɪv fˈaɪv wˌɛn ɹˈɛdi fɔːɹ pˈʊʃbæk ɔːɹ ˈɛndʒɪn stˈɑːɹt, jˈʊɹɹoʊwɪŋz nˈaɪnɚ hoʊtˈɛl"
+[LocalVoiceInput] sid=376 ls=1.165 | "Zurich delivery, sunexpress three sierra bravo, boeing seven thirty seven eight hundred, with information sierra, gate echo six seven,request i f r clearance to antalya airport."
+[LocalVoicePhonemes] sid=376 | "zjˈʊɹɪk dᵻlˈɪvɚɹi, sˈʌnɪkspɹˌɛs θɹˈiː siːˈɛɹə bɹˈɑːvoʊ, bˈoʊɪŋ sˈɛvən θˈɜːɾi sˈɛvən ˈeɪt hˈʌndɹɪd, wɪð ˌɪnfɚmˈeɪʃən siːˈɛɹə, ɡˈeɪt ˈɛkoʊ sˈɪks sˈɛvən,ɹᵻkwˈɛst ˈaɪ ˈɛf ˈɑːɹ klˈɪɹəns tuː ˈæntɐlɪə ˈɛɹpoːɹt."
+[TrafficTurnaround]: EZY67LM departs to EGKK in 13h:52m:21s
+[LocalVoiceInput] sid=162 ls=1.089 | "Sunexpress three sierra bravo, zurich delivery, cleared to antalya airport via the deges two x ray departure, runway two eight,climb to seven thousand feet, squawk three zero five five."
+[LocalVoicePhonemes] sid=162 | "sˈʌnɪkspɹˌɛs θɹˈiː siːˈɛɹə bɹˈɑːvoʊ, zjˈʊɹɪk dᵻlˈɪvɚɹi, klˈɪɹd tuː ˈæntɐlɪə ˈɛɹpoːɹt vˈaɪə ðə dᵻdʒˈɛz tˈuː ˈɛks ɹˈeɪ dᵻpˈɑːɹtʃɚ, ɹˈʌnweɪ tˈuː ˈeɪt,klˈaɪm tuː sˈɛvən θˈaʊzənd fˈiːt, skwˈɔːk θɹˈiː zˈiəɹoʊ fˈaɪv fˈaɪv."
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[VFR - Debug] CircuitManager: Unregistered Austrian 14GK
+[LocalVoiceInput] sid=376 ls=1.165 | "Cleared to antalya airport via the deges two x ray departure, runway two eight,climb to seven thousand feet, squawk three zero five five,sunexpress three sierra bravo."
+[LocalVoicePhonemes] sid=376 | "klˈɪɹd tuː ˈæntɐlɪə ˈɛɹpoːɹt vˈaɪə ðə dᵻdʒˈɛz tˈuː ˈɛks ɹˈeɪ dᵻpˈɑːɹtʃɚ, ɹˈʌnweɪ tˈuː ˈeɪt,klˈaɪm tuː sˈɛvən θˈaʊzənd fˈiːt, skwˈɔːk θɹˈiː zˈiəɹoʊ fˈaɪv fˈaɪv,sˈʌnɪkspɹˌɛs θɹˈiː siːˈɛɹə bɹˈɑːvoʊ."
+[LocalVoiceInput] sid=162 ls=1.089 | "Sunexpress three sierra bravo, reedback correct. Contact ground one two one decimal seven five five when ready for push or start."
+[LocalVoicePhonemes] sid=162 | "sˈʌnɪkspɹˌɛs θɹˈiː siːˈɛɹə bɹˈɑːvoʊ, ɹˈiːdbæk kɚɹˈɛkt. kˈɑːntækt ɡɹˈaʊnd wˌʌn tˈuː wˌʌn dˈɛsɪməl sˈɛvən fˈaɪv fˈaɪv wˌɛn ɹˈɛdi fɔːɹ pˈʊʃ ɔːɹ stˈɑːɹt."
+Look rotation viewing vector is zero
+[LocalVoiceInput] sid=376 ls=1.165 | "Ground one two one decimal seven five five when ready for pushback or engine start, sunexpress three sierra bravo"
+[LocalVoicePhonemes] sid=376 | "ɡɹˈaʊnd wˌʌn tˈuː wˌʌn dˈɛsɪməl sˈɛvən fˈaɪv fˈaɪv wˌɛn ɹˈɛdi fɔːɹ pˈʊʃbæk ɔːɹ ˈɛndʒɪn stˈɑːɹt, sˈʌnɪkspɹˌɛs θɹˈiː siːˈɛɹə bɹˈɑːvoʊ"
+[LocalVoiceInput] sid=148 ls=1.350 | "Zurich delivery, swiss seven  three  six,airbus atwo twenty one hundred, with information sierra, ramp bravo four five,request i f r clearance to skipohl."
+[LocalVoicePhonemes] sid=148 | "zjˈʊɹɪk dᵻlˈɪvɚɹi, swˈɪs sˈɛvən θɹˈiː sˈɪks,ˈɛɹbʌs ˈætwoʊ twˈɛnti wˌʌn hˈʌndɹɪd, wɪð ˌɪnfɚmˈeɪʃən siːˈɛɹə, ɹˈæmp bɹˈɑːvoʊ fˈoːɹ fˈaɪv,ɹᵻkwˈɛst ˈaɪ ˈɛf ˈɑːɹ klˈɪɹəns tuː skˈɪpoʊl."
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[LocalVoiceInput] sid=162 ls=1.089 | "Swiss seven  three  six,zurich delivery, information sierra correct, cleared to skipohl via vebit one yankee departure, runway two eight,climb via sidd to seven thousand feet, squawk five four six zero."
+[LocalVoicePhonemes] sid=162 | "swˈɪs sˈɛvən θɹˈiː sˈɪks,zjˈʊɹɪk dᵻlˈɪvɚɹi, ˌɪnfɚmˈeɪʃən siːˈɛɹə kɚɹˈɛkt, klˈɪɹd tuː skˈɪpoʊl vˈaɪə vˈɛbɪt wˌʌn jˈæŋkiː dᵻpˈɑːɹtʃɚ, ɹˈʌnweɪ tˈuː ˈeɪt,klˈaɪm vˈaɪə sˌɪd tuː sˈɛvən θˈaʊzənd fˈiːt, skwˈɔːk fˈaɪv fˈoːɹ sˈɪks zˈiəɹoʊ."
+[Planning] GoAround LFPO/02: charted procedure REJECTED — charted procedure carries no altitude. Falling back to the generated pattern.
+[LocalVoiceInput] sid=148 ls=1.350 | "Cleared to skipohl via vebit one yankee departure, runway two eight,climb via sidd to seven thousand feet, squawk five four six zero,swiss seven  three  six."
+[LocalVoicePhonemes] sid=148 | "klˈɪɹd tuː skˈɪpoʊl vˈaɪə vˈɛbɪt wˌʌn jˈæŋkiː dᵻpˈɑːɹtʃɚ, ɹˈʌnweɪ tˈuː ˈeɪt,klˈaɪm vˈaɪə sˌɪd tuː sˈɛvən θˈaʊzənd fˈiːt, skwˈɔːk fˈaɪv fˈoːɹ sˈɪks zˈiəɹoʊ,swˈɪs sˈɛvən θɹˈiː sˈɪks."
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[Bindings] Saving: /Keyboard/f3
+[LocalVoiceInput] sid=162 ls=1.089 | "Swiss seven  three  six,reedback correct. Contact ground one two one decimal seven five five when ready for pushback or engine start."
+[LocalVoicePhonemes] sid=162 | "swˈɪs sˈɛvən θɹˈiː sˈɪks,ɹˈiːdbæk kɚɹˈɛkt. kˈɑːntækt ɡɹˈaʊnd wˌʌn tˈuː wˌʌn dˈɛsɪməl sˈɛvən fˈaɪv fˈaɪv wˌɛn ɹˈɛdi fɔːɹ pˈʊʃbæk ɔːɹ ˈɛndʒɪn stˈɑːɹt."
+[LocalVoiceInput] sid=148 ls=1.350 | "Ground one two one decimal seven five five when ready, swiss seven  three  six,have uh good evening."
+[LocalVoicePhonemes] sid=148 | "ɡɹˈaʊnd wˌʌn tˈuː wˌʌn dˈɛsɪməl sˈɛvən fˈaɪv fˈaɪv wˌɛn ɹˈɛdi, swˈɪs sˈɛvən θɹˈiː sˈɪks,hˈæv ˈʌ ɡˈʊd ˈiːvnɪŋ."
+[Planning] GoAround EBBR/25L: charted procedure REJECTED — top alt 700 vs terrain 173+1000 on leg 0. Falling back to the generated pattern.
+[LocalVoiceInput] sid=301 ls=0.816 | "Scandinavian eight  niner bravo, request i f r clearance to kastrup."
+[LocalVoicePhonemes] sid=301 | "skˌændɪnˈeɪviən ˈeɪt nˈaɪnɚ bɹˈɑːvoʊ, ɹᵻkwˈɛst ˈaɪ ˈɛf ˈɑːɹ klˈɪɹəns tuː kˈæstɹʌp."
+[LocalVoiceInput] sid=162 ls=1.089 | "Scandinavian eight  niner bravo, zurich delivery, information sierra current, cleared to kastrup airport via zurich east tree victor departure, runway two eight,climb via sidd to six thousand feet, squawk three zero three one."
+[LocalVoicePhonemes] sid=162 | "skˌændɪnˈeɪviən ˈeɪt nˈaɪnɚ bɹˈɑːvoʊ, zjˈʊɹɪk dᵻlˈɪvɚɹi, ˌɪnfɚmˈeɪʃən siːˈɛɹə kˈɜːɹənt, klˈɪɹd tuː kˈæstɹʌp ˈɛɹpoːɹt vˈaɪə zjˈʊɹɪk ˈiːst tɹˈiː vˈɪktɚ dᵻpˈɑːɹtʃɚ, ɹˈʌnweɪ tˈuː ˈeɪt,klˈaɪm vˈaɪə sˌɪd tuː sˈɪks θˈaʊzənd fˈiːt, skwˈɔːk θɹˈiː zˈiəɹoʊ θɹˈiː wˌʌn."
+[GSX] Integration enabled.. Departure Handling: True | Arrival Handling: True
+[ATIS] Refreshing all metars.
+[LocalVoiceInput] sid=301 ls=0.816 | "Cleared to kastrup airport via zurich east tree victor departure, runway two eight,climb via sidd to six thousand feet, squawk three zero three one,scandinavian eight  niner bravo."
+[LocalVoicePhonemes] sid=301 | "klˈɪɹd tuː kˈæstɹʌp ˈɛɹpoːɹt vˈaɪə zjˈʊɹɪk ˈiːst tɹˈiː vˈɪktɚ dᵻpˈɑːɹtʃɚ, ɹˈʌnweɪ tˈuː ˈeɪt,klˈaɪm vˈaɪə sˌɪd tuː sˈɪks θˈaʊzənd fˈiːt, skwˈɔːk θɹˈiː zˈiəɹoʊ θɹˈiː wˌʌn,skˌændɪnˈeɪviən ˈeɪt nˈaɪnɚ bɹˈɑːvoʊ."
+[LocalVoiceInput] sid=162 ls=1.089 | "Scandinavian eight  niner bravo, reedback correct. Contact ground one two one decimal seven five five when ready for push or start."
+[LocalVoicePhonemes] sid=162 | "skˌændɪnˈeɪviən ˈeɪt nˈaɪnɚ bɹˈɑːvoʊ, ɹˈiːdbæk kɚɹˈɛkt. kˈɑːntækt ɡɹˈaʊnd wˌʌn tˈuː wˌʌn dˈɛsɪməl sˈɛvən fˈaɪv fˈaɪv wˌɛn ɹˈɛdi fɔːɹ pˈʊʃ ɔːɹ stˈɑːɹt."
+[LocalVoiceInput] sid=301 ls=0.816 | "We'll contact ground one two one decimal seven five five when ready for pushback or engine start, scandinavian eight  niner bravo, good day, thanks"
+[LocalVoicePhonemes] sid=301 | "wiːl kˈɑːntækt ɡɹˈaʊnd wˌʌn tˈuː wˌʌn dˈɛsɪməl sˈɛvən fˈaɪv fˈaɪv wˌɛn ɹˈɛdi fɔːɹ pˈʊʃbæk ɔːɹ ˈɛndʒɪn stˈɑːɹt, skˌændɪnˈeɪviən ˈeɪt nˈaɪnɚ bɹˈɑːvoʊ, ɡˈʊd dˈeɪ, θˈæŋks"
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+------------------------------
+[Speech Transcription] Raw: zurich delivery swiss eight seven four request irf clearance to stuttgart
+[Speech Transcription] AI Processed: Zurich Delivery, Swiss 874, request IFR clearance to Stuttgart.
+[Speech Transcription] Table Fallback: zurich delivery swiss 874 request irf clearance to stuttgart 
+------------------------------
+[ControllerScript] AICommunicationSystem.IFR.IfrEvaluatorScript
+[RunwaySelectEP] SWR874 28 pruned 6 EP(s) whose route crosses the departure runway itself (4 remain)
+[RunwaySelect] SWR874 28 A*hs=250 ep=True dep=4 arr=0(wt=0.00) busyness=1200 total=1450
+[RunwayAlloc] SWR874 planned=28 validRunways=[28] branch=exactMatch result=28 cachedEP=True
+[LocalVoiceInput] sid=162 ls=1.089 | "Swiss eight  seven  four,zurich delivery, information sierra current, cleared to stuttgart via the deges two yankee departure, runway two eight,climb to seven thousand feet, squawk one zero zero zero."
+[LocalVoicePhonemes] sid=162 | "swˈɪs ˈeɪt sˈɛvən fˈoːɹ,zjˈʊɹɪk dᵻlˈɪvɚɹi, ˌɪnfɚmˈeɪʃən siːˈɛɹə kˈɜːɹənt, klˈɪɹd tuː stˈʌtɡɑːɹt vˈaɪə ðə dᵻdʒˈɛz tˈuː jˈæŋkiː dᵻpˈɑːɹtʃɚ, ɹˈʌnweɪ tˈuː ˈeɪt,klˈaɪm tuː sˈɛvən θˈaʊzənd fˈiːt, skwˈɔːk wˌʌn zˈiəɹoʊ zˈiəɹoʊ zˈiəɹoʊ."
+------------------------------
+[PlayerState] Friday 18:43, lat: 47.4534, lon: 8.5586, alt: 1408, hdg: 4, spd: 0, gs: 0, lastFix: , currFix: ZH541, inVector: False, com1: 121.930(On), com2: 121.500(On), transponder: 2000(On)
+[Instruction] Swiss 874, Zurich Delivery, information S current, cleared to Stuttgart via the DEGE2Y departure, runway 28, climb to 7000 feet, squawk 1000.
+------------------------------
+[LocalVoiceInput] sid=147 ls=1.128 | "Cleared to stuttgart via the deges two yankee departure, runway two eight,climb to seven thousand feet, squawk one zero zero zero,swiss eight  seven  four."
+[LocalVoicePhonemes] sid=147 | "klˈɪɹd tuː stˈʌtɡɑːɹt vˈaɪə ðə dᵻdʒˈɛz tˈuː jˈæŋkiː dᵻpˈɑːɹtʃɚ, ɹˈʌnweɪ tˈuː ˈeɪt,klˈaɪm tuː sˈɛvən θˈaʊzənd fˈiːt, skwˈɔːk wˌʌn zˈiəɹoʊ zˈiəɹoʊ zˈiəɹoʊ,swˈɪs ˈeɪt sˈɛvən fˈoːɹ."
+[Traffic] EZY941T live enroute injected past its entire path (no waypoint ahead of the live position) - dropping injection.
+------------------------------
+[PlayerState] Friday 18:43, lat: 47.4534, lon: 8.5586, alt: 1408, hdg: 4, spd: 0, gs: 0, lastFix: , currFix: ZH541, inVector: False, com1: 121.930(On), com2: 121.500(On), transponder: 2000(On)
+[Instruction] Cleared to Stuttgart via the DEGE2Y departure, runway 28, climb to 7000 feet, squawk 1000, Swiss 874.
+------------------------------
+[LocalVoiceInput] sid=162 ls=1.089 | "Swiss eight  seven  four,reedback correct. Contact ground one two one decimal seven five five when ready for push or start."
+[LocalVoicePhonemes] sid=162 | "swˈɪs ˈeɪt sˈɛvən fˈoːɹ,ɹˈiːdbæk kɚɹˈɛkt. kˈɑːntækt ɡɹˈaʊnd wˌʌn tˈuː wˌʌn dˈɛsɪməl sˈɛvən fˈaɪv fˈaɪv wˌɛn ɹˈɛdi fɔːɹ pˈʊʃ ɔːɹ stˈɑːɹt."
+------------------------------
+[PlayerState] Friday 18:43, lat: 47.4534, lon: 8.5586, alt: 1408, hdg: 4, spd: 0, gs: 0, lastFix: , currFix: ZH541, inVector: False, com1: 121.930(On), com2: 121.500(On), transponder: 2000(On)
+[Instruction] Swiss 874, readback correct. Contact ground 121.755 when ready for push or start.
+------------------------------
+[Comms] Auto-tune skipped — aircraft destroyed before script completion (target comm 132.305)
+[LocalVoiceInput] sid=147 ls=1.128 | "Ground one two one decimal seven five five when ready for pushback or engine start, swiss eight  seven  four "
+[LocalVoicePhonemes] sid=147 | "ɡɹˈaʊnd wˌʌn tˈuː wˌʌn dˈɛsɪməl sˈɛvən fˈaɪv fˈaɪv wˌɛn ɹˈɛdi fɔːɹ pˈʊʃbæk ɔːɹ ˈɛndʒɪn stˈɑːɹt, swˈɪs ˈeɪt sˈɛvən fˈoːɹ"
+------------------------------
+[PlayerState] Friday 18:43, lat: 47.4534, lon: 8.5586, alt: 1408, hdg: 4, spd: 0, gs: 0, lastFix: , currFix: ZH541, inVector: False, com1: 121.930(On), com2: 121.500(On), transponder: 2000(On)
+[Instruction] Ground 121.755 when ready for pushback or engine start, Swiss 874.
+------------------------------
+[Comms] Set Frequency Com1: 121755000
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[LocalVoiceInput] sid=173 ls=1.132 | "Scandinavian eight  niner bravo, zurich apron, pushback and engine start approved. Face west."
+[LocalVoicePhonemes] sid=173 | "skˌændɪnˈeɪviən ˈeɪt nˈaɪnɚ bɹˈɑːvoʊ, zjˈʊɹɪk ˈeɪpɹən, pˈʊʃbæk ænd ˈɛndʒɪn stˈɑːɹt ɐpɹˈuːvd. fˈeɪs wˈɛst."
+[LocalVoiceInput] sid=301 ls=0.734 | "Pushback and engine start approved, face west, scandinavian eight  niner bravo."
+[LocalVoicePhonemes] sid=301 | "pˈʊʃbæk ænd ˈɛndʒɪn stˈɑːɹt ɐpɹˈuːvd, fˈeɪs wˈɛst, skˌændɪnˈeɪviən ˈeɪt nˈaɪnɚ bɹˈɑːvoʊ."
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[LocalVoiceInput] sid=301 ls=0.734 | "Scandinavian eight  niner bravo, taxi for departure."
+[LocalVoicePhonemes] sid=301 | "skˌændɪnˈeɪviən ˈeɪt nˈaɪnɚ bɹˈɑːvoʊ, tˈæksi fɔːɹ dᵻpˈɑːɹtʃɚ."
+[LocalVoiceInput] sid=173 ls=1.132 | "Scandinavian eight  niner bravo, taxi to holding point alpha one,runway two eight,via november, foxtrot, inner, alpha."
+[LocalVoicePhonemes] sid=173 | "skˌændɪnˈeɪviən ˈeɪt nˈaɪnɚ bɹˈɑːvoʊ, tˈæksi tuː hˈoʊldɪŋ pˈɔɪnt ˈælfə wˌʌn,ɹˈʌnweɪ tˈuː ˈeɪt,vˈaɪə noʊvˈɛmbɚ, fˈɑːkstɹɑːt, ˈɪnɚ, ˈælfə."
+[LocalVoiceInput] sid=301 ls=0.734 | "Taxi to holding point alpha one,runway two eight,via november, foxtrot, inner, alpha, scandinavian eight  niner bravo"
+[LocalVoicePhonemes] sid=301 | "tˈæksi tuː hˈoʊldɪŋ pˈɔɪnt ˈælfə wˌʌn,ɹˈʌnweɪ tˈuː ˈeɪt,vˈaɪə noʊvˈɛmbɚ, fˈɑːkstɹɑːt, ˈɪnɚ, ˈælfə, skˌændɪnˈeɪviən ˈeɪt nˈaɪnɚ bɹˈɑːvoʊ"
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[LocalVoiceInput] sid=173 ls=1.132 | "Sunexpress three sierra bravo, contact zurich tower one one eight decimal one."
+[LocalVoicePhonemes] sid=173 | "sˈʌnɪkspɹˌɛs θɹˈiː siːˈɛɹə bɹˈɑːvoʊ, kˈɑːntækt zjˈʊɹɪk tˈaʊɚ wˌʌn wˌʌn ˈeɪt dˈɛsɪməl wˌʌn."
+[LocalVoiceInput] sid=376 ls=1.049 | "Contact tower one one eight decimal one,sunexpress three sierra bravo, good day."
+[LocalVoicePhonemes] sid=376 | "kˈɑːntækt tˈaʊɚ wˌʌn wˌʌn ˈeɪt dˈɛsɪməl wˌʌn,sˈʌnɪkspɹˌɛs θɹˈiː siːˈɛɹə bɹˈɑːvoʊ, ɡˈʊd dˈeɪ."
+[LocalVoiceInput] sid=173 ls=1.132 | "Swiss seven  three  six,contact zurich tower one one eight decimal one."
+[LocalVoicePhonemes] sid=173 | "swˈɪs sˈɛvən θɹˈiː sˈɪks,kˈɑːntækt zjˈʊɹɪk tˈaʊɚ wˌʌn wˌʌn ˈeɪt dˈɛsɪməl wˌʌn."
+[LocalVoiceInput] sid=148 ls=1.215 | "Over to tower one one eight decimal one,swiss seven  three  six,bye bye."
+[LocalVoicePhonemes] sid=148 | "ˈoʊvɚ tuː tˈaʊɚ wˌʌn wˌʌn ˈeɪt dˈɛsɪməl wˌʌn,swˈɪs sˈɛvən θɹˈiː sˈɪks,bˈaɪ bˈaɪ."
+[LocalVoiceInput] sid=173 ls=1.258 | "Eurowings niner hotel, contact zurich tower one one eight decimal one."
+[LocalVoicePhonemes] sid=173 | "jˈʊɹɹoʊwɪŋz nˈaɪnɚ hoʊtˈɛl, kˈɑːntækt zjˈʊɹɪk tˈaʊɚ wˌʌn wˌʌn ˈeɪt dˈɛsɪməl wˌʌn."
+[LocalVoiceInput] sid=169 ls=0.736 | "Over to tower one one eight decimal one,eurowings niner hotel."
+[LocalVoicePhonemes] sid=169 | "ˈoʊvɚ tuː tˈaʊɚ wˌʌn wˌʌn ˈeɪt dˈɛsɪməl wˌʌn,jˈʊɹɹoʊwɪŋz nˈaɪnɚ hoʊtˈɛl."
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[ATIS] Refreshing ATIS for LSZH if required
+[ATIS] Refreshing ATIS for EDDS if required
+[ATIS] Refreshing all metars.
+[Traffic] UNI131 live enroute injected past its entire path (no waypoint ahead of the live position) - dropping injection.
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[Planning] GoAround LFPO/02: charted procedure REJECTED — charted procedure carries no altitude. Falling back to the generated pattern.
+[LocalVoiceInput] sid=173 ls=1.258 | "Scandinavian eight  niner bravo, contact zurich tower one one eight decimal one."
+[LocalVoicePhonemes] sid=173 | "skˌændɪnˈeɪviən ˈeɪt nˈaɪnɚ bɹˈɑːvoʊ, kˈɑːntækt zjˈʊɹɪk tˈaʊɚ wˌʌn wˌʌn ˈeɪt dˈɛsɪməl wˌʌn."
+[LocalVoiceInput] sid=301 ls=0.816 | "Contact tower one one eight decimal one,scandinavian eight  niner bravo."
+[LocalVoicePhonemes] sid=301 | "kˈɑːntækt tˈaʊɚ wˌʌn wˌʌn ˈeɪt dˈɛsɪməl wˌʌn,skˌændɪnˈeɪviən ˈeɪt nˈaɪnɚ bɹˈɑːvoʊ."
+[LocalVoiceInput] sid=150 ls=1.315 | "Ae dull vice two  seven november, gate bravo four one,request pushback and engine start."
+[LocalVoicePhonemes] sid=150 | "ˌeɪˈiː dˈʌl vˈaɪs tˈuː sˈɛvən noʊvˈɛmbɚ, ɡˈeɪt bɹˈɑːvoʊ fˈoːɹ wˌʌn,ɹᵻkwˈɛst pˈʊʃbæk ænd ˈɛndʒɪn stˈɑːɹt."
+[LocalVoiceInput] sid=173 ls=1.258 | "Ae dull vice two  seven november, zurich apron, pushback approved. Face west."
+[LocalVoicePhonemes] sid=173 | "ˌeɪˈiː dˈʌl vˈaɪs tˈuː sˈɛvən noʊvˈɛmbɚ, zjˈʊɹɪk ˈeɪpɹən, pˈʊʃbæk ɐpɹˈuːvd. fˈeɪs wˈɛst."
+[LocalVoiceInput] sid=150 ls=1.315 | "Pushback approved, face west, ae dull vice two  seven november."
+[LocalVoicePhonemes] sid=150 | "pˈʊʃbæk ɐpɹˈuːvd, fˈeɪs wˈɛst, ˌeɪˈiː dˈʌl vˈaɪs tˈuː sˈɛvən noʊvˈɛmbɚ."
+[Traffic] EZS75KZ live enroute injected past its entire path (no waypoint ahead of the live position) - dropping injection.
+[TrafficTurnaround]: EDW394 departs to LIBD in 11h:02m:44s
+[LocalVoiceInput] sid=425 ls=1.187 | "Shamrock tree  four yankee, at gate echo five four,request pushback and engine start."
+[LocalVoicePhonemes] sid=425 | "ʃˈæmɹɑːk tɹˈiː fˈoːɹ jˈæŋkiː, æt ɡˈeɪt ˈɛkoʊ fˈaɪv fˈoːɹ,ɹᵻkwˈɛst pˈʊʃbæk ænd ˈɛndʒɪn stˈɑːɹt."
+[LocalVoiceInput] sid=173 ls=1.258 | "Shamrock three  four yankee, zurich apron, pushback and engine start approved. Face west."
+[LocalVoicePhonemes] sid=173 | "ʃˈæmɹɑːk θɹˈiː fˈoːɹ jˈæŋkiː, zjˈʊɹɪk ˈeɪpɹən, pˈʊʃbæk ænd ˈɛndʒɪn stˈɑːɹt ɐpɹˈuːvd. fˈeɪs wˈɛst."
+[LocalVoiceInput] sid=425 ls=1.187 | "Pushback and engine start approved, face west, shamrock tree  four yankee."
+[LocalVoicePhonemes] sid=425 | "pˈʊʃbæk ænd ˈɛndʒɪn stˈɑːɹt ɐpɹˈuːvd, fˈeɪs wˈɛst, ʃˈæmɹɑːk tɹˈiː fˈoːɹ jˈæŋkiː."
+[Planning] GoAround EBBR/25L: charted procedure REJECTED — top alt 700 vs terrain 173+1000 on leg 0. Falling back to the generated pattern.
+[LocalVoiceInput] sid=379 ls=0.828 | "Sunturk three  four victor x ray, gate echo five eight,request pushback and engine start."
+[LocalVoicePhonemes] sid=379 | "sˈʌntɜːk θɹˈiː fˈoːɹ vˈɪktɚ ˈɛks ɹˈeɪ, ɡˈeɪt ˈɛkoʊ fˈaɪv ˈeɪt,ɹᵻkwˈɛst pˈʊʃbæk ænd ˈɛndʒɪn stˈɑːɹt."
+[LocalVoiceInput] sid=173 ls=1.258 | "Sunturk three  four victor x ray, zurich apron, pushback approved. Face southeast."
+[LocalVoicePhonemes] sid=173 | "sˈʌntɜːk θɹˈiː fˈoːɹ vˈɪktɚ ˈɛks ɹˈeɪ, zjˈʊɹɪk ˈeɪpɹən, pˈʊʃbæk ɐpɹˈuːvd. fˈeɪs sˈaʊθiːst."
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[LocalVoiceInput] sid=379 ls=0.828 | "Pushback and engine start approved, face southeast, sunturk three  four victor x ray."
+[LocalVoicePhonemes] sid=379 | "pˈʊʃbæk ænd ˈɛndʒɪn stˈɑːɹt ɐpɹˈuːvd, fˈeɪs sˈaʊθiːst, sˈʌntɜːk θɹˈiː fˈoːɹ vˈɪktɚ ˈɛks ɹˈeɪ."
+[LocalVoiceInput] sid=150 ls=1.315 | "Ae dull vice two  seven november, ready to taxi to the active."
+[LocalVoicePhonemes] sid=150 | "ˌeɪˈiː dˈʌl vˈaɪs tˈuː sˈɛvən noʊvˈɛmbɚ, ɹˈɛdi tuː tˈæksi tuː ðə ˈæktɪv."
+[LocalVoiceInput] sid=173 ls=1.258 | "Ae dull vice two  seven november, taxi to holding point alpha one,runway two eight,via november, foxtrot, inner, alpha."
+[LocalVoicePhonemes] sid=173 | "ˌeɪˈiː dˈʌl vˈaɪs tˈuː sˈɛvən noʊvˈɛmbɚ, tˈæksi tuː hˈoʊldɪŋ pˈɔɪnt ˈælfə wˌʌn,ɹˈʌnweɪ tˈuː ˈeɪt,vˈaɪə noʊvˈɛmbɚ, fˈɑːkstɹɑːt, ˈɪnɚ, ˈælfə."
+[LocalVoiceInput] sid=150 ls=1.315 | "Taxi to holding point alpha one,runway two eight,via november, foxtrot, inner, alpha, ae dull vice two  seven november"
+[LocalVoicePhonemes] sid=150 | "tˈæksi tuː hˈoʊldɪŋ pˈɔɪnt ˈælfə wˌʌn,ɹˈʌnweɪ tˈuː ˈeɪt,vˈaɪə noʊvˈɛmbɚ, fˈɑːkstɹɑːt, ˈɪnɚ, ˈælfə, ˌeɪˈiː dˈʌl vˈaɪs tˈuː sˈɛvən noʊvˈɛmbɚ"
+[LocalVoiceInput] sid=425 ls=1.187 | "Shamrock tree  four yankee, taxi for departure."
+[LocalVoicePhonemes] sid=425 | "ʃˈæmɹɑːk tɹˈiː fˈoːɹ jˈæŋkiː, tˈæksi fɔːɹ dᵻpˈɑːɹtʃɚ."
+[LocalVoiceInput] sid=173 ls=1.258 | "Shamrock three  four yankee, taxi to holding point bravo, runway two eight,via charlie, foxtrot, bravo, juliet, bravo."
+[LocalVoicePhonemes] sid=173 | "ʃˈæmɹɑːk θɹˈiː fˈoːɹ jˈæŋkiː, tˈæksi tuː hˈoʊldɪŋ pˈɔɪnt bɹˈɑːvoʊ, ɹˈʌnweɪ tˈuː ˈeɪt,vˈaɪə tʃˈɑːɹli, fˈɑːkstɹɑːt, bɹˈɑːvoʊ, dʒˌuːlɪˈɛt, bɹˈɑːvoʊ."
+[TrafficTurnaround]: SWR2CL departs to LIRF in 10h:51m:38s
+[LocalVoiceInput] sid=425 ls=1.187 | "Taxi to holding point bravo, runway two eight,via charlie, foxtrot, bravo, juliet, bravo, shamrock tree  four yankee"
+[LocalVoicePhonemes] sid=425 | "tˈæksi tuː hˈoʊldɪŋ pˈɔɪnt bɹˈɑːvoʊ, ɹˈʌnweɪ tˈuː ˈeɪt,vˈaɪə tʃˈɑːɹli, fˈɑːkstɹɑːt, bɹˈɑːvoʊ, dʒˌuːlɪˈɛt, bɹˈɑːvoʊ, ʃˈæmɹɑːk tɹˈiː fˈoːɹ jˈæŋkiː"
+Look rotation viewing vector is zero
+[LocalVoiceInput] sid=379 ls=0.828 | "Sunturk three  four victor x ray, ready to taxi to the active."
+[LocalVoicePhonemes] sid=379 | "sˈʌntɜːk θɹˈiː fˈoːɹ vˈɪktɚ ˈɛks ɹˈeɪ, ɹˈɛdi tuː tˈæksi tuː ðə ˈæktɪv."
+[LocalVoiceInput] sid=173 ls=1.258 | "Sunturk three  four victor x ray, taxi to holding point bravo, runway two eight,via foxtrot, bravo, juliet, bravo."
+[LocalVoicePhonemes] sid=173 | "sˈʌntɜːk θɹˈiː fˈoːɹ vˈɪktɚ ˈɛks ɹˈeɪ, tˈæksi tuː hˈoʊldɪŋ pˈɔɪnt bɹˈɑːvoʊ, ɹˈʌnweɪ tˈuː ˈeɪt,vˈaɪə fˈɑːkstɹɑːt, bɹˈɑːvoʊ, dʒˌuːlɪˈɛt, bɹˈɑːvoʊ."
+[LocalVoiceInput] sid=379 ls=0.828 | "Taxi to holding point bravo, runway two eight,via foxtrot, bravo, juliet, bravo, sunturk three  four victor x ray"
+[LocalVoicePhonemes] sid=379 | "tˈæksi tuː hˈoʊldɪŋ pˈɔɪnt bɹˈɑːvoʊ, ɹˈʌnweɪ tˈuː ˈeɪt,vˈaɪə fˈɑːkstɹɑːt, bɹˈɑːvoʊ, dʒˌuːlɪˈɛt, bɹˈɑːvoʊ, sˈʌntɜːk θɹˈiː fˈoːɹ vˈɪktɚ ˈɛks ɹˈeɪ"
+[Planning] GoAround LFMN/04L: charted procedure REJECTED — top alt 400 vs terrain 0+1000 on leg 0. Falling back to the generated pattern.
+[Planning] GoAround turn: rwy=04L|sign=1|source=terrainVeto|conventionSide=4192ft|chosenSide=1958ft|rightHigh=1958|leftHigh=4192
+[METAR] Historic batch fetch for 44 ambient fields at 20260911_1852
+[ATIS] Refreshing all metars.
+[LocalVoiceInput] sid=173 ls=1.258 | "Sunturk three  four victor x ray, hold position for traffic."
+[LocalVoicePhonemes] sid=173 | "sˈʌntɜːk θɹˈiː fˈoːɹ vˈɪktɚ ˈɛks ɹˈeɪ, hˈoʊld pəzˈɪʃən fɔːɹ tɹˈæfɪk."
+[LocalVoiceInput] sid=379 ls=0.828 | "Hold position, sunturk three  four victor x ray."
+[LocalVoicePhonemes] sid=379 | "hˈoʊld pəzˈɪʃən, sˈʌntɜːk θɹˈiː fˈoːɹ vˈɪktɚ ˈɛks ɹˈeɪ."
+[LocalVoiceInput] sid=173 ls=1.258 | "Ae dull vice two  seven november, contact zurich tower one one eight decimal one."
+[LocalVoicePhonemes] sid=173 | "ˌeɪˈiː dˈʌl vˈaɪs tˈuː sˈɛvən noʊvˈɛmbɚ, kˈɑːntækt zjˈʊɹɪk tˈaʊɚ wˌʌn wˌʌn ˈeɪt dˈɛsɪməl wˌʌn."
+[LocalVoiceInput] sid=150 ls=1.315 | "Over to tower one one eight decimal one,ae dull vice two  seven november, have uh good evening."
+[LocalVoicePhonemes] sid=150 | "ˈoʊvɚ tuː tˈaʊɚ wˌʌn wˌʌn ˈeɪt dˈɛsɪməl wˌʌn,ˌeɪˈiː dˈʌl vˈaɪs tˈuː sˈɛvən noʊvˈɛmbɚ, hˈæv ˈʌ ɡˈʊd ˈiːvnɪŋ."
+[LocalVoiceInput] sid=173 ls=1.258 | "Sunturk three  four victor x ray, continue taxi."
+[LocalVoicePhonemes] sid=173 | "sˈʌntɜːk θɹˈiː fˈoːɹ vˈɪktɚ ˈɛks ɹˈeɪ, kəntˈɪnjuː tˈæksi."
+[LocalVoiceInput] sid=379 ls=0.828 | "Continue taxi, sunturk three  four victor x ray."
+[LocalVoicePhonemes] sid=379 | "kəntˈɪnjuː tˈæksi, sˈʌntɜːk θɹˈiː fˈoːɹ vˈɪktɚ ˈɛks ɹˈeɪ."
+[LocalVoiceInput] sid=173 ls=1.258 | "Shamrock three  four yankee, contact zurich tower one one eight decimal one."
+[LocalVoicePhonemes] sid=173 | "ʃˈæmɹɑːk θɹˈiː fˈoːɹ jˈæŋkiː, kˈɑːntækt zjˈʊɹɪk tˈaʊɚ wˌʌn wˌʌn ˈeɪt dˈɛsɪməl wˌʌn."
+[LocalVoiceInput] sid=425 ls=1.187 | "Contact tower one one eight decimal one,shamrock tree  four yankee, bye bye."
+[LocalVoicePhonemes] sid=425 | "kˈɑːntækt tˈaʊɚ wˌʌn wˌʌn ˈeɪt dˈɛsɪməl wˌʌn,ʃˈæmɹɑːk tɹˈiː fˈoːɹ jˈæŋkiː, bˈaɪ bˈaɪ."
+[GSX] Integration enabled.. Departure Handling: True | Arrival Handling: True
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[LocalVoiceInput] sid=398 ls=1.194 | "Easy five  eight charlie victor, gate echo five four,request pushback and engine start."
+[LocalVoicePhonemes] sid=398 | "ˈiːzi fˈaɪv ˈeɪt tʃˈɑːɹli vˈɪktɚ, ɡˈeɪt ˈɛkoʊ fˈaɪv fˈoːɹ,ɹᵻkwˈɛst pˈʊʃbæk ænd ˈɛndʒɪn stˈɑːɹt."
+[LocalVoiceInput] sid=173 ls=1.258 | "Sunturk three  four victor x ray, contact zurich tower one one eight decimal one."
+[LocalVoicePhonemes] sid=173 | "sˈʌntɜːk θɹˈiː fˈoːɹ vˈɪktɚ ˈɛks ɹˈeɪ, kˈɑːntækt zjˈʊɹɪk tˈaʊɚ wˌʌn wˌʌn ˈeɪt dˈɛsɪməl wˌʌn."
+[LocalVoiceInput] sid=379 ls=0.828 | "Over to tower one one eight decimal one,sunturk three  four victor x ray."
+[LocalVoicePhonemes] sid=379 | "ˈoʊvɚ tuː tˈaʊɚ wˌʌn wˌʌn ˈeɪt dˈɛsɪməl wˌʌn,sˈʌntɜːk θɹˈiː fˈoːɹ vˈɪktɚ ˈɛks ɹˈeɪ."
+[LocalVoiceInput] sid=173 ls=1.258 | "Easy five  eight charlie victor, zurich apron, pushback approved. Face west."
+[LocalVoicePhonemes] sid=173 | "ˈiːzi fˈaɪv ˈeɪt tʃˈɑːɹli vˈɪktɚ, zjˈʊɹɪk ˈeɪpɹən, pˈʊʃbæk ɐpɹˈuːvd. fˈeɪs wˈɛst."
+[LocalVoiceInput] sid=398 ls=1.194 | "Pushback approved, face west, easy five  eight charlie victor."
+[LocalVoicePhonemes] sid=398 | "pˈʊʃbæk ɐpɹˈuːvd, fˈeɪs wˈɛst, ˈiːzi fˈaɪv ˈeɪt tʃˈɑːɹli vˈɪktɚ."
+[Comms] Duplicate frequency 125.200: RJAA ApproachDeparture vs center Langen Radar -> airport wins (onGround=False, relevantAirport=True, centerFromNearFallback=False)
+[Traffic] RYR3399 live enroute injected past its entire path (no waypoint ahead of the live position) - dropping injection.
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[Traffic] Aircraft AT45_DMS2LW_EDDB_EDDR would cause fatal in ConnectDestAirportToLastFixInRoute
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[LocalVoiceInput] sid=398 ls=1.194 | "Easy five  eight charlie victor, request taxi to the active."
+[LocalVoicePhonemes] sid=398 | "ˈiːzi fˈaɪv ˈeɪt tʃˈɑːɹli vˈɪktɚ, ɹᵻkwˈɛst tˈæksi tuː ðə ˈæktɪv."
+[TrafficTurnaround]: SWR1886 departs to LROP in 01h:25m:34s
+[LocalVoiceInput] sid=173 ls=1.258 | "Easy five  eight charlie victor, taxi to holding point bravo, runway two eight,via charlie, foxtrot, bravo, juliet, bravo."
+[LocalVoicePhonemes] sid=173 | "ˈiːzi fˈaɪv ˈeɪt tʃˈɑːɹli vˈɪktɚ, tˈæksi tuː hˈoʊldɪŋ pˈɔɪnt bɹˈɑːvoʊ, ɹˈʌnweɪ tˈuː ˈeɪt,vˈaɪə tʃˈɑːɹli, fˈɑːkstɹɑːt, bɹˈɑːvoʊ, dʒˌuːlɪˈɛt, bɹˈɑːvoʊ."
+[LocalVoiceInput] sid=398 ls=1.194 | "Taxi to holding point bravo, runway two eight,via charlie, foxtrot, bravo, juliet, bravo, easy five  eight charlie victor"
+[LocalVoicePhonemes] sid=398 | "tˈæksi tuː hˈoʊldɪŋ pˈɔɪnt bɹˈɑːvoʊ, ɹˈʌnweɪ tˈuː ˈeɪt,vˈaɪə tʃˈɑːɹli, fˈɑːkstɹɑːt, bɹˈɑːvoʊ, dʒˌuːlɪˈɛt, bɹˈɑːvoʊ, ˈiːzi fˈaɪv ˈeɪt tʃˈɑːɹli vˈɪktɚ"
+Look rotation viewing vector is zero
+[ATIS] Refreshing all metars.
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[LocalVoiceInput] sid=173 ls=1.258 | "Easy five  eight charlie victor, contact zurich tower one one eight decimal one."
+[LocalVoicePhonemes] sid=173 | "ˈiːzi fˈaɪv ˈeɪt tʃˈɑːɹli vˈɪktɚ, kˈɑːntækt zjˈʊɹɪk tˈaʊɚ wˌʌn wˌʌn ˈeɪt dˈɛsɪməl wˌʌn."
+[LocalVoiceInput] sid=398 ls=1.194 | "Over to tower one one eight decimal one,easy five  eight charlie victor."
+[LocalVoicePhonemes] sid=398 | "ˈoʊvɚ tuː tˈaʊɚ wˌʌn wˌʌn ˈeɪt dˈɛsɪməl wˌʌn,ˈiːzi fˈaɪv ˈeɪt tʃˈɑːɹli vˈɪktɚ."
+[Traffic] Aircraft (BAW754) was unable to find an exit from the runway and was removed.
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[TrafficTurnaround]: SWR5LD departs to LIRF in 16h:00m:09s
+[Traffic] Aircraft (EZY91QC) was unable to find an exit from the runway and was removed.
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[LocalVoiceInput] sid=316 ls=1.402 | "Lot three victor bravo, at ramp  five three whiskey, request pushback and engine start."
+[LocalVoicePhonemes] sid=316 | "lˈɑːt θɹˈiː vˈɪktɚ bɹˈɑːvoʊ, æt ɹˈæmp fˈaɪv θɹˈiː wˈɪski, ɹᵻkwˈɛst pˈʊʃbæk ænd ˈɛndʒɪn stˈɑːɹt."
+[LocalVoiceInput] sid=173 ls=1.258 | "Lot three victor bravo, zurich apron, pushback and engine start approved. Face north."
+[LocalVoicePhonemes] sid=173 | "lˈɑːt θɹˈiː vˈɪktɚ bɹˈɑːvoʊ, zjˈʊɹɪk ˈeɪpɹən, pˈʊʃbæk ænd ˈɛndʒɪn stˈɑːɹt ɐpɹˈuːvd. fˈeɪs nˈɔːɹθ."
+[LocalVoiceInput] sid=316 ls=1.402 | "Pushback and engine start approved, face north, lot three victor bravo."
+[LocalVoicePhonemes] sid=316 | "pˈʊʃbæk ænd ˈɛndʒɪn stˈɑːɹt ɐpɹˈuːvd, fˈeɪs nˈɔːɹθ, lˈɑːt θɹˈiː vˈɪktɚ bɹˈɑːvoʊ."
+[ATIS] Refreshing ATIS for LSZH if required
+[ATIS] METAR updated to METAR LSZH 111850Z VRB01KT CAVOK 16/09 Q1023 NOSIG at LSZH
+[ATIS] ATIS text updated to LSZH ATIS T 1902Z VRB01KT CAVOK 16/09 Q1023 ARR RWY 14 DEP RWY 16 28 TRANSITION-LEVEL FL070 ACKNOWLEDGE RECEIPT OF INFORMATION T AND ADVISE AIRCRAFT TYPE ON FIRST CONTACT  at LSZH
+[ATIS] ATIS spoken updated to Zurich Airport information Tango, one niner zero two zulu, surface wind variable, one knots. Ceiling and visibility OK, Temperature one six degrees, Dewpoint zero niner degrees, QNH one zero two tree, Landing runway one four, Departing runways one six , two eight, Transition level zero seven zero, Advise on initial contact you have information Tango. at LSZH
+[ATIS] Refreshing ATIS for EDDS if required
+[ATIS] METAR updated to METAR EDDS 111850Z AUTO VRB01KT CAVOK 17/07 Q1023 NOSIG at EDDS
+[ATIS] ATIS text updated to EDDS ATIS P 1902Z VRB01KT CAVOK 17/07 Q1023 RWY 25 IN USE TRANSITION-LEVEL FL050 ACKNOWLEDGE RECEIPT OF INFORMATION P AND ADVISE AIRCRAFT TYPE ON FIRST CONTACT  at EDDS
+[ATIS] ATIS spoken updated to Stuttgart Airport information Papa, one niner zero two zulu, surface wind variable, one knots. Ceiling and visibility OK, Temperature one seven degrees, Dewpoint zero seven degrees, QNH one zero two tree, Landing and departing runway two five, Transition level zero five zero, Advise on initial contact you have information Papa. at EDDS
+[LocalVoiceInput] sid=173 ls=1.258 | "All aircraft be advised information tango now current, q n h one zero two three."
+[LocalVoicePhonemes] sid=173 | "ˈɔːl ˈɛɹkɹæft bˈiː ɐdvˈaɪzd ˌɪnfɚmˈeɪʃən tˈæŋɡoʊ nˈaʊ kˈɜːɹənt, kjˈuː ˈɛn ˈeɪtʃ wˌʌn zˈiəɹoʊ tˈuː θɹˈiː."
+[ATIS] Refreshing all metars.
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[VFR - Debug] CircuitManager: Unregistered Ivory 601
+[TrafficTurnaround]: EDW130J departs to HEGN in 09h:09m:42s
+[LocalVoiceInput] sid=316 ls=1.402 | "Lot three victor bravo, ready to taxi to the active."
+[LocalVoicePhonemes] sid=316 | "lˈɑːt θɹˈiː vˈɪktɚ bɹˈɑːvoʊ, ɹˈɛdi tuː tˈæksi tuː ðə ˈæktɪv."
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[LocalVoiceInput] sid=173 ls=1.258 | "Lot three victor bravo, taxi via tango blue, tango, romeo, leema, echo seven,november, link three,inner, alpha, hold short of runway one six."
+[LocalVoicePhonemes] sid=173 | "lˈɑːt θɹˈiː vˈɪktɚ bɹˈɑːvoʊ, tˈæksi vˈaɪə tˈæŋɡoʊ blˈuː, tˈæŋɡoʊ, ɹˈoʊmɪˌoʊ, lˈiːmə, ˈɛkoʊ sˈɛvən,noʊvˈɛmbɚ, lˈɪŋk θɹˈiː,ˈɪnɚ, ˈælfə, hˈoʊld ʃˈɔːɹt ʌv ɹˈʌnweɪ wˌʌn sˈɪks."
+[GSX] Integration enabled.. Departure Handling: True | Arrival Handling: True
+[VFR - Debug] CircuitManager: Unregistered Croatia 4429
+[LocalVoiceInput] sid=316 ls=1.402 | "Taxi via tango blue, tango, romeo, leema, echo seven,november, link three,inner, alpha, hold short of runway one six,lot three victor bravo"
+[LocalVoicePhonemes] sid=316 | "tˈæksi vˈaɪə tˈæŋɡoʊ blˈuː, tˈæŋɡoʊ, ɹˈoʊmɪˌoʊ, lˈiːmə, ˈɛkoʊ sˈɛvən,noʊvˈɛmbɚ, lˈɪŋk θɹˈiː,ˈɪnɚ, ˈælfə, hˈoʊld ʃˈɔːɹt ʌv ɹˈʌnweɪ wˌʌn sˈɪks,lˈɑːt θɹˈiː vˈɪktɚ bɹˈɑːvoʊ"
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[VFR - Debug] CircuitManager: Unregistered KLM 88B
+[Comms] Auto-tune skipped — aircraft destroyed before script completion (target comm 132.1)
+------------------------------
+[Speech Transcription] Raw: swiss eight seven four requesting pushback on the engine start
+[Speech Transcription] AI Processed: Swiss 874 requesting pushback and engine start
+[Speech Transcription] Table Fallback: swiss 874 requesting pushback on the engine start 
+------------------------------
+[GSX] Execute Pushback Flow
+[ControllerScript] AICommunicationSystem.IFR.PushbackApprovedScript
+[LocalVoiceInput] sid=173 ls=1.258 | "Swiss eight  seven  four,zurich apron, pushback approved. Face west."
+[LocalVoicePhonemes] sid=173 | "swˈɪs ˈeɪt sˈɛvən fˈoːɹ,zjˈʊɹɪk ˈeɪpɹən, pˈʊʃbæk ɐpɹˈuːvd. fˈeɪs wˈɛst."
+------------------------------
+[PlayerState] Friday 19:04, lat: 47.4534, lon: 8.5586, alt: 1408, hdg: 4, spd: 0, gs: 0, lastFix: , currFix: ZH541, inVector: False, com1: 121.755(On), com2: 121.500(On), transponder: 2000(On)
+[Instruction] Swiss 874, Zurich Apron, pushback approved. Face west.
+------------------------------
+[GSX] In Pushback Sequence Flow..
+Menu Title: activate services at lszh/zurich
+Current GSX Menu Options: Request Deboarding
+Request Catering service
+Request Refueling
+Request Boarding
+Prepare for Push-back and Departure
+Operate Jetway
+Stairs disabled
+Additional Services ▶
+Customize this Parking position
+Reposition Aircraft
+[GSX] Setting menu choice to: 4 (Title: Prepare for Push-back and Departure)
+[GSX] In Pushback Sequence Flow..
+Menu Title: select handling operator
+Current GSX Menu Options: Swissport International
+Airline Assitance Switzerland
+DNATA [GSX choice]
+Back
+[LocalVoiceInput] sid=147 ls=1.128 | "Pushback and engine start approved, face west, swiss eight  seven  four."
+[LocalVoicePhonemes] sid=147 | "pˈʊʃbæk ænd ˈɛndʒɪn stˈɑːɹt ɐpɹˈuːvd, fˈeɪs wˈɛst, swˈɪs ˈeɪt sˈɛvən fˈoːɹ."
+------------------------------
+[PlayerState] Friday 19:04, lat: 47.4534, lon: 8.5586, alt: 1408, hdg: 4, spd: 0, gs: 0, lastFix: , currFix: ZH541, inVector: False, com1: 121.755(On), com2: 121.500(On), transponder: 2000(On)
+[Instruction] Pushback and engine start approved, Face west, Swiss 874.
+------------------------------
+[LocalVoiceInput] sid=173 ls=1.258 | "Lot three victor bravo, via leema cross runway one six,taxi to holding point alpha one,runway two eight,via romeo, leema, echo seven,november, link three,inner, alpha."
+[LocalVoicePhonemes] sid=173 | "lˈɑːt θɹˈiː vˈɪktɚ bɹˈɑːvoʊ, vˈaɪə lˈiːmə kɹˈɔs ɹˈʌnweɪ wˌʌn sˈɪks,tˈæksi tuː hˈoʊldɪŋ pˈɔɪnt ˈælfə wˌʌn,ɹˈʌnweɪ tˈuː ˈeɪt,vˈaɪə ɹˈoʊmɪˌoʊ, lˈiːmə, ˈɛkoʊ sˈɛvən,noʊvˈɛmbɚ, lˈɪŋk θɹˈiː,ˈɪnɚ, ˈælfə."
+[GSX] Completed Execute Pushback Flow
+[Traffic] Aircraft (BEL4HU) was unable to find an exit from the runway and was removed.
+[LocalVoiceInput] sid=316 ls=1.402 | "Via leema cross runway one six,taxi to holding point alpha one,runway two eight,via romeo, leema, echo seven,november, link three,inner, alpha, lot three victor bravo."
+[LocalVoicePhonemes] sid=316 | "vˈaɪə lˈiːmə kɹˈɔs ɹˈʌnweɪ wˌʌn sˈɪks,tˈæksi tuː hˈoʊldɪŋ pˈɔɪnt ˈælfə wˌʌn,ɹˈʌnweɪ tˈuː ˈeɪt,vˈaɪə ɹˈoʊmɪˌoʊ, lˈiːmə, ˈɛkoʊ sˈɛvən,noʊvˈɛmbɚ, lˈɪŋk θɹˈiː,ˈɪnɚ, ˈælfə, lˈɑːt θɹˈiː vˈɪktɚ bɹˈɑːvoʊ."
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[Planning] GoAround LFPO/02: charted procedure REJECTED — charted procedure carries no altitude. Falling back to the generated pattern.
+[TrafficTurnaround]: SWR1252 departs to ESSA in 10h:52m:53s
+[Traffic] Aircraft (ETH729) was unable to find an exit from the runway and was removed.
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[VFR - Debug] CircuitManager: Unregistered Eurowings 45B
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[LocalVoiceInput] sid=173 ls=1.258 | "Lot three victor bravo, contact zurich tower one one eight decimal one."
+[LocalVoicePhonemes] sid=173 | "lˈɑːt θɹˈiː vˈɪktɚ bɹˈɑːvoʊ, kˈɑːntækt zjˈʊɹɪk tˈaʊɚ wˌʌn wˌʌn ˈeɪt dˈɛsɪməl wˌʌn."
+[LocalVoiceInput] sid=316 ls=1.402 | "Over to tower one one eight decimal one,lot three victor bravo."
+[LocalVoicePhonemes] sid=316 | "ˈoʊvɚ tuː tˈaʊɚ wˌʌn wˌʌn ˈeɪt dˈɛsɪməl wˌʌn,lˈɑːt θɹˈiː vˈɪktɚ bɹˈɑːvoʊ."
+[METAR] Historic batch fetch for 44 ambient fields at 20260911_1907
+[ATIS] Refreshing all metars.
+[Comms] Duplicate frequency 125.200: VTBS ApproachDeparture vs center Langen Radar -> airport wins (onGround=False, relevantAirport=True, centerFromNearFallback=False)
+[Traffic] RYR70ED live enroute injected past its entire path (no waypoint ahead of the live position) - dropping injection.
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[Planning] GoAround LFPO/02: charted procedure REJECTED — charted procedure carries no altitude. Falling back to the generated pattern.
+[Traffic] EJU63VU live enroute injected past its entire path (no waypoint ahead of the live position) - dropping injection.
+[VFR - Debug] CircuitManager: Unregistered Oman Air 154
+[VFR - Debug] CircuitManager: Unregistered Sunexpress 6RK
+[LocalVoiceInput] sid=172 ls=1.247 | "Swiss one  one  zero  eight,at ramp india three,request pushback."
+[LocalVoicePhonemes] sid=172 | "swˈɪs wˌʌn wˌʌn zˈiəɹoʊ ˈeɪt,æt ɹˈæmp ˈɪndiə θɹˈiː,ɹᵻkwˈɛst pˈʊʃbæk."
+[LocalVoiceInput] sid=173 ls=1.258 | "Swiss one  one  zero  eight,zurich apron, pushback and engine start approved. Face north."
+[LocalVoicePhonemes] sid=173 | "swˈɪs wˌʌn wˌʌn zˈiəɹoʊ ˈeɪt,zjˈʊɹɪk ˈeɪpɹən, pˈʊʃbæk ænd ˈɛndʒɪn stˈɑːɹt ɐpɹˈuːvd. fˈeɪs nˈɔːɹθ."
+[LocalVoiceInput] sid=172 ls=1.247 | "Pushback and engine start approved, face north, swiss one  one  zero  eight."
+[LocalVoicePhonemes] sid=172 | "pˈʊʃbæk ænd ˈɛndʒɪn stˈɑːɹt ɐpɹˈuːvd, fˈeɪs nˈɔːɹθ, swˈɪs wˌʌn wˌʌn zˈiəɹoʊ ˈeɪt."
+[Planning] GoAround LFPO/02: charted procedure REJECTED — charted procedure carries no altitude. Falling back to the generated pattern.
+[Comms] Auto-tune skipped — aircraft destroyed before script completion (target comm 134.8)
+[VFR - Debug] CircuitManager: Unregistered Tui Jet 385
+------------------------------
+[Speech Transcription] Raw: swiss eight seven four request taxi per run rate
+[Speech Transcription] AI Processed: Swiss 874 request taxi per runway
+[Speech Transcription] Table Fallback: swiss 874 request taxi per run rate 
+------------------------------
+[ControllerScript] AICommunicationSystem.TaxiToRunwayInstructionScript
+[LocalVoiceInput] sid=173 ls=1.258 | "Swiss eight  seven  four,taxi to holding point alpha one,runway two eight,via november, foxtrot, inner, alpha."
+[LocalVoicePhonemes] sid=173 | "swˈɪs ˈeɪt sˈɛvən fˈoːɹ,tˈæksi tuː hˈoʊldɪŋ pˈɔɪnt ˈælfə wˌʌn,ɹˈʌnweɪ tˈuː ˈeɪt,vˈaɪə noʊvˈɛmbɚ, fˈɑːkstɹɑːt, ˈɪnɚ, ˈælfə."
+------------------------------
+[PlayerState] Friday 19:10, lat: 47.4525, lon: 8.5589, alt: 1408, hdg: 275, spd: 0, gs: 0, lastFix: , currFix: ZH541, inVector: False, com1: 121.755(On), com2: 121.500(On), transponder: 2000(On)
+[Instruction] Swiss 874, taxi to holding point A1, runway 28, via N, F, INNER, A.
+------------------------------
+[LocalVoiceInput] sid=147 ls=1.128 | "Taxi to holding point alpha one,runway two eight,via november, foxtrot, inner, alpha, swiss eight  seven  four "
+[LocalVoicePhonemes] sid=147 | "tˈæksi tuː hˈoʊldɪŋ pˈɔɪnt ˈælfə wˌʌn,ɹˈʌnweɪ tˈuː ˈeɪt,vˈaɪə noʊvˈɛmbɚ, fˈɑːkstɹɑːt, ˈɪnɚ, ˈælfə, swˈɪs ˈeɪt sˈɛvən fˈoːɹ"
+------------------------------
+[PlayerState] Friday 19:10, lat: 47.4525, lon: 8.5589, alt: 1408, hdg: 275, spd: 0, gs: 0, lastFix: , currFix: ZH541, inVector: False, com1: 121.755(On), com2: 121.500(On), transponder: 2000(On)
+[Instruction] Taxi to holding point A1, runway 28, via N, F, INNER, A, Swiss 874.
+------------------------------
+[LocalVoiceInput] sid=172 ls=1.247 | "Swiss one  one  zero  eight,request taxi to the active."
+[LocalVoicePhonemes] sid=172 | "swˈɪs wˌʌn wˌʌn zˈiəɹoʊ ˈeɪt,ɹᵻkwˈɛst tˈæksi tuː ðə ˈæktɪv."
+[LocalVoiceInput] sid=173 ls=1.258 | "Swiss one  one  zero  eight,taxi to holding point alpha one,runway two eight,via alpha."
+[LocalVoicePhonemes] sid=173 | "swˈɪs wˌʌn wˌʌn zˈiəɹoʊ ˈeɪt,tˈæksi tuː hˈoʊldɪŋ pˈɔɪnt ˈælfə wˌʌn,ɹˈʌnweɪ tˈuː ˈeɪt,vˈaɪə ˈælfə."
+[LocalVoiceInput] sid=172 ls=1.247 | "Taxi to holding point alpha one,runway two eight,via alpha, swiss one  one  zero  eight "
+[LocalVoicePhonemes] sid=172 | "tˈæksi tuː hˈoʊldɪŋ pˈɔɪnt ˈælfə wˌʌn,ɹˈʌnweɪ tˈuː ˈeɪt,vˈaɪə ˈælfə, swˈɪs wˌʌn wˌʌn zˈiəɹoʊ ˈeɪt"
+[LocalVoiceInput] sid=149 ls=1.387 | "Air serbia niner  eight charlie, ramp india one,request pushback and engine start."
+[LocalVoicePhonemes] sid=149 | "ˈɛɹ sˈɜːbiə nˈaɪnɚ ˈeɪt tʃˈɑːɹli, ɹˈæmp ˈɪndiə wˌʌn,ɹᵻkwˈɛst pˈʊʃbæk ænd ˈɛndʒɪn stˈɑːɹt."
+[LocalVoiceInput] sid=173 ls=1.258 | "Air serbia niner  eight charlie, zurich apron, pushback approved. Face north."
+[LocalVoicePhonemes] sid=173 | "ˈɛɹ sˈɜːbiə nˈaɪnɚ ˈeɪt tʃˈɑːɹli, zjˈʊɹɪk ˈeɪpɹən, pˈʊʃbæk ɐpɹˈuːvd. fˈeɪs nˈɔːɹθ."
+[LocalVoiceInput] sid=149 ls=1.387 | "Pushback and engine start approved, face north, air serbia niner  eight charlie."
+[LocalVoicePhonemes] sid=149 | "pˈʊʃbæk ænd ˈɛndʒɪn stˈɑːɹt ɐpɹˈuːvd, fˈeɪs nˈɔːɹθ, ˈɛɹ sˈɜːbiə nˈaɪnɚ ˈeɪt tʃˈɑːɹli."
+[LocalVoiceInput] sid=148 ls=1.350 | "Swiss four tango hotel, at ramp tango five four,request pushback."
+[LocalVoicePhonemes] sid=148 | "swˈɪs fˈoːɹ tˈæŋɡoʊ hoʊtˈɛl, æt ɹˈæmp tˈæŋɡoʊ fˈaɪv fˈoːɹ,ɹᵻkwˈɛst pˈʊʃbæk."
+[LocalVoiceInput] sid=173 ls=1.258 | "Swiss four tango hotel, zurich apron, pushback approved. Face southwest."
+[LocalVoicePhonemes] sid=173 | "swˈɪs fˈoːɹ tˈæŋɡoʊ hoʊtˈɛl, zjˈʊɹɪk ˈeɪpɹən, pˈʊʃbæk ɐpɹˈuːvd. fˈeɪs saʊθwˈɛst."
+[LocalVoiceInput] sid=148 ls=1.350 | "Pushback and engine start approved, face southwest, swiss four tango hotel."
+[LocalVoicePhonemes] sid=148 | "pˈʊʃbæk ænd ˈɛndʒɪn stˈɑːɹt ɐpɹˈuːvd, fˈeɪs saʊθwˈɛst, swˈɪs fˈoːɹ tˈæŋɡoʊ hoʊtˈɛl."
+[ATIS] Refreshing all metars.
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[LocalVoiceInput] sid=173 ls=1.258 | "Swiss one  one  zero  eight,contact zurich tower one one eight decimal one."
+[LocalVoicePhonemes] sid=173 | "swˈɪs wˌʌn wˌʌn zˈiəɹoʊ ˈeɪt,kˈɑːntækt zjˈʊɹɪk tˈaʊɚ wˌʌn wˌʌn ˈeɪt dˈɛsɪməl wˌʌn."
+[LocalVoiceInput] sid=172 ls=1.247 | "Contact tower one one eight decimal one,swiss one  one  zero  eight."
+[LocalVoicePhonemes] sid=172 | "kˈɑːntækt tˈaʊɚ wˌʌn wˌʌn ˈeɪt dˈɛsɪməl wˌʌn,swˈɪs wˌʌn wˌʌn zˈiəɹoʊ ˈeɪt."
+[Traffic] Aircraft (VOE75PK) was unable to find an exit from the runway and was removed.
+[VFR - Debug] CircuitManager: Unregistered Sunexpress 3SB
+[LocalVoiceInput] sid=149 ls=1.387 | "Air serbia niner  eight charlie, taxi for departure."
+[LocalVoicePhonemes] sid=149 | "ˈɛɹ sˈɜːbiə nˈaɪnɚ ˈeɪt tʃˈɑːɹli, tˈæksi fɔːɹ dᵻpˈɑːɹtʃɚ."
+[LocalVoiceInput] sid=173 ls=1.258 | "Air serbia niner  eight charlie, taxi to holding point alpha one,runway two eight,via alpha."
+[LocalVoicePhonemes] sid=173 | "ˈɛɹ sˈɜːbiə nˈaɪnɚ ˈeɪt tʃˈɑːɹli, tˈæksi tuː hˈoʊldɪŋ pˈɔɪnt ˈælfə wˌʌn,ɹˈʌnweɪ tˈuː ˈeɪt,vˈaɪə ˈælfə."
+[LocalVoiceInput] sid=149 ls=1.387 | "Taxi to holding point alpha one,runway two eight,via alpha, air serbia niner  eight charlie"
+[LocalVoicePhonemes] sid=149 | "tˈæksi tuː hˈoʊldɪŋ pˈɔɪnt ˈælfə wˌʌn,ɹˈʌnweɪ tˈuː ˈeɪt,vˈaɪə ˈælfə, ˈɛɹ sˈɜːbiə nˈaɪnɚ ˈeɪt tʃˈɑːɹli"
+[LocalVoiceInput] sid=148 ls=1.350 | "Swiss four tango hotel, ready to taxi to the active."
+[LocalVoicePhonemes] sid=148 | "swˈɪs fˈoːɹ tˈæŋɡoʊ hoʊtˈɛl, ɹˈɛdi tuː tˈæksi tuː ðə ˈæktɪv."
+[LocalVoiceInput] sid=173 ls=1.132 | "Swiss four tango hotel, taxi to holding point alpha one,runway two eight,via mike, foxtrot, inner, alpha."
+[LocalVoicePhonemes] sid=173 | "swˈɪs fˈoːɹ tˈæŋɡoʊ hoʊtˈɛl, tˈæksi tuː hˈoʊldɪŋ pˈɔɪnt ˈælfə wˌʌn,ɹˈʌnweɪ tˈuː ˈeɪt,vˈaɪə mˈaɪk, fˈɑːkstɹɑːt, ˈɪnɚ, ˈælfə."
+[LocalVoiceInput] sid=148 ls=1.215 | "Taxi to holding point alpha one,runway two eight,via mike, foxtrot, inner, alpha, swiss four tango hotel"
+[LocalVoicePhonemes] sid=148 | "tˈæksi tuː hˈoʊldɪŋ pˈɔɪnt ˈælfə wˌʌn,ɹˈʌnweɪ tˈuː ˈeɪt,vˈaɪə mˈaɪk, fˈɑːkstɹɑːt, ˈɪnɚ, ˈælfə, swˈɪs fˈoːɹ tˈæŋɡoʊ hoʊtˈɛl"
+[LocalVoiceInput] sid=173 ls=1.258 | "Air serbia niner  eight charlie, contact zurich tower one one eight decimal one."
+[LocalVoicePhonemes] sid=173 | "ˈɛɹ sˈɜːbiə nˈaɪnɚ ˈeɪt tʃˈɑːɹli, kˈɑːntækt zjˈʊɹɪk tˈaʊɚ wˌʌn wˌʌn ˈeɪt dˈɛsɪməl wˌʌn."
+[LocalVoiceInput] sid=149 ls=1.387 | "Contact tower one one eight decimal one,air serbia niner  eight charlie."
+[LocalVoicePhonemes] sid=149 | "kˈɑːntækt tˈaʊɚ wˌʌn wˌʌn ˈeɪt dˈɛsɪməl wˌʌn,ˈɛɹ sˈɜːbiə nˈaɪnɚ ˈeɪt tʃˈɑːɹli."
+[Traffic] UVL215 live enroute injected past its entire path (no waypoint ahead of the live position) - dropping injection.
+Look rotation viewing vector is zero
+[Traffic] Aircraft (LHX1TW) was unable to find an exit from the runway and was removed.
+[VFR - Debug] CircuitManager: Unregistered Eurowings 9H
+[Traffic] FIE247 live enroute injected past its entire path (no waypoint ahead of the live position) - dropping injection.
+[TrafficTurnaround]: EWG4FX departs to LHBP in 09h:08m:13s
+[ATIS] Refreshing ATIS for EDDS if required
+[ATIS] Refreshing ATIS for LSZH if required
+[ATIS] Refreshing all metars.
+[Traffic] SWU1941 live enroute injected past its entire path (no waypoint ahead of the live position) - dropping injection.
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[VFR - Debug] CircuitManager: Unregistered Scandinavian 89B
+[Comms] Auto-tune skipped — aircraft destroyed before script completion (target comm 134.085)
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[VFR - Debug] CircuitManager: Unregistered Edelweiss 27N
+[Handoff] Swiss 874 handed off by ControllerAI_LSZH_Ground_121.755
+[ControllerScript] AICommunicationSystem.IFR.GenericTowerHandoffScript
+[LocalVoiceInput] sid=173 ls=1.258 | "Swiss eight  seven  four,contact zurich tower one one eight decimal one."
+[LocalVoicePhonemes] sid=173 | "swˈɪs ˈeɪt sˈɛvən fˈoːɹ,kˈɑːntækt zjˈʊɹɪk tˈaʊɚ wˌʌn wˌʌn ˈeɪt dˈɛsɪməl wˌʌn."
+------------------------------
+[PlayerState] Friday 19:19, lat: 47.4558, lon: 8.5662, alt: 1418, hdg: 97, spd: 10, gs: 10, lastFix: , currFix: ZH541, inVector: False, com1: 121.755(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Swiss 874, contact Zurich Tower 118.1.
+------------------------------
+[LocalVoiceInput] sid=147 ls=1.128 | "Over to tower one one eight decimal one,swiss eight  seven  four."
+[LocalVoicePhonemes] sid=147 | "ˈoʊvɚ tuː tˈaʊɚ wˌʌn wˌʌn ˈeɪt dˈɛsɪməl wˌʌn,swˈɪs ˈeɪt sˈɛvən fˈoːɹ."
+------------------------------
+[PlayerState] Friday 19:19, lat: 47.4558, lon: 8.5665, alt: 1419, hdg: 96, spd: 10, gs: 10, lastFix: , currFix: ZH541, inVector: False, com1: 121.755(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Over to tower 118.1, Swiss 874.
+------------------------------
+[Comms] Set Frequency Com1: 118100000
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[LocalVoiceInput] sid=163 ls=0.929 | "Zurich tower, austrian one  four  seven,i l s approach runway one four."
+[LocalVoicePhonemes] sid=163 | "zjˈʊɹɪk tˈaʊɚ, ˈɔːstɹiən wˌʌn fˈoːɹ sˈɛvən,ˈaɪ ˈɛl ˈɛs ɐpɹˈoʊtʃ ɹˈʌnweɪ wˌʌn fˈoːɹ."
+[LocalVoiceInput] sid=177 ls=1.170 | "Austrian one  four  seven,zurich tower, winnd variable, one knots, runway one four cleared to land."
+[LocalVoicePhonemes] sid=177 | "ˈɔːstɹiən wˌʌn fˈoːɹ sˈɛvən,zjˈʊɹɪk tˈaʊɚ, wˈɪnd vˈɛɹɪəbəl, wˌʌn nˈɑːts, ɹˈʌnweɪ wˌʌn fˈoːɹ klˈɪɹd tuː lˈænd."
+Look rotation viewing vector is zero
+[LocalVoiceInput] sid=163 ls=0.929 | "Runway one four cleared to land, austrian one  four  seven."
+[LocalVoicePhonemes] sid=163 | "ɹˈʌnweɪ wˌʌn fˈoːɹ klˈɪɹd tuː lˈænd, ˈɔːstɹiən wˌʌn fˈoːɹ sˈɛvən."
+[LocalVoiceInput] sid=148 ls=1.350 | "Swiss four tango hotel, ready for departure, runway two eight."
+[LocalVoicePhonemes] sid=148 | "swˈɪs fˈoːɹ tˈæŋɡoʊ hoʊtˈɛl, ɹˈɛdi fɔːɹ dᵻpˈɑːɹtʃɚ, ɹˈʌnweɪ tˈuː ˈeɪt."
+[LocalVoiceInput] sid=177 ls=1.170 | "Swiss four tango hotel, tower, number two for departure."
+[LocalVoicePhonemes] sid=177 | "swˈɪs fˈoːɹ tˈæŋɡoʊ hoʊtˈɛl, tˈaʊɚ, nˈʌmbɚ tˈuː fɔːɹ dᵻpˈɑːɹtʃɚ."
+[LocalVoiceInput] sid=148 ls=1.350 | "Roger that, number two,swiss four tango hotel."
+[LocalVoicePhonemes] sid=148 | "ɹˈɑːdʒɚ ðˈæt, nˈʌmbɚ tˈuː,swˈɪs fˈoːɹ tˈæŋɡoʊ hoʊtˈɛl."
+[Comms] Auto-tune skipped — aircraft destroyed before script completion (target comm 132.1)
+------------------------------
+[Speech Transcription] Raw: swiss eight seven four ready for departure
+[Speech Transcription] AI Processed: Swiss 874 ready for departure
+[Speech Transcription] Table Fallback: swiss 874 ready for departure 
+------------------------------
+[ControllerScript] AICommunicationSystem.TakeoffClearanceScript
+[LocalVoiceInput] sid=177 ls=1.170 | "Swiss eight  seven  four,zurich tower, winnd variable, one knots, runway two eight,cleared for takeoff."
+[LocalVoicePhonemes] sid=177 | "swˈɪs ˈeɪt sˈɛvən fˈoːɹ,zjˈʊɹɪk tˈaʊɚ, wˈɪnd vˈɛɹɪəbəl, wˌʌn nˈɑːts, ɹˈʌnweɪ tˈuː ˈeɪt,klˈɪɹd fɔːɹ tˈeɪkɔf."
+------------------------------
+[PlayerState] Friday 19:20, lat: 47.4558, lon: 8.57, alt: 1423, hdg: 44, spd: 0, gs: 0, lastFix: , currFix: ZH541, inVector: False, com1: 118.100(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Swiss 874, Zurich Tower, wind variable, 1 knots, runway 28, cleared for takeoff.
+------------------------------
+[LocalVoiceInput] sid=147 ls=1.128 | "Runway two eight,cleared for takeoff, swiss eight  seven  four."
+[LocalVoicePhonemes] sid=147 | "ɹˈʌnweɪ tˈuː ˈeɪt,klˈɪɹd fɔːɹ tˈeɪkɔf, swˈɪs ˈeɪt sˈɛvən fˈoːɹ."
+------------------------------
+[PlayerState] Friday 19:20, lat: 47.4558, lon: 8.57, alt: 1423, hdg: 44, spd: 0, gs: 0, lastFix: , currFix: ZH541, inVector: False, com1: 118.100(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Runway 28, cleared for takeoff, Swiss 874.
+------------------------------
+[TrafficTurnaround]: SWR268A departs to LHBP in 09h:17m:09s
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[LocalVoiceInput] sid=177 ls=1.170 | "Swiss four tango hotel, runway two eight,lineup and wait."
+[LocalVoicePhonemes] sid=177 | "swˈɪs fˈoːɹ tˈæŋɡoʊ hoʊtˈɛl, ɹˈʌnweɪ tˈuː ˈeɪt,lˈaɪnʌp ænd wˈeɪt."
+[LocalVoiceInput] sid=148 ls=1.350 | "Lineup and wait, runway two eight,swiss four tango hotel."
+[LocalVoicePhonemes] sid=148 | "lˈaɪnʌp ænd wˈeɪt, ɹˈʌnweɪ tˈuː ˈeɪt,swˈɪs fˈoːɹ tˈæŋɡoʊ hoʊtˈɛl."
+[Comms] Tuned 127.050 matched 127.055 via 25/8.33 channel equivalence (LIEE)
+[Comms] Duplicate frequency 127.050: LIEE ATIS vs center Langen Radar -> center wins (onGround=False, relevantAirport=True, centerFromNearFallback=False)
+[VFR - Debug] CircuitManager: Unregistered Sunturk 34VX
+[PlayerState] Friday 19:22, lat: 47.4585, lon: 8.5436, alt: 1395, hdg: 276, spd: 140, gs: 144, lastFix: ZH553, currFix: ZH501, inVector: False, com1: 118.100(On), com2: 121.500(On), transponder: 1000(On)
+[WaypointPath] Progress Path
+[LocalVoiceInput] sid=177 ls=1.170 | "Swiss four tango hotel,zurich tower, winnd variable, one knots, runway two eight,cleared for takeoff."
+[LocalVoicePhonemes] sid=177 | "swˈɪs fˈoːɹ tˈæŋɡoʊ hoʊtˈɛl,zjˈʊɹɪk tˈaʊɚ, wˈɪnd vˈɛɹɪəbəl, wˌʌn nˈɑːts, ɹˈʌnweɪ tˈuː ˈeɪt,klˈɪɹd fɔːɹ tˈeɪkɔf."
+[METAR] Historic batch fetch for 44 ambient fields at 20260911_1922
+[ATIS] Refreshing all metars.
+[LocalVoiceInput] sid=148 ls=1.350 | "Runway two eight,cleared for takeoff, swiss four tango hotel."
+[LocalVoicePhonemes] sid=148 | "ɹˈʌnweɪ tˈuː ˈeɪt,klˈɪɹd fɔːɹ tˈeɪkɔf, swˈɪs fˈoːɹ tˈæŋɡoʊ hoʊtˈɛl."
+[VFR - Debug] CircuitManager: Unregistered Sunexpress 2LL
+Look rotation viewing vector is zero
+[LocalVoiceInput] sid=177 ls=1.170 | "Austrian one  four  seven, exit right at hotel one."
+[LocalVoicePhonemes] sid=177 | "ˈɔːstɹiən wˌʌn fˈoːɹ sˈɛvən, ˈɛɡzɪt ɹˈaɪt æt hoʊtˈɛl wˌʌn."
+[LocalVoiceInput] sid=163 ls=0.929 | "Exit right at hotel one,austrian one  four  seven."
+[LocalVoicePhonemes] sid=163 | "ˈɛɡzɪt ɹˈaɪt æt hoʊtˈɛl wˌʌn,ˈɔːstɹiən wˌʌn fˈoːɹ sˈɛvən."
+[Handoff] Swiss 874 handed off by ControllerAI_LSZH_Tower_118.100
+[ControllerScript] AICommunicationSystem.IFR.ApproachHandoffScript
+[LocalVoiceInput] sid=177 ls=1.170 | "Swiss eight  seven  four,contact zurich departure one two five decimal niner five five."
+[LocalVoicePhonemes] sid=177 | "swˈɪs ˈeɪt sˈɛvən fˈoːɹ,kˈɑːntækt zjˈʊɹɪk dᵻpˈɑːɹtʃɚ wˌʌn tˈuː fˈaɪv dˈɛsɪməl nˈaɪnɚ fˈaɪv fˈaɪv."
+------------------------------
+[PlayerState] Friday 19:22, lat: 47.4605, lon: 8.517, alt: 2182, hdg: 273, spd: 156, gs: 161, lastFix: ZH501, currFix: MOMOL, inVector: False, com1: 118.100(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Swiss 874, contact Zurich Departure 125.955.
+------------------------------
+[Comms] Tuned 132.280 matched 132.275 via 25/8.33 channel equivalence (LATI)
+[Comms] Duplicate frequency 132.280: LATI ATIS vs center Reims Control -> center wins (onGround=False, relevantAirport=True, centerFromNearFallback=False)
+[LocalVoiceInput] sid=147 ls=1.128 | "Contact zurich departure one two five decimal niner five five,swiss eight  seven  four."
+[LocalVoicePhonemes] sid=147 | "kˈɑːntækt zjˈʊɹɪk dᵻpˈɑːɹtʃɚ wˌʌn tˈuː fˈaɪv dˈɛsɪməl nˈaɪnɚ fˈaɪv fˈaɪv,swˈɪs ˈeɪt sˈɛvən fˈoːɹ."
+------------------------------
+[PlayerState] Friday 19:23, lat: 47.4608, lon: 8.5118, alt: 2261, hdg: 273, spd: 165, gs: 172, lastFix: ZH501, currFix: MOMOL, inVector: False, com1: 118.100(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Contact Zurich Departure 125.955, Swiss 874.
+------------------------------
+[VFR - Debug] CircuitManager: Unregistered Vueling 2GF
+[Comms] Set Frequency Com1: 125955000
+[LocalVoiceInput] sid=147 ls=1.128 | "Zurich departure, swiss eight  seven  four,good evening, passing two thousand two hundred feet climbing to seven thousand feet."
+[LocalVoicePhonemes] sid=147 | "zjˈʊɹɪk dᵻpˈɑːɹtʃɚ, swˈɪs ˈeɪt sˈɛvən fˈoːɹ,ɡˈʊd ˈiːvnɪŋ, pˈæsɪŋ tˈuː θˈaʊzənd tˈuː hˈʌndɹɪd fˈiːt klˈaɪmɪŋ tuː sˈɛvən θˈaʊzənd fˈiːt."
+------------------------------
+[PlayerState] Friday 19:23, lat: 47.4611, lon: 8.5045, alt: 2216, hdg: 273, spd: 174, gs: 180, lastFix: ZH501, currFix: MOMOL, inVector: False, com1: 125.955(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Zurich Departure, Swiss 874, good evening, passing 2,200 climbing to 7,000.
+------------------------------
+[Planning] GoAround EBBR/25L: charted procedure REJECTED — top alt 700 vs terrain 173+1000 on leg 0. Falling back to the generated pattern.
+[ControllerScript] AICommunicationSystem.IFR.TraconDepartureWithYouScript
+[LocalVoiceInput] sid=157 ls=1.254 | "Swiss eight  seven  four,zurich departure, identified, climb flight level one hundred."
+[LocalVoicePhonemes] sid=157 | "swˈɪs ˈeɪt sˈɛvən fˈoːɹ,zjˈʊɹɪk dᵻpˈɑːɹtʃɚ, aɪdˈɛntᵻfˌaɪd, klˈaɪm flˈaɪt lˈɛvəl wˌʌn hˈʌndɹɪd."
+------------------------------
+[PlayerState] Friday 19:23, lat: 47.4616, lon: 8.4947, alt: 2158, hdg: 274, spd: 178, gs: 183, lastFix: ZH501, currFix: MOMOL, inVector: False, com1: 125.955(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Swiss 874, Zurich Departure, identified, climb FL100.
+------------------------------
+[LocalVoiceInput] sid=147 ls=1.128 | "Climb flight level one hundred, swiss eight  seven  four."
+[LocalVoicePhonemes] sid=147 | "klˈaɪm flˈaɪt lˈɛvəl wˌʌn hˈʌndɹɪd, swˈɪs ˈeɪt sˈɛvən fˈoːɹ."
+------------------------------
+[PlayerState] Friday 19:23, lat: 47.4619, lon: 8.489, alt: 2313, hdg: 275, spd: 163, gs: 168, lastFix: ZH501, currFix: MOMOL, inVector: False, com1: 125.955(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Climb FL100, Swiss 874.
+------------------------------
+[LocalVoiceInput] sid=148 ls=1.350 | "Zurich departure, swiss four tango hotel, passing two thousand one hundred feet climbing to seven thousand feet."
+[LocalVoicePhonemes] sid=148 | "zjˈʊɹɪk dᵻpˈɑːɹtʃɚ, swˈɪs fˈoːɹ tˈæŋɡoʊ hoʊtˈɛl, pˈæsɪŋ tˈuː θˈaʊzənd wˌʌn hˈʌndɹɪd fˈiːt klˈaɪmɪŋ tuː sˈɛvən θˈaʊzənd fˈiːt."
+[VFR - Debug] CircuitManager: Unregistered Swiss 874
+[LocalVoiceInput] sid=157 ls=1.254 | "Swiss four tango hotel, zurich departure, identified, climb flight level one seven zero."
+[LocalVoicePhonemes] sid=157 | "swˈɪs fˈoːɹ tˈæŋɡoʊ hoʊtˈɛl, zjˈʊɹɪk dᵻpˈɑːɹtʃɚ, aɪdˈɛntᵻfˌaɪd, klˈaɪm flˈaɪt lˈɛvəl wˌʌn sˈɛvən zˈiəɹoʊ."
+[LocalVoiceInput] sid=148 ls=1.350 | "Climb flight level one seven zero,swiss four tango hotel."
+[LocalVoicePhonemes] sid=148 | "klˈaɪm flˈaɪt lˈɛvəl wˌʌn sˈɛvən zˈiəɹoʊ,swˈɪs fˈoːɹ tˈæŋɡoʊ hoʊtˈɛl."
+[VFR - Debug] CircuitManager: Unregistered Air India 152 Heavy
+[VFR - Debug] CircuitManager: Unregistered Swiss 736
+[Planning] GoAround LFPO/02: charted procedure REJECTED — charted procedure carries no altitude. Falling back to the generated pattern.
+[Planning] GoAround LFMN/04L: charted procedure REJECTED — top alt 400 vs terrain 0+1000 on leg 0. Falling back to the generated pattern.
+[Planning] GoAround turn: rwy=04L|sign=1|source=terrainVeto|conventionSide=4192ft|chosenSide=1958ft|rightHigh=1958|leftHigh=4192
+[Comms] Duplicate frequency 127.500: RJTT ApproachDeparture vs center Langen Radar -> airport wins (onGround=False, relevantAirport=True, centerFromNearFallback=False)
+[VFR - Debug] CircuitManager: Unregistered Aegean 809
+[Planning] GoAround LFPO/02: charted procedure REJECTED — charted procedure carries no altitude. Falling back to the generated pattern.
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[Planning] GoAround LFMN/04L: charted procedure REJECTED — top alt 400 vs terrain 0+1000 on leg 0. Falling back to the generated pattern.
+[Planning] GoAround turn: rwy=04L|sign=1|source=terrainVeto|conventionSide=4192ft|chosenSide=1958ft|rightHigh=1958|leftHigh=4192
+[Handoff] Swiss 874 handed off by ControllerAI_LSZH_Departure_125.955
+[CPDLC] The following script (AICommunicationSystem.IFR.CenterHandoffScript) would be run via CPDLC however doesn't meet one or more of the following criteria:
+[CPDLC] : Player should be logged in to CPDLC - Is logged in: False
+[CPDLC] : Current controller should be a center controller - Current Controller Zurich Departure 125.955, Is center controller: False
+[CPDLC] : Altitude should be appropriate for CPDLC - Current Alt 7005.122 Region ICAO Is alt appropriate: False
+[CPDLC] : If this script is apart of a CPDLC request, there should be a pending CPDLC request - Is this script apart of a CPDLC request: False, if true, is there a pending CPDLC request in system the system: False
+[ControllerScript] AICommunicationSystem.IFR.CenterHandoffScript
+[LocalVoiceInput] sid=157 ls=1.254 | "Swiss eight  seven  four,contact swiss radar one tree tree decimal niner zero five,bye bye."
+[LocalVoicePhonemes] sid=157 | "swˈɪs ˈeɪt sˈɛvən fˈoːɹ,kˈɑːntækt swˈɪs ɹˈeɪdɑːɹ wˌʌn tɹˈiː tɹˈiː dˈɛsɪməl nˈaɪnɚ zˈiəɹoʊ fˈaɪv,bˈaɪ bˈaɪ."
+------------------------------
+[PlayerState] Friday 19:25, lat: 47.3944, lon: 8.3577, alt: 7013, hdg: 162, spd: 199, gs: 224, lastFix: ZH501, currFix: MOMOL, inVector: False, com1: 125.955(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Swiss 874, contact Swiss Radar 133.905, bye bye.
+------------------------------
+[LocalVoiceInput] sid=147 ls=1.128 | "Center on one three three decimal niner zero five,swiss eight  seven  four."
+[LocalVoicePhonemes] sid=147 | "sˈɛnɾɚ ˈɔn wˌʌn θɹˈiː θɹˈiː dˈɛsɪməl nˈaɪnɚ zˈiəɹoʊ fˈaɪv,swˈɪs ˈeɪt sˈɛvən fˈoːɹ."
+------------------------------
+[PlayerState] Friday 19:25, lat: 47.3896, lon: 8.3607, alt: 7199, hdg: 150, spd: 199, gs: 225, lastFix: ZH501, currFix: MOMOL, inVector: False, com1: 125.955(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Center on 133.905, Swiss 874.
+------------------------------
+[Comms] Set Frequency Com1: 133905000
+[LocalVoiceInput] sid=147 ls=1.128 | "Swiss radar, swiss eight  seven  four,good evening, passing flight level zero seven four climbing to flight level one hundred direct momol."
+[LocalVoicePhonemes] sid=147 | "swˈɪs ɹˈeɪdɑːɹ, swˈɪs ˈeɪt sˈɛvən fˈoːɹ,ɡˈʊd ˈiːvnɪŋ, pˈæsɪŋ flˈaɪt lˈɛvəl zˈiəɹoʊ sˈɛvən fˈoːɹ klˈaɪmɪŋ tuː flˈaɪt lˈɛvəl wˌʌn hˈʌndɹɪd dᵻɹˈɛkt mɑmɑl."
+------------------------------
+[PlayerState] Friday 19:25, lat: 47.3847, lon: 8.3656, alt: 7420, hdg: 138, spd: 199, gs: 226, lastFix: ZH501, currFix: MOMOL, inVector: False, com1: 133.905(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Swiss Radar, Swiss 874, good evening, passing FL074 climbing to FL100 direct MOMOL.
+------------------------------
+[ControllerScript] AICommunicationSystem.IFR.VerifyCallsignAltitudeScript
+[ControllerScript] AICommunicationSystem.IFR.CenterWithYouScript
+[LocalVoiceInput] sid=172 ls=1.247 | "Swiss eight  seven  four,swiss radar, good evening, identified, climb flight level one niner zero."
+[LocalVoicePhonemes] sid=172 | "swˈɪs ˈeɪt sˈɛvən fˈoːɹ,swˈɪs ɹˈeɪdɑːɹ, ɡˈʊd ˈiːvnɪŋ, aɪdˈɛntᵻfˌaɪd, klˈaɪm flˈaɪt lˈɛvəl wˌʌn nˈaɪnɚ zˈiəɹoʊ."
+------------------------------
+[PlayerState] Friday 19:26, lat: 47.378, lon: 8.3784, alt: 7797, hdg: 115, spd: 199, gs: 227, lastFix: ZH501, currFix: MOMOL, inVector: False, com1: 133.905(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Swiss 874, Swiss Radar, good evening, identified, climb FL190.
+------------------------------
+[LocalVoiceInput] sid=147 ls=1.128 | "Climb flight level one niner zero,swiss eight  seven  four."
+[LocalVoicePhonemes] sid=147 | "klˈaɪm flˈaɪt lˈɛvəl wˌʌn nˈaɪnɚ zˈiəɹoʊ,swˈɪs ˈeɪt sˈɛvən fˈoːɹ."
+------------------------------
+[PlayerState] Friday 19:26, lat: 47.3761, lon: 8.3858, alt: 7989, hdg: 104, spd: 199, gs: 228, lastFix: ZH501, currFix: MOMOL, inVector: False, com1: 133.905(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Climb FL190, Swiss 874.
+------------------------------
+[TrafficTurnaround]: AUA138S departs to LOWW in 16h:29m:15s
+[Planning] GoAround LFPO/02: charted procedure REJECTED — charted procedure carries no altitude. Falling back to the generated pattern.
+Look rotation viewing vector is zero
+[Traffic] DLH4M live enroute injected past its entire path (no waypoint ahead of the live position) - dropping injection.
+[Traffic] DLH7EC live enroute injected past its entire path (no waypoint ahead of the live position) - dropping injection.
+[ATIS] Refreshing all metars.
+[Planning] GoAround EBBR/25L: charted procedure REJECTED — top alt 700 vs terrain 173+1000 on leg 0. Falling back to the generated pattern.
+[LocalVoiceInput] sid=316 ls=1.402 | "Swiss radar, lot three victor bravo, passing flight level one eight eight climbing to flight level four one zero direct aberu."
+[LocalVoicePhonemes] sid=316 | "swˈɪs ɹˈeɪdɑːɹ, lˈɑːt θɹˈiː vˈɪktɚ bɹˈɑːvoʊ, pˈæsɪŋ flˈaɪt lˈɛvəl wˌʌn ˈeɪt ˈeɪt klˈaɪmɪŋ tuː flˈaɪt lˈɛvəl fˈoːɹ wˌʌn zˈiəɹoʊ dᵻɹˈɛkt ˌæbɚɹˈuː."
+[VFR - Debug] CircuitManager: Unregistered Sunexpress 4WL
+[LocalVoiceInput] sid=172 ls=1.247 | "Lot tree victor bravo, swiss radar, identified."
+[LocalVoicePhonemes] sid=172 | "lˈɑːt tɹˈiː vˈɪktɚ bɹˈɑːvoʊ, swˈɪs ɹˈeɪdɑːɹ, aɪdˈɛntᵻfˌaɪd."
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[LocalVoiceInput] sid=172 ls=1.247 | "Lot tree victor bravo, contact münchen radar one tree four decimal one five."
+[LocalVoicePhonemes] sid=172 | "lˈɑːt tɹˈiː vˈɪktɚ bɹˈɑːvoʊ, kˈɑːntækt mntʃɛn ɹˈeɪdɑːɹ wˌʌn tɹˈiː fˈoːɹ dˈɛsɪməl wˌʌn fˈaɪv."
+[LocalVoiceInput] sid=316 ls=1.402 | "Center on one three four decimal one five,lot three victor bravo."
+[LocalVoicePhonemes] sid=316 | "sˈɛnɾɚ ˈɔn wˌʌn θɹˈiː fˈoːɹ dˈɛsɪməl wˌʌn fˈaɪv,lˈɑːt θɹˈiː vˈɪktɚ bɹˈɑːvoʊ."
+[VFR - Debug] CircuitManager: Unregistered Shamrock 34Y
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[Procedures] STAR is REUT5A for transition REUTL using runway 25
+Look rotation viewing vector is zero
+[ILSVectorCalc] callsign=SWR874|bearing=74|perfFinalLeg=9.0|distInApproach=13.5|finalLegDist=0.0|baseLegDist=5.0|maxAlt=5000|endAlt=4500|start=(48.9130,9.3402)|end=(48.7517,9.5511)|vecCount=4|generated=[0](48.7517,9.5511) [1](48.7794,9.5906) [2](48.8409,9.5645) [3](48.9130,9.3402) 
+[Handoff] Swiss 874 handed off by ControllerAI_Center_Swiss Radar_133.905
+[CPDLC] The following script (AICommunicationSystem.IFR.CenterHandoffScript) would be run via CPDLC however doesn't meet one or more of the following criteria:
+[CPDLC] : Player should be logged in to CPDLC - Is logged in: False
+[CPDLC] : Current controller should be a center controller - Current Controller Swiss Radar 133.905, Is center controller: True
+[CPDLC] : Altitude should be appropriate for CPDLC - Current Alt 12525.1 Region ICAO Is alt appropriate: False
+[CPDLC] : If this script is apart of a CPDLC request, there should be a pending CPDLC request - Is this script apart of a CPDLC request: False, if true, is there a pending CPDLC request in system the system: False
+[ControllerScript] AICommunicationSystem.IFR.CenterHandoffScript
+[LocalVoiceInput] sid=172 ls=1.247 | "Swiss eight  seven  four,contact swiss radar one two eight decimal zero five,have uh good evening."
+[LocalVoicePhonemes] sid=172 | "swˈɪs ˈeɪt sˈɛvən fˈoːɹ,kˈɑːntækt swˈɪs ɹˈeɪdɑːɹ wˌʌn tˈuː ˈeɪt dˈɛsɪməl zˈiəɹoʊ fˈaɪv,hˈæv ˈʌ ɡˈʊd ˈiːvnɪŋ."
+------------------------------
+[PlayerState] Friday 19:29, lat: 47.4608, lon: 8.639, alt: 12535, hdg: 85, spd: 199, gs: 250, lastFix: ZH501, currFix: MOMOL, inVector: False, com1: 133.905(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Swiss 874, contact Swiss Radar 128.05, have a good evening.
+------------------------------
+[LocalVoiceInput] sid=147 ls=1.128 | "Center on one two eight decimal zero five,swiss eight  seven  four."
+[LocalVoicePhonemes] sid=147 | "sˈɛnɾɚ ˈɔn wˌʌn tˈuː ˈeɪt dˈɛsɪməl zˈiəɹoʊ fˈaɪv,swˈɪs ˈeɪt sˈɛvən fˈoːɹ."
+[PlayerState] Friday 19:29, lat: 47.461, lon: 8.6466, alt: 12707, hdg: 85, spd: 199, gs: 251, lastFix: ZH501, currFix: MOMOL, inVector: False, com1: 133.905(On), com2: 121.500(On), transponder: 1000(On)
+[WaypointPath] Progress Path
+------------------------------
+[PlayerState] Friday 19:29, lat: 47.461, lon: 8.6468, alt: 12705, hdg: 85, spd: 199, gs: 251, lastFix: MOMOL, currFix: KOLUL, inVector: False, com1: 133.905(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Center on 128.05, Swiss 874.
+------------------------------
+[Comms] Set Frequency Com1: 128050000
+[LocalVoiceInput] sid=147 ls=1.128 | "Swiss radar, swiss eight  seven  four,good evening, passing flight level one two eight climbing to flight level one niner zero direct kolul."
+[LocalVoicePhonemes] sid=147 | "swˈɪs ɹˈeɪdɑːɹ, swˈɪs ˈeɪt sˈɛvən fˈoːɹ,ɡˈʊd ˈiːvnɪŋ, pˈæsɪŋ flˈaɪt lˈɛvəl wˌʌn tˈuː ˈeɪt klˈaɪmɪŋ tuː flˈaɪt lˈɛvəl wˌʌn nˈaɪnɚ zˈiəɹoʊ dᵻɹˈɛkt kɑlʌl."
+------------------------------
+[PlayerState] Friday 19:29, lat: 47.4613, lon: 8.6552, alt: 12902, hdg: 85, spd: 199, gs: 251, lastFix: MOMOL, currFix: KOLUL, inVector: False, com1: 128.050(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Swiss Radar, Swiss 874, good evening, passing FL128 climbing to FL190 direct KOLUL.
+------------------------------
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[ControllerScript] AICommunicationSystem.IFR.VerifyCallsignAltitudeScript
+[ControllerScript] AICommunicationSystem.IFR.CenterWithYouScript
+[LocalVoiceInput] sid=245 ls=1.206 | "Swiss eight  seven  four,swiss radar, identified."
+[LocalVoicePhonemes] sid=245 | "swˈɪs ˈeɪt sˈɛvən fˈoːɹ,swˈɪs ɹˈeɪdɑːɹ, aɪdˈɛntᵻfˌaɪd."
+------------------------------
+[PlayerState] Friday 19:29, lat: 47.4618, lon: 8.6716, alt: 13265, hdg: 85, spd: 199, gs: 253, lastFix: MOMOL, currFix: KOLUL, inVector: False, com1: 128.050(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Swiss 874, Swiss Radar, identified.
+------------------------------
+[ControllerScript] AICommunicationSystem.IFR.ExpectStarInstructionScript
+[LocalVoiceInput] sid=245 ls=1.206 | "Swiss eight  seven  four,cleared reutl five alpha arrival, runway two five."
+[LocalVoicePhonemes] sid=245 | "swˈɪs ˈeɪt sˈɛvən fˈoːɹ,klˈɪɹd ɹˈuːɾəl fˈaɪv ˈælfə ɚɹˈaɪvəl, ɹˈʌnweɪ tˈuː fˈaɪv."
+------------------------------
+[PlayerState] Friday 19:30, lat: 47.4638, lon: 8.7274, alt: 14395, hdg: 84, spd: 199, gs: 258, lastFix: MOMOL, currFix: KOLUL, inVector: False, com1: 128.050(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Swiss 874, cleared REUT5A arrival, runway 25.
+------------------------------
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[Comms] Auto-tune skipped — aircraft destroyed before script completion (target comm 135.035)
+[LocalVoiceInput] sid=245 ls=1.206 | "Swiss eight  seven  four,cleared reutl five alpha arrival, runway two five."
+[LocalVoicePhonemes] sid=245 | "swˈɪs ˈeɪt sˈɛvən fˈoːɹ,klˈɪɹd ɹˈuːɾəl fˈaɪv ˈælfə ɚɹˈaɪvəl, ɹˈʌnweɪ tˈuː fˈaɪv."
+------------------------------
+[PlayerState] Friday 19:30, lat: 47.4653, lon: 8.768, alt: 15142, hdg: 84, spd: 199, gs: 262, lastFix: MOMOL, currFix: KOLUL, inVector: False, com1: 128.050(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Swiss 874, cleared REUT5A arrival, runway 25.
+------------------------------
+[LocalVoiceInput] sid=147 ls=1.128 | "Cleared reutl five alpha arrival, runway two five,swiss eight  seven  four."
+[LocalVoicePhonemes] sid=147 | "klˈɪɹd ɹˈuːɾəl fˈaɪv ˈælfə ɚɹˈaɪvəl, ɹˈʌnweɪ tˈuː fˈaɪv,swˈɪs ˈeɪt sˈɛvən fˈoːɹ."
+------------------------------
+[PlayerState] Friday 19:30, lat: 47.4658, lon: 8.7825, alt: 15417, hdg: 84, spd: 200, gs: 263, lastFix: MOMOL, currFix: KOLUL, inVector: False, com1: 128.050(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Cleared REUT5A arrival, runway 25, Swiss 874.
+------------------------------
+[LocalVoiceInput] sid=245 ls=1.206 | "Ethiopian seven  three  seven heavy, contact milano radar one two seven decimal four five."
+[LocalVoicePhonemes] sid=245 | "ˌiːθɪˈoʊpiən sˈɛvən θɹˈiː sˈɛvən hˈɛvi, kˈɑːntækt mɪlˈɑːnoʊ ɹˈeɪdɑːɹ wˌʌn tˈuː sˈɛvən dˈɛsɪməl fˈoːɹ fˈaɪv."
+[PlayerState] Friday 19:30, lat: 47.4663, lon: 8.7984, alt: 15693, hdg: 84, spd: 199, gs: 265, lastFix: MOMOL, currFix: KOLUL, inVector: False, com1: 128.050(On), com2: 121.500(On), transponder: 1000(On)
+[WaypointPath] Progress Path
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[LocalVoiceInput] sid=3 ls=0.918 | "Contact milano radar one two seven decimal four five,ethiopian seven  tree  seven heavy."
+[LocalVoicePhonemes] sid=3 | "kˈɑːntækt mɪlˈɑːnoʊ ɹˈeɪdɑːɹ wˌʌn tˈuː sˈɛvən dˈɛsɪməl fˈoːɹ fˈaɪv,ˌiːθɪˈoʊpiən sˈɛvən tɹˈiː sˈɛvən hˈɛvi."
+[Handoff] Swiss 874 handed off by ControllerAI_Center_Swiss Radar_128.050
+[CPDLC] The following script (AICommunicationSystem.IFR.CenterHandoffScript) would be run via CPDLC however doesn't meet one or more of the following criteria:
+[CPDLC] : Player should be logged in to CPDLC - Is logged in: False
+[CPDLC] : Current controller should be a center controller - Current Controller Swiss Radar 128.050, Is center controller: True
+[CPDLC] : Altitude should be appropriate for CPDLC - Current Alt 16529.25 Region ICAO Is alt appropriate: False
+[CPDLC] : If this script is apart of a CPDLC request, there should be a pending CPDLC request - Is this script apart of a CPDLC request: False, if true, is there a pending CPDLC request in system the system: False
+[ControllerScript] AICommunicationSystem.IFR.CenterHandoffScript
+[LocalVoiceInput] sid=245 ls=1.206 | "Swiss eight  seven  four,contact swiss radar one three three decimal niner zero five."
+[LocalVoicePhonemes] sid=245 | "swˈɪs ˈeɪt sˈɛvən fˈoːɹ,kˈɑːntækt swˈɪs ɹˈeɪdɑːɹ wˌʌn θɹˈiː θɹˈiː dˈɛsɪməl nˈaɪnɚ zˈiəɹoʊ fˈaɪv."
+------------------------------
+[PlayerState] Friday 19:31, lat: 47.4636, lon: 8.8471, alt: 16530, hdg: 98, spd: 199, gs: 272, lastFix: KOLUL, currFix: ZH504, inVector: False, com1: 128.050(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Swiss 874, contact Swiss Radar 133.905.
+------------------------------
+[LocalVoiceInput] sid=147 ls=1.128 | "Center on one three three decimal niner zero five,swiss eight  seven  four,good day."
+[LocalVoicePhonemes] sid=147 | "sˈɛnɾɚ ˈɔn wˌʌn θɹˈiː θɹˈiː dˈɛsɪməl nˈaɪnɚ zˈiəɹoʊ fˈaɪv,swˈɪs ˈeɪt sˈɛvən fˈoːɹ,ɡˈʊd dˈeɪ."
+------------------------------
+[PlayerState] Friday 19:31, lat: 47.4624, lon: 8.856, alt: 16680, hdg: 99, spd: 199, gs: 273, lastFix: KOLUL, currFix: ZH504, inVector: False, com1: 128.050(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Center on 133.905, Swiss 874, good day.
+------------------------------
+[Comms] Set Frequency Com1: 133905000
+[VFR - Debug] CircuitManager: Unregistered Easy 58CV
+[LocalVoiceInput] sid=147 ls=1.128 | "Swiss radar, swiss eight  seven  four,passing flight level one six eight climbing to flight level one niner zero direct zh five zero four."
+[LocalVoicePhonemes] sid=147 | "swˈɪs ɹˈeɪdɑːɹ, swˈɪs ˈeɪt sˈɛvən fˈoːɹ,pˈæsɪŋ flˈaɪt lˈɛvəl wˌʌn sˈɪks ˈeɪt klˈaɪmɪŋ tuː flˈaɪt lˈɛvəl wˌʌn nˈaɪnɚ zˈiəɹoʊ dᵻɹˈɛkt zh fˈaɪv zˈiəɹoʊ fˈoːɹ."
+------------------------------
+[PlayerState] Friday 19:31, lat: 47.4608, lon: 8.8672, alt: 16851, hdg: 99, spd: 199, gs: 274, lastFix: KOLUL, currFix: ZH504, inVector: False, com1: 133.905(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Swiss Radar, Swiss 874, passing FL168 climbing to FL190 direct ZH504.
+------------------------------
+[PlayerState] Friday 19:31, lat: 47.4599, lon: 8.873, alt: 16951, hdg: 99, spd: 199, gs: 275, lastFix: KOLUL, currFix: ZH504, inVector: False, com1: 133.905(On), com2: 121.500(On), transponder: 1000(On)
+[WaypointPath] Progress Path
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[ControllerScript] AICommunicationSystem.IFR.VerifyCallsignAltitudeScript
+[ControllerScript] AICommunicationSystem.IFR.CenterWithYouScript
+[LocalVoiceInput] sid=172 ls=1.247 | "Swiss eight  seven  four,swiss radar, identified."
+[LocalVoicePhonemes] sid=172 | "swˈɪs ˈeɪt sˈɛvən fˈoːɹ,swˈɪs ɹˈeɪdɑːɹ, aɪdˈɛntᵻfˌaɪd."
+------------------------------
+[PlayerState] Friday 19:31, lat: 47.458, lon: 8.8863, alt: 17159, hdg: 99, spd: 200, gs: 276, lastFix: ZH504, currFix: ZH525, inVector: False, com1: 133.905(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Swiss 874, Swiss Radar, identified.
+------------------------------
+[TrafficTurnaround]: SWR96B departs to LSGG in 01h:30m:44s
+[LocalVoiceInput] sid=172 ls=1.247 | "Swiss radar, swiss two  four charlie, good evening, passing flight level one four one climbing to flight level one seven zero direct zh five zero four."
+[LocalVoicePhonemes] sid=172 | "swˈɪs ɹˈeɪdɑːɹ, swˈɪs tˈuː fˈoːɹ tʃˈɑːɹli, ɡˈʊd ˈiːvnɪŋ, pˈæsɪŋ flˈaɪt lˈɛvəl wˌʌn fˈoːɹ wˌʌn klˈaɪmɪŋ tuː flˈaɪt lˈɛvəl wˌʌn sˈɛvən zˈiəɹoʊ dᵻɹˈɛkt zh fˈaɪv zˈiəɹoʊ fˈoːɹ."
+[LocalVoiceInput] sid=172 ls=1.247 | "Swiss two  four charlie, swiss radar, good evening, identified, climb flight level tree four zero."
+[LocalVoicePhonemes] sid=172 | "swˈɪs tˈuː fˈoːɹ tʃˈɑːɹli, swˈɪs ɹˈeɪdɑːɹ, ɡˈʊd ˈiːvnɪŋ, aɪdˈɛntᵻfˌaɪd, klˈaɪm flˈaɪt lˈɛvəl tɹˈiː fˈoːɹ zˈiəɹoʊ."
+[LocalVoiceInput] sid=172 ls=1.247 | "Climb flight level three four zero,swiss two  four charlie."
+[LocalVoicePhonemes] sid=172 | "klˈaɪm flˈaɪt lˈɛvəl θɹˈiː fˈoːɹ zˈiəɹoʊ,swˈɪs tˈuː fˈoːɹ tʃˈɑːɹli."
+[Planning] GoAround LWSK/34: charted procedure REJECTED — charted procedure carries no altitude. Falling back to the generated pattern.
+[Planning] GoAround turn: rwy=34|sign=1|source=terrainVeto|conventionSide=5003ft|chosenSide=2201ft|rightHigh=2201|leftHigh=5003
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[ATIS] Refreshing ATIS for LSZH if required
+[ATIS] METAR updated to METAR LSZH 111920Z 12002KT CAVOK 15/08 Q1024 NOSIG at LSZH
+[ATIS] ATIS text updated to LSZH ATIS U 1932Z 12002KT CAVOK 15/08 Q1024 ARR RWY 14 DEP RWY 16 28 TRANSITION-LEVEL FL070 ACKNOWLEDGE RECEIPT OF INFORMATION U AND ADVISE AIRCRAFT TYPE ON FIRST CONTACT  at LSZH
+[ATIS] ATIS spoken updated to Zurich Airport information Uniform, one niner tree two zulu, surface wind one two zero degrees, two knots. Ceiling and visibility OK, Temperature one five degrees, Dewpoint zero eight degrees, QNH one zero two four, Landing runway one four, Departing runways one six , two eight, Transition level zero seven zero, Advise on initial contact you have information Uniform. at LSZH
+[ATIS] Refreshing ATIS for EDDS if required
+[ATIS] METAR updated to METAR EDDS 111920Z AUTO 27001KT CAVOK 14/08 Q1023 NOSIG at EDDS
+[ATIS] ATIS text updated to EDDS ATIS Q 1932Z 27001KT CAVOK 14/08 Q1023 RWY 25 IN USE TRANSITION-LEVEL FL050 ACKNOWLEDGE RECEIPT OF INFORMATION Q AND ADVISE AIRCRAFT TYPE ON FIRST CONTACT  at EDDS
+[ATIS] ATIS spoken updated to Stuttgart Airport information Quebec, one niner tree two zulu, surface wind two seven zero degrees, one knots. Ceiling and visibility OK, Temperature one four degrees, Dewpoint zero eight degrees, QNH one zero two tree, Landing and departing runway two five, Transition level zero five zero, Advise on initial contact you have information Quebec. at EDDS
+[DynamicAirports] evicting dynamic LSZP (out of range)
+[Traffic] Data load - Appended 48 flights and filtered to 371 by reg flight groups for traffic 
+[PlayerState] Friday 19:32, lat: 47.4435, lon: 8.9871, alt: 18670, hdg: 98, spd: 200, gs: 283, lastFix: ZH504, currFix: ZH525, inVector: False, com1: 133.905(On), com2: 121.500(On), transponder: 1000(On)
+[WaypointPath] Progress Path
+[Planning] GoAround EBBR/25L: charted procedure REJECTED — top alt 700 vs terrain 173+1000 on leg 0. Falling back to the generated pattern.
+[ATIS] Refreshing all metars.
+Look rotation viewing vector is zero
+[Traffic] No livery found for departure BCS4620 (B752) at EDDS
+[Planning] GoAround EBBR/25L: charted procedure REJECTED — top alt 700 vs terrain 173+1000 on leg 0. Falling back to the generated pattern.
+Look rotation viewing vector is zero
+[TrafficTurnaround]: SWR53Q departs to EETN in 00h:13m:20s
+Look rotation viewing vector is zero
+[DynamicAirports] evicting dynamic LSZW (out of range)
+[Planning] GoAround LFMN/04L: charted procedure REJECTED — top alt 400 vs terrain 0+1000 on leg 0. Falling back to the generated pattern.
+[Planning] GoAround turn: rwy=04L|sign=1|source=terrainVeto|conventionSide=4192ft|chosenSide=1958ft|rightHigh=1958|leftHigh=4192
+[LocalVoiceInput] sid=172 ls=1.247 | "Swiss two  four charlie, cleared aleso one hotel arrival, runway two seven left, descend via star to seven thousand feet, q n h one zero two two."
+[LocalVoicePhonemes] sid=172 | "swˈɪs tˈuː fˈoːɹ tʃˈɑːɹli, klˈɪɹd ɐlˈiːsoʊ wˌʌn hoʊtˈɛl ɚɹˈaɪvəl, ɹˈʌnweɪ tˈuː sˈɛvən lˈɛft, dᵻsˈɛnd vˈaɪə stˈɑːɹ tuː sˈɛvən θˈaʊzənd fˈiːt, kjˈuː ˈɛn ˈeɪtʃ wˌʌn zˈiəɹoʊ tˈuː tˈuː."
+[Traffic] Aircraft (AFR48HP) was unable to find an exit from the runway and was removed.
+[Traffic] Aircraft (DLH7HV) was unable to find an exit from the runway and was removed.
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[LocalVoiceInput] sid=172 ls=1.247 | "Cleared aleso one hotel arrival, runway two seven left, descend via star to seven thousand feet, q n h one zero two two,swiss two  four charlie."
+[LocalVoicePhonemes] sid=172 | "klˈɪɹd ɐlˈiːsoʊ wˌʌn hoʊtˈɛl ɚɹˈaɪvəl, ɹˈʌnweɪ tˈuː sˈɛvən lˈɛft, dᵻsˈɛnd vˈaɪə stˈɑːɹ tuː sˈɛvən θˈaʊzənd fˈiːt, kjˈuː ˈɛn ˈeɪtʃ wˌʌn zˈiəɹoʊ tˈuː tˈuː,swˈɪs tˈuː fˈoːɹ tʃˈɑːɹli."
+[LocalVoiceInput] sid=381 ls=1.217 | "Swiss radar, turkish six  four  four  three heavy, good evening, passing flight level one six one climbing to flight level one niner zero."
+[LocalVoicePhonemes] sid=381 | "swˈɪs ɹˈeɪdɑːɹ, tˈɜːkɪʃ sˈɪks fˈoːɹ fˈoːɹ θɹˈiː hˈɛvi, ɡˈʊd ˈiːvnɪŋ, pˈæsɪŋ flˈaɪt lˈɛvəl wˌʌn sˈɪks wˌʌn klˈaɪmɪŋ tuː flˈaɪt lˈɛvəl wˌʌn nˈaɪnɚ zˈiəɹoʊ."
+[PlayerState] Friday 19:34, lat: 47.4162, lon: 9.178, alt: 19000, hdg: 93, spd: 202, gs: 286, lastFix: ZH525, currFix: DEGES, inVector: False, com1: 133.905(On), com2: 121.500(On), transponder: 1000(On)
+[WaypointPath] Progress Path
+[LocalVoiceInput] sid=172 ls=1.247 | "Turkish six  four  four  tree heavy, swiss radar, good evening, identified, climb flight level four one zero."
+[LocalVoicePhonemes] sid=172 | "tˈɜːkɪʃ sˈɪks fˈoːɹ fˈoːɹ tɹˈiː hˈɛvi, swˈɪs ɹˈeɪdɑːɹ, ɡˈʊd ˈiːvnɪŋ, aɪdˈɛntᵻfˌaɪd, klˈaɪm flˈaɪt lˈɛvəl fˈoːɹ wˌʌn zˈiəɹoʊ."
+[DynamicAirports] evicting dynamic EDTG (out of range)
+[DynamicAirports] evicting dynamic LFGB (out of range)
+[DynamicAirports] evicting dynamic LSZG (out of range)
+[LocalVoiceInput] sid=381 ls=1.217 | "Climb flight level four one zero,turkish six  four  four  three heavy."
+[LocalVoicePhonemes] sid=381 | "klˈaɪm flˈaɪt lˈɛvəl fˈoːɹ wˌʌn zˈiəɹoʊ,tˈɜːkɪʃ sˈɪks fˈoːɹ fˈoːɹ θɹˈiː hˈɛvi."
+[LocalVoiceInput] sid=172 ls=1.247 | "Swiss one  one  zero  eight,contact münchen radar one tree tree decimal five five."
+[LocalVoicePhonemes] sid=172 | "swˈɪs wˌʌn wˌʌn zˈiəɹoʊ ˈeɪt,kˈɑːntækt mntʃɛn ɹˈeɪdɑːɹ wˌʌn tɹˈiː tɹˈiː dˈɛsɪməl fˈaɪv fˈaɪv."
+Look rotation viewing vector is zero
+[LocalVoiceInput] sid=172 ls=1.247 | "Center on one three three decimal five five,swiss one  one  zero  eight."
+[LocalVoicePhonemes] sid=172 | "sˈɛnɾɚ ˈɔn wˌʌn θɹˈiː θɹˈiː dˈɛsɪməl fˈaɪv fˈaɪv,swˈɪs wˌʌn wˌʌn zˈiəɹoʊ ˈeɪt."
+[Traffic] Aircraft (VOE6FB) was unable to find an exit from the runway and was removed.
+[Traffic] Aircraft (SWR357) was unable to find an exit from the runway and was removed.
+[ControllerScript] AICommunicationSystem.IFR.InitialDescentInstructionScript
+[LocalVoiceInput] sid=172 ls=1.247 | "Swiss eight  seven  four,report ready for descent."
+[LocalVoicePhonemes] sid=172 | "swˈɪs ˈeɪt sˈɛvən fˈoːɹ,ɹᵻpˈoːɹt ɹˈɛdi fɔːɹ dᵻsˈɛnt."
+------------------------------
+[PlayerState] Friday 19:35, lat: 47.4394, lon: 9.2695, alt: 19004, hdg: 56, spd: 200, gs: 271, lastFix: DEGES, currFix: ROMGA, inVector: False, com1: 133.905(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Swiss 874, report ready for descent.
+------------------------------
+[DynamicAirports] evicting dynamic LSPD (out of range)
+Look rotation viewing vector is zero
+[LocalVoiceInput] sid=172 ls=1.247 | "Swiss eight  seven  four,report ready for descent."
+[LocalVoicePhonemes] sid=172 | "swˈɪs ˈeɪt sˈɛvən fˈoːɹ,ɹᵻpˈoːɹt ɹˈɛdi fɔːɹ dᵻsˈɛnt."
+------------------------------
+[PlayerState] Friday 19:35, lat: 47.4521, lon: 9.3029, alt: 19000, hdg: 56, spd: 200, gs: 271, lastFix: DEGES, currFix: ROMGA, inVector: False, com1: 133.905(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Swiss 874, report ready for descent.
+------------------------------
+[VFR - Debug] CircuitManager: Unregistered Eurowings 8GJ
+[LocalVoiceInput] sid=172 ls=1.247 | "Swiss eight  seven  four,swiss radar?"
+[LocalVoicePhonemes] sid=172 | "swˈɪs ˈeɪt sˈɛvən fˈoːɹ,swˈɪs ɹˈeɪdɑːɹ?"
+------------------------------
+[PlayerState] Friday 19:35, lat: 47.4649, lon: 9.3364, alt: 19000, hdg: 56, spd: 199, gs: 271, lastFix: DEGES, currFix: ROMGA, inVector: False, com1: 133.905(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Swiss 874, Swiss Radar?
+------------------------------
+Look rotation viewing vector is zero
+[Traffic] Aircraft (EJU79UM) was unable to find an exit from the runway and was removed.
+[LocalVoiceInput] sid=147 ls=1.128 | "Wilco, swiss eight  seven  four."
+[LocalVoicePhonemes] sid=147 | "wˈɪlkoʊ, swˈɪs ˈeɪt sˈɛvən fˈoːɹ."
+------------------------------
+[PlayerState] Friday 19:36, lat: 47.4754, lon: 9.3637, alt: 18998, hdg: 56, spd: 200, gs: 271, lastFix: DEGES, currFix: ROMGA, inVector: False, com1: 133.905(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Wilco, Swiss 874.
+------------------------------
+[LocalVoiceInput] sid=172 ls=1.247 | "Turkish six  four  four  tree heavy, contact swiss radar one tree five decimal zero one five,bye bye."
+[LocalVoicePhonemes] sid=172 | "tˈɜːkɪʃ sˈɪks fˈoːɹ fˈoːɹ tɹˈiː hˈɛvi, kˈɑːntækt swˈɪs ɹˈeɪdɑːɹ wˌʌn tɹˈiː fˈaɪv dˈɛsɪməl zˈiəɹoʊ wˌʌn fˈaɪv,bˈaɪ bˈaɪ."
+[LocalVoiceInput] sid=381 ls=1.217 | "Contact swiss radar one three five decimal zero one five,turkish six  four  four  three heavy, have uh good evening."
+[LocalVoicePhonemes] sid=381 | "kˈɑːntækt swˈɪs ɹˈeɪdɑːɹ wˌʌn θɹˈiː fˈaɪv dˈɛsɪməl zˈiəɹoʊ wˌʌn fˈaɪv,tˈɜːkɪʃ sˈɪks fˈoːɹ fˈoːɹ θɹˈiː hˈɛvi, hˈæv ˈʌ ɡˈʊd ˈiːvnɪŋ."
+[PlayerState] Friday 19:36, lat: 47.4826, lon: 9.382, alt: 18995, hdg: 52, spd: 199, gs: 269, lastFix: DEGES, currFix: ROMGA, inVector: False, com1: 133.905(On), com2: 121.500(On), transponder: 1000(On)
+[WaypointPath] Progress Path
+[DynamicAirports] evicting dynamic EDTF (out of range)
+[DynamicAirports] evicting dynamic LSPL (out of range)
+[DynamicAirports] evicting dynamic LSMM (out of range)
+[PlayerState] Friday 19:37, lat: 47.5719, lon: 9.443, alt: 19016, hdg: 15, spd: 263, gs: 340, lastFix: ROMGA, currFix: BODAN, inVector: False, com1: 133.905(On), com2: 121.500(On), transponder: 1000(On)
+[WaypointPath] Progress Path
+[METAR] Historic batch fetch for 47 ambient fields at 20260911_1937
+[ATIS] Refreshing all metars.
+[LocalVoiceInput] sid=147 ls=1.128 | "Swiss eight  seven  four,ready for descent."
+[LocalVoicePhonemes] sid=147 | "swˈɪs ˈeɪt sˈɛvən fˈoːɹ,ɹˈɛdi fɔːɹ dᵻsˈɛnt."
+------------------------------
+[PlayerState] Friday 19:37, lat: 47.5939, lon: 9.4501, alt: 19014, hdg: 4, spd: 278, gs: 357, lastFix: BODAN, currFix: ALAGO, inVector: False, com1: 133.905(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Swiss 874, ready for descent.
+------------------------------
+[ControllerScript] AICommunicationSystem.IFR.DescentInstructionScript
+[LocalVoiceInput] sid=172 ls=1.247 | "Swiss eight  seven  four,descend to flight level zero niner zero."
+[LocalVoicePhonemes] sid=172 | "swˈɪs ˈeɪt sˈɛvən fˈoːɹ,dᵻsˈɛnd tuː flˈaɪt lˈɛvəl zˈiəɹoʊ nˈaɪnɚ zˈiəɹoʊ."
+------------------------------
+[PlayerState] Friday 19:37, lat: 47.5994, lon: 9.4508, alt: 19010, hdg: 2, spd: 281, gs: 359, lastFix: BODAN, currFix: ALAGO, inVector: False, com1: 133.905(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Swiss 874, descend to FL090.
+------------------------------
+[LocalVoiceInput] sid=147 ls=1.128 | "Descend to flight level zero niner zero,swiss eight  seven  four."
+[LocalVoicePhonemes] sid=147 | "dᵻsˈɛnd tuː flˈaɪt lˈɛvəl zˈiəɹoʊ nˈaɪnɚ zˈiəɹoʊ,swˈɪs ˈeɪt sˈɛvən fˈoːɹ."
+------------------------------
+[PlayerState] Friday 19:37, lat: 47.605, lon: 9.4515, alt: 19011, hdg: 1, spd: 282, gs: 361, lastFix: BODAN, currFix: ALAGO, inVector: False, com1: 133.905(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Descend to FL090, Swiss 874.
+------------------------------
+[Planning] GoAround LFPO/02: charted procedure REJECTED — charted procedure carries no altitude. Falling back to the generated pattern.
+[VFR - Debug] CircuitManager: Unregistered LOT 7PK
+[Comms] Auto-tune skipped — aircraft destroyed before script completion (target comm 136.035)
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[LocalVoiceInput] sid=393 ls=1.235 | "Swiss radar, easy four  two zulu whiskey, passing flight level one tree zero climbing to flight level one six zero direct zurich east."
+[LocalVoicePhonemes] sid=393 | "swˈɪs ɹˈeɪdɑːɹ, ˈiːzi fˈoːɹ tˈuː zˈuːluː wˈɪski, pˈæsɪŋ flˈaɪt lˈɛvəl wˌʌn tɹˈiː zˈiəɹoʊ klˈaɪmɪŋ tuː flˈaɪt lˈɛvəl wˌʌn sˈɪks zˈiəɹoʊ dᵻɹˈɛkt zjˈʊɹɪk ˈiːst."
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[LocalVoiceInput] sid=172 ls=1.247 | "Easy four  two zulu whiskey, swiss radar, identified, climb flight level tree two zero."
+[LocalVoicePhonemes] sid=172 | "ˈiːzi fˈoːɹ tˈuː zˈuːluː wˈɪski, swˈɪs ɹˈeɪdɑːɹ, aɪdˈɛntᵻfˌaɪd, klˈaɪm flˈaɪt lˈɛvəl tɹˈiː tˈuː zˈiəɹoʊ."
+[LocalVoiceInput] sid=393 ls=1.235 | "Climb flight level tree two zero,easy four  two zulu whiskey."
+[LocalVoicePhonemes] sid=393 | "klˈaɪm flˈaɪt lˈɛvəl tɹˈiː tˈuː zˈiəɹoʊ,ˈiːzi fˈoːɹ tˈuː zˈuːluː wˈɪski."
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[DynamicAirports] evicting dynamic EDTR (out of range)
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[VFR - Debug] CircuitManager: Unregistered Swiss 9TP
+[PlayerState] Friday 19:39, lat: 47.7831, lon: 9.4619, alt: 15631, hdg: 359, spd: 274, gs: 334, lastFix: BODAN, currFix: ALAGO, inVector: False, com1: 133.905(On), com2: 121.500(On), transponder: 1000(On)
+[WaypointPath] Progress Path
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[VFR - Debug] CircuitManager: Unregistered Swiss 3ME
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[Traffic] RYR961A live enroute injected past its entire path (no waypoint ahead of the live position) - dropping injection.
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[LocalVoiceInput] sid=172 ls=1.247 | "Swiss two  four charlie, contact münchen radar one tree four decimal one five."
+[LocalVoicePhonemes] sid=172 | "swˈɪs tˈuː fˈoːɹ tʃˈɑːɹli, kˈɑːntækt mntʃɛn ɹˈeɪdɑːɹ wˌʌn tɹˈiː fˈoːɹ dˈɛsɪməl wˌʌn fˈaɪv."
+[DynamicAirports] evicting dynamic LSPO (out of range)
+[DynamicAirports] evicting dynamic LSMA (out of range)
+[LocalVoiceInput] sid=172 ls=1.247 | "Contact münchen radar one three four decimal one five,swiss two  four charlie."
+[LocalVoicePhonemes] sid=172 | "kˈɑːntækt mntʃɛn ɹˈeɪdɑːɹ wˌʌn θɹˈiː fˈoːɹ dˈɛsɪməl wˌʌn fˈaɪv,swˈɪs tˈuː fˈoːɹ tʃˈɑːɹli."
+[VFR - Debug] CircuitManager: Unregistered Swiss 4TH
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[VFR - Debug] CircuitManager: Unregistered Ethiopian 737 Heavy
+Look rotation viewing vector is zero
+[Traffic] Aircraft (LHX1705) was unable to find an exit from the runway and was removed.
+[DynamicAirports] evicting dynamic LSZC (out of range)
+[LocalVoiceInput] sid=172 ls=1.247 | "Swiss radar, swiss two  four charlie, passing flight level two zero three,descending to seven thousand feet."
+[LocalVoicePhonemes] sid=172 | "swˈɪs ɹˈeɪdɑːɹ, swˈɪs tˈuː fˈoːɹ tʃˈɑːɹli, pˈæsɪŋ flˈaɪt lˈɛvəl tˈuː zˈiəɹoʊ θɹˈiː,dᵻsˈɛndɪŋ tuː sˈɛvən θˈaʊzənd fˈiːt."
+[VFR - Debug] CircuitManager: Unregistered Sunexpress 1ST
+[VFR - Debug] CircuitManager: Unregistered Sunturk 60MV
+[VFR - Debug] CircuitManager: Unregistered Vueling 8BH
+[VFR - Debug] CircuitManager: Unregistered Sunexpress 2LL
+[LocalVoiceInput] sid=172 ls=1.247 | "Swiss two  four charlie, swiss radar, identified."
+[LocalVoicePhonemes] sid=172 | "swˈɪs tˈuː fˈoːɹ tʃˈɑːɹli, swˈɪs ɹˈeɪdɑːɹ, aɪdˈɛntᵻfˌaɪd."
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[TrafficTurnaround]: SWR2HD departs to EDDB in 10h:32m:54s
+[Traffic] Aircraft A319_EWG7XR_LOWW_EDDK would cause fatal in ConnectDestAirportToLastFixInRoute
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[Planning] GoAround EBBR/25L: charted procedure REJECTED — top alt 700 vs terrain 173+1000 on leg 0. Falling back to the generated pattern.
+[DynamicAirports] evicting dynamic LSPN (out of range)
+[DynamicAirports] evicting dynamic LSME (out of range)
+[LocalVoiceInput] sid=172 ls=1.247 | "Easy four  two zulu whiskey, contact rine radar one tree two decimal four zero five."
+[LocalVoicePhonemes] sid=172 | "ˈiːzi fˈoːɹ tˈuː zˈuːluː wˈɪski, kˈɑːntækt ɹˈaɪn ɹˈeɪdɑːɹ wˌʌn tɹˈiː tˈuː dˈɛsɪməl fˈoːɹ zˈiəɹoʊ fˈaɪv."
+[LocalVoiceInput] sid=393 ls=1.235 | "Center on one tree two decimal four zero five,easy four  two zulu whiskey, good day."
+[LocalVoicePhonemes] sid=393 | "sˈɛnɾɚ ˈɔn wˌʌn tɹˈiː tˈuː dˈɛsɪməl fˈoːɹ zˈiəɹoʊ fˈaɪv,ˈiːzi fˈoːɹ tˈuː zˈuːluː wˈɪski, ɡˈʊd dˈeɪ."
+Look rotation viewing vector is zero
+[Handoff] Swiss 874 handed off by ControllerAI_Center_Swiss Radar_133.905
+[ControllerScript] AICommunicationSystem.IFR.ApproachHandoffScript
+[LocalVoiceInput] sid=172 ls=1.247 | "Swiss eight  seven  four,contact stuttgart director one one niner decimal eight five."
+[LocalVoicePhonemes] sid=172 | "swˈɪs ˈeɪt sˈɛvən fˈoːɹ,kˈɑːntækt stˈʌtɡɑːɹt dᵻɹˈɛktɚ wˌʌn wˌʌn nˈaɪnɚ dˈɛsɪməl ˈeɪt fˈaɪv."
+[ATIS] Refreshing all metars.
+------------------------------
+[PlayerState] Friday 19:42, lat: 48.037, lon: 9.3762, alt: 10475, hdg: 345, spd: 250, gs: 288, lastFix: ALAGO, currFix: ARSUT, inVector: False, com1: 133.905(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Swiss 874, contact Stuttgart Director 119.85.
+------------------------------
+[LocalVoiceInput] sid=147 ls=1.128 | "Contact stuttgart director one one niner decimal eight five,swiss eight  seven  four."
+[LocalVoicePhonemes] sid=147 | "kˈɑːntækt stˈʌtɡɑːɹt dᵻɹˈɛktɚ wˌʌn wˌʌn nˈaɪnɚ dˈɛsɪməl ˈeɪt fˈaɪv,swˈɪs ˈeɪt sˈɛvən fˈoːɹ."
+------------------------------
+[PlayerState] Friday 19:42, lat: 48.0428, lon: 9.3741, alt: 10356, hdg: 345, spd: 250, gs: 287, lastFix: ALAGO, currFix: ARSUT, inVector: False, com1: 133.905(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Contact Stuttgart Director 119.85, Swiss 874.
+------------------------------
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[Comms] Set Frequency Com1: 119850000
+[LocalVoiceInput] sid=147 ls=1.128 | "Stuttgart director, swiss eight  seven  four,passing flight level one zero two,descending to flight level zero niner zero with information quebec."
+[LocalVoicePhonemes] sid=147 | "stˈʌtɡɑːɹt dᵻɹˈɛktɚ, swˈɪs ˈeɪt sˈɛvən fˈoːɹ,pˈæsɪŋ flˈaɪt lˈɛvəl wˌʌn zˈiəɹoʊ tˈuː,dᵻsˈɛndɪŋ tuː flˈaɪt lˈɛvəl zˈiəɹoʊ nˈaɪnɚ zˈiəɹoʊ wɪð ˌɪnfɚmˈeɪʃən kwᵻbˈɛk."
+------------------------------
+[PlayerState] Friday 19:42, lat: 48.0505, lon: 9.3713, alt: 10207, hdg: 345, spd: 249, gs: 287, lastFix: ALAGO, currFix: ARSUT, inVector: False, com1: 119.850(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Stuttgart Director, Swiss 874, passing FL102, descending to FL090 with Information Quebec.
+------------------------------
+[ControllerScript] AICommunicationSystem.IFR.TraconApproachInstructionScript
+[LocalVoiceInput] sid=163 ls=0.929 | "Swiss eight  seven  four stuttgart director, q n h one zero two three expect the i l s approach runway two five with the romeo echo uniform one whiskey transition."
+[LocalVoicePhonemes] sid=163 | "swˈɪs ˈeɪt sˈɛvən fˈoːɹ stˈʌtɡɑːɹt dᵻɹˈɛktɚ, kjˈuː ˈɛn ˈeɪtʃ wˌʌn zˈiəɹoʊ tˈuː θɹˈiː ɛkspˈɛkt ðə ˈaɪ ˈɛl ˈɛs ɐpɹˈoʊtʃ ɹˈʌnweɪ tˈuː fˈaɪv wɪð ðə ɹˈoʊmɪˌoʊ ˈɛkoʊ jˈuːnɪfˌɔːɹm wˌʌn wˈɪski tɹænsˈɪʃən."
+------------------------------
+[PlayerState] Friday 19:42, lat: 48.0632, lon: 9.3666, alt: 10000, hdg: 345, spd: 250, gs: 284, lastFix: ALAGO, currFix: ARSUT, inVector: False, com1: 119.850(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Swiss 874 Stuttgart Director, QNH 1023 expect the ILS approach runway 25 with the REU1W transition.
+------------------------------
+Look rotation viewing vector is zero
+[Traffic] Aircraft (OCN6YX) was unable to find an exit from the runway and was removed.
+[LocalVoiceInput] sid=147 ls=1.128 | "Q n h one zero two three expect the i l s approach runway two five with the romeo echo uniform one whiskey transition, swiss eight  seven  four."
+[LocalVoicePhonemes] sid=147 | "kjˈuː ˈɛn ˈeɪtʃ wˌʌn zˈiəɹoʊ tˈuː θɹˈiː ɛkspˈɛkt ðə ˈaɪ ˈɛl ˈɛs ɐpɹˈoʊtʃ ɹˈʌnweɪ tˈuː fˈaɪv wɪð ðə ɹˈoʊmɪˌoʊ ˈɛkoʊ jˈuːnɪfˌɔːɹm wˌʌn wˈɪski tɹænsˈɪʃən, swˈɪs ˈeɪt sˈɛvən fˈoːɹ."
+------------------------------
+[PlayerState] Friday 19:43, lat: 48.0746, lon: 9.3625, alt: 9805, hdg: 345, spd: 249, gs: 281, lastFix: ALAGO, currFix: ARSUT, inVector: False, com1: 119.850(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] QNH 1023 expect the ILS approach runway 25 with the REU1W transition, Swiss 874.
+------------------------------
+[DynamicAirports] evicting dynamic LSZO (out of range)
+[ControllerScript] AICommunicationSystem.IFR.DescentInstructionScript
+[LocalVoiceInput] sid=163 ls=0.929 | "Swiss eight  seven  four,descend via star to flight level zero niner zero."
+[LocalVoicePhonemes] sid=163 | "swˈɪs ˈeɪt sˈɛvən fˈoːɹ,dᵻsˈɛnd vˈaɪə stˈɑːɹ tuː flˈaɪt lˈɛvəl zˈiəɹoʊ nˈaɪnɚ zˈiəɹoʊ."
+------------------------------
+[PlayerState] Friday 19:43, lat: 48.1231, lon: 9.3446, alt: 8998, hdg: 344, spd: 245, gs: 276, lastFix: ALAGO, currFix: ARSUT, inVector: False, com1: 119.850(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Swiss 874, descend via STAR to FL090.
+------------------------------
+[LocalVoiceInput] sid=147 ls=1.128 | "Descend via star to flight level zero niner zero,swiss eight  seven  four."
+[LocalVoicePhonemes] sid=147 | "dᵻsˈɛnd vˈaɪə stˈɑːɹ tuː flˈaɪt lˈɛvəl zˈiəɹoʊ nˈaɪnɚ zˈiəɹoʊ,swˈɪs ˈeɪt sˈɛvən fˈoːɹ."
+------------------------------
+[PlayerState] Friday 19:43, lat: 48.1283, lon: 9.3427, alt: 8992, hdg: 344, spd: 247, gs: 277, lastFix: ALAGO, currFix: ARSUT, inVector: False, com1: 119.850(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Descend via STAR to FL090, Swiss 874.
+------------------------------
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[PlayerState] Friday 19:44, lat: 48.1505, lon: 9.3345, alt: 8992, hdg: 345, spd: 250, gs: 281, lastFix: ALAGO, currFix: ARSUT, inVector: False, com1: 119.850(On), com2: 121.500(On), transponder: 1000(On)
+[WaypointPath] Progress Path
+[Planning] GoAround EBBR/25L: charted procedure REJECTED — top alt 700 vs terrain 173+1000 on leg 0. Falling back to the generated pattern.
+[ControllerScript] AICommunicationSystem.IFR.ClearedDirectIaf
+[LocalVoiceInput] sid=163 ls=0.929 | "Swiss eight  seven  four,cleared direct reutl, cross reutl at or above flight level zero niner zero,cleared i l s approach runway two five."
+[LocalVoicePhonemes] sid=163 | "swˈɪs ˈeɪt sˈɛvən fˈoːɹ,klˈɪɹd dᵻɹˈɛkt ɹˈuːɾəl, kɹˈɔs ɹˈuːɾəl æt ɔːɹ əbˈʌv flˈaɪt lˈɛvəl zˈiəɹoʊ nˈaɪnɚ zˈiəɹoʊ,klˈɪɹd ˈaɪ ˈɛl ˈɛs ɐpɹˈoʊtʃ ɹˈʌnweɪ tˈuː fˈaɪv."
+------------------------------
+[PlayerState] Friday 19:44, lat: 48.1706, lon: 9.3307, alt: 8999, hdg: 359, spd: 249, gs: 282, lastFix: ARSUT, currFix: REUTL, inVector: False, com1: 119.850(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Swiss 874, cleared direct REUTL, cross REUTL at or above FL090, cleared ILS approach runway 25.
+------------------------------
+[LocalVoiceInput] sid=147 ls=1.128 | "Cleared direct reutl, cross reutl at or above flight level zero niner zero,cleared i l s approach runway two five,swiss eight  seven  four."
+[LocalVoicePhonemes] sid=147 | "klˈɪɹd dᵻɹˈɛkt ɹˈuːɾəl, kɹˈɔs ɹˈuːɾəl æt ɔːɹ əbˈʌv flˈaɪt lˈɛvəl zˈiəɹoʊ nˈaɪnɚ zˈiəɹoʊ,klˈɪɹd ˈaɪ ˈɛl ˈɛs ɐpɹˈoʊtʃ ɹˈʌnweɪ tˈuː fˈaɪv,swˈɪs ˈeɪt sˈɛvən fˈoːɹ."
+Look rotation viewing vector is zero
+------------------------------
+[PlayerState] Friday 19:44, lat: 48.1808, lon: 9.3315, alt: 9002, hdg: 2, spd: 249, gs: 282, lastFix: ARSUT, currFix: REUTL, inVector: False, com1: 119.850(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Cleared direct REUTL, cross REUTL at or above FL090, cleared ILS approach runway 25, Swiss 874.
+------------------------------
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[TrafficTurnaround]: SWR89T departs to LATI in 09h:21m:06s
+[DynamicAirports] evicting dynamic LSZU (out of range)
+[DynamicAirports] evicting dynamic LSZI (out of range)
+[DynamicAirports] evicting dynamic LSZM (out of range)
+[DynamicAirports] evicting dynamic LSZE (out of range)
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[DynamicAirports] evicting dynamic LSZN (out of range)
+[DynamicAirports] evicting dynamic LSZX (out of range)
+[VFR - Debug] CircuitManager: Unregistered LOT 3VB
+[PlayerState] Friday 19:46, lat: 48.3523, lon: 9.3586, alt: 8757, hdg: 4, spd: 249, gs: 280, lastFix: ARSUT, currFix: REUTL, inVector: False, com1: 119.850(On), com2: 121.500(On), transponder: 1000(On)
+[WaypointPath] Progress Path
+[Traffic] EWG8SY live enroute injected past its entire path (no waypoint ahead of the live position) - dropping injection.
+Look rotation viewing vector is zero
+[Traffic] EWG28N live enroute injected past its entire path (no waypoint ahead of the live position) - dropping injection.
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[Traffic] AFR71PD live enroute injected past its entire path (no waypoint ahead of the live position) - dropping injection.
+[ATIS] Refreshing ATIS for LSZH if required
+[ATIS] Refreshing ATIS for EDDS if required
+[DynamicAirports] evicting dynamic LSZF (out of range)
+[DynamicAirports] evicting dynamic LSPV (out of range)
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[Traffic] Aircraft (SWR1108) was unable to find an exit from the runway and was removed.
+[VFR - Debug] CircuitManager: Unregistered Swiss 1108
+[Traffic] Aircraft (WMT8AH) was unable to find an exit from the runway and was removed.
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[ATIS] Refreshing all metars.
+[Comms] Auto-tune skipped — aircraft destroyed before script completion (target comm 120.955)
+[Traffic] CGF3907 live enroute injected past its entire path (no waypoint ahead of the live position) - dropping injection.
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[Traffic] TRA98A live enroute injected past its entire path (no waypoint ahead of the live position) - dropping injection.
+[Traffic] AFR38LQ live enroute injected past its entire path (no waypoint ahead of the live position) - dropping injection.
+[DynamicAirports] evicting dynamic LSMD (out of range)
+[DynamicAirports] evicting dynamic LSZK (out of range)
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[VFR - Debug] CircuitManager: Unregistered Swiss 9KW
+[PlayerState] Friday 19:48, lat: 48.5089, lon: 9.4562, alt: 6335, hdg: 22, spd: 250, gs: 276, lastFix: REUTL, currFix: DS556, inVector: False, com1: 119.850(On), com2: 121.500(On), transponder: 1000(On)
+[WaypointPath] Progress Path
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[VFR - Debug] CircuitManager: Unregistered Air Serbia 98C
+[VFR - Debug] CircuitManager: Unregistered Etihad 142
+[Traffic] Aircraft (LHX5UT) was unable to find an exit from the runway and was removed.
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[DynamicAirports] evicting dynamic LSPH (out of range)
+[DynamicAirports] evicting dynamic LOIH (out of range)
+[VFR - Debug] CircuitManager: Unregistered Swiss 2120
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[Traffic] AUA156 live enroute injected past its entire path (no waypoint ahead of the live position) - dropping injection.
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[PlayerState] Friday 19:50, lat: 48.6516, lon: 9.5535, alt: 4875, hdg: 23, spd: 240, gs: 260, lastFix: DS556, currFix: DS522, inVector: False, com1: 119.850(On), com2: 121.500(On), transponder: 1000(On)
+[WaypointPath] Progress Path
+[DynamicAirports] evicting dynamic LSPF (out of range)
+[DynamicAirports] evicting dynamic LSZT (out of range)
+[DynamicAirports] evicting dynamic LSZV (out of range)
+[DynamicAirports] evicting dynamic LSZR (out of range)
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[Traffic] AUA290 live enroute injected past its entire path (no waypoint ahead of the live position) - dropping injection.
+[Traffic] THY3AT live enroute injected past its entire path (no waypoint ahead of the live position) - dropping injection.
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[DynamicAirports] evicting dynamic LSPA (out of range)
+Look rotation viewing vector is zero
+[PlayerState] Friday 19:52, lat: 48.7351, lon: 9.5545, alt: 4494, hdg: 319, spd: 190, gs: 197, lastFix: DS522, currFix: DS512, inVector: False, com1: 119.850(On), com2: 121.500(On), transponder: 1000(On)
+[WaypointPath] Progress Path
+[METAR] Historic batch fetch for 61 ambient fields at 20260911_1952
+[ATIS] Refreshing all metars.
+Look rotation viewing vector is zero
+[Planning] GoAround EBBR/25L: charted procedure REJECTED — top alt 700 vs terrain 173+1000 on leg 0. Falling back to the generated pattern.
+[DynamicAirports] evicting dynamic EDMK (out of range)
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[PlayerState] Friday 19:53, lat: 48.7384, lon: 9.4783, alt: 4484, hdg: 255, spd: 135, gs: 139, lastFix: DS512, currFix: UNSER, inVector: False, com1: 119.850(On), com2: 121.500(On), transponder: 1000(On)
+[WaypointPath] Progress Path
+[Handoff] Swiss 874 handed off by ControllerAI_EDDS_Approach_119.850
+[ControllerScript] AICommunicationSystem.IFR.GenericTowerHandoffScript
+[LocalVoiceInput] sid=163 ls=0.929 | "Swiss eight  seven  four,contact stuttgart tower one one eight decimal eight zero five."
+[LocalVoicePhonemes] sid=163 | "swˈɪs ˈeɪt sˈɛvən fˈoːɹ,kˈɑːntækt stˈʌtɡɑːɹt tˈaʊɚ wˌʌn wˌʌn ˈeɪt dˈɛsɪməl ˈeɪt zˈiəɹoʊ fˈaɪv."
+------------------------------
+[PlayerState] Friday 19:53, lat: 48.7383, lon: 9.4778, alt: 4488, hdg: 255, spd: 133, gs: 138, lastFix: UNSER, currFix: IST39, inVector: False, com1: 119.850(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Swiss 874, contact Stuttgart Tower 118.805.
+------------------------------
+[LocalVoiceInput] sid=147 ls=1.128 | "Contact tower one one eight decimal eight zero five,swiss eight  seven  four,have uh good evening."
+[LocalVoicePhonemes] sid=147 | "kˈɑːntækt tˈaʊɚ wˌʌn wˌʌn ˈeɪt dˈɛsɪməl ˈeɪt zˈiəɹoʊ fˈaɪv,swˈɪs ˈeɪt sˈɛvən fˈoːɹ,hˈæv ˈʌ ɡˈʊd ˈiːvnɪŋ."
+------------------------------
+[PlayerState] Friday 19:53, lat: 48.7375, lon: 9.4736, alt: 4492, hdg: 255, spd: 127, gs: 131, lastFix: UNSER, currFix: IST39, inVector: False, com1: 119.850(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Contact tower 118.805, Swiss 874, have a good evening.
+------------------------------
+Look rotation viewing vector is zero
+[Comms] Set Frequency Com1: 118805000
+[LocalVoiceInput] sid=147 ls=1.128 | "Stuttgart tower, swiss eight  seven  four,i l s approach runway two five."
+[LocalVoicePhonemes] sid=147 | "stˈʌtɡɑːɹt tˈaʊɚ, swˈɪs ˈeɪt sˈɛvən fˈoːɹ,ˈaɪ ˈɛl ˈɛs ɐpɹˈoʊtʃ ɹˈʌnweɪ tˈuː fˈaɪv."
+------------------------------
+[PlayerState] Friday 19:53, lat: 48.7365, lon: 9.4683, alt: 4463, hdg: 256, spd: 123, gs: 127, lastFix: UNSER, currFix: IST39, inVector: False, com1: 118.805(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Stuttgart Tower, Swiss 874, ILS approach runway 25.
+------------------------------
+[ControllerScript] AICommunicationSystem.IFR.LandingClearanceScript
+[LocalVoiceInput] sid=169 ls=0.736 | "Swiss eight  seven  four,stuttgart tower, winnd two seven zero degrees, one knots, runway two five cleared to land."
+[LocalVoicePhonemes] sid=169 | "swˈɪs ˈeɪt sˈɛvən fˈoːɹ,stˈʌtɡɑːɹt tˈaʊɚ, wˈɪnd tˈuː sˈɛvən zˈiəɹoʊ dᵻɡɹˈiːz, wˌʌn nˈɑːts, ɹˈʌnweɪ tˈuː fˈaɪv klˈɪɹd tuː lˈænd."
+------------------------------
+[PlayerState] Friday 19:53, lat: 48.7355, lon: 9.4631, alt: 4462, hdg: 256, spd: 121, gs: 125, lastFix: UNSER, currFix: IST39, inVector: False, com1: 118.805(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Swiss 874, Stuttgart Tower, wind 270 degrees, 1 knots, runway 25 cleared to land.
+------------------------------
+[LocalVoiceInput] sid=147 ls=1.128 | "Runway two five cleared to land, swiss eight  seven  four."
+[LocalVoicePhonemes] sid=147 | "ɹˈʌnweɪ tˈuː fˈaɪv klˈɪɹd tuː lˈænd, swˈɪs ˈeɪt sˈɛvən fˈoːɹ."
+------------------------------
+[PlayerState] Friday 19:53, lat: 48.7345, lon: 9.4575, alt: 4482, hdg: 256, spd: 124, gs: 128, lastFix: UNSER, currFix: IST39, inVector: False, com1: 118.805(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Runway 25 cleared to land, Swiss 874.
+------------------------------
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[Traffic] Aircraft (RYR64JM) was unable to find an exit from the runway and was removed.
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[VFR - Debug] CircuitManager: Unregistered Turkish 8QE
+[VFR - Debug] CircuitManager: Unregistered Eurowings 7ZP
+[VFR - Debug] CircuitManager: Unregistered Eurowings 8DR
+[VFR - Debug] CircuitManager: Unregistered KLM 87E
+[PlayerState] Friday 19:55, lat: 48.7153, lon: 9.3578, alt: 2677, hdg: 255, spd: 130, gs: 130, lastFix: UNSER, currFix: IST39, inVector: False, com1: 118.805(On), com2: 121.500(On), transponder: 1000(On)
+[WaypointPath] Progress Path
+[VFR - Debug] CircuitManager: Unregistered Swiss 24C
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[VFR - Debug] CircuitManager: Unregistered Alpine 14PY
+[Traffic] Aircraft (MSR5060) was unable to find an exit from the runway and was removed.
+[VFR - Debug] CircuitManager: Unregistered Swiss 2PH
+[ATIS] Refreshing all metars.
+[LocalVoiceInput] sid=379 ls=0.828 | "Sunexpress zero  one  two,holding short, runway two five."
+[LocalVoicePhonemes] sid=379 | "sˈʌnɪkspɹˌɛs zˈiəɹoʊ wˌʌn tˈuː,hˈoʊldɪŋ ʃˈɔːɹt, ɹˈʌnweɪ tˈuː fˈaɪv."
+[LocalVoiceInput] sid=169 ls=0.736 | "Sunexpress zero  one  two,hold short of runway two five,arriving traffic."
+[LocalVoicePhonemes] sid=169 | "sˈʌnɪkspɹˌɛs zˈiəɹoʊ wˌʌn tˈuː,hˈoʊld ʃˈɔːɹt ʌv ɹˈʌnweɪ tˈuː fˈaɪv,ɚɹˈaɪvɪŋ tɹˈæfɪk."
+[LocalVoiceInput] sid=379 ls=0.828 | "Hold short of runway two five,sunexpress zero  one  two."
+[LocalVoicePhonemes] sid=379 | "hˈoʊld ʃˈɔːɹt ʌv ɹˈʌnweɪ tˈuː fˈaɪv,sˈʌnɪkspɹˌɛs zˈiəɹoʊ wˌʌn tˈuː."
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[LocalVoiceInput] sid=147 ls=1.128 | "Swiss eight  seven  four,going around."
+[LocalVoicePhonemes] sid=147 | "swˈɪs ˈeɪt sˈɛvən fˈoːɹ,ɡˈoʊɪŋ ɚɹˈaʊnd."
+------------------------------
+[PlayerState] Friday 19:58, lat: 48.6905, lon: 9.225, alt: 1420, hdg: 254, spd: 123, gs: 122, lastFix: IST39, currFix: RW25, inVector: False, com1: 118.805(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Swiss 874, going around.
+------------------------------
+[Handoff] Swiss 874 handed off by ControllerAI_EDDS_Tower_118.805
+[ControllerScript] AICommunicationSystem.IFR.GoAroundContextScript
+[Vectoring] callsign=SWR874|divergence|owned=None|derived=GoAround|curr=RW25|alt=1452
+[LocalVoiceInput] sid=169 ls=0.736 | "Swiss eight  seven  four,roger. Fly the published missed approach procedure, climb five thousand feet."
+[LocalVoicePhonemes] sid=169 | "swˈɪs ˈeɪt sˈɛvən fˈoːɹ,ɹˈɑːdʒɚ. flˈaɪ ðə pˈʌblɪʃt mˈɪst ɐpɹˈoʊtʃ pɹəsˈiːdʒɚ, klˈaɪm fˈaɪv θˈaʊzənd fˈiːt."
+------------------------------
+[PlayerState] Friday 19:58, lat: 48.6898, lon: 9.2218, alt: 1455, hdg: 254, spd: 128, gs: 128, lastFix: IST39, currFix: RW25, inVector: False, com1: 118.805(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Swiss 874, roger. Fly the published missed approach procedure, climb 5,000.
+------------------------------
+[LocalVoiceInput] sid=147 ls=1.128 | "Fly the published missed approach procedure, climb five thousand feet, swiss eight  seven  four."
+[LocalVoicePhonemes] sid=147 | "flˈaɪ ðə pˈʌblɪʃt mˈɪst ɐpɹˈoʊtʃ pɹəsˈiːdʒɚ, klˈaɪm fˈaɪv θˈaʊzənd fˈiːt, swˈɪs ˈeɪt sˈɛvən fˈoːɹ."
+------------------------------
+[PlayerState] Friday 19:58, lat: 48.6889, lon: 9.2168, alt: 1480, hdg: 254, spd: 140, gs: 140, lastFix: IST39, currFix: RW25, inVector: False, com1: 118.805(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Fly the published missed approach procedure, climb 5,000, Swiss 874.
+------------------------------
+[LocalVoiceInput] sid=169 ls=0.736 | "Swiss eight  seven  four,contact stuttgart director one one niner decimal eight five."
+[LocalVoicePhonemes] sid=169 | "swˈɪs ˈeɪt sˈɛvən fˈoːɹ,kˈɑːntækt stˈʌtɡɑːɹt dᵻɹˈɛktɚ wˌʌn wˌʌn nˈaɪnɚ dˈɛsɪməl ˈeɪt fˈaɪv."
+------------------------------
+[PlayerState] Friday 19:58, lat: 48.6879, lon: 9.2119, alt: 1536, hdg: 254, spd: 146, gs: 147, lastFix: IST39, currFix: RW25, inVector: False, com1: 118.805(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Swiss 874, contact Stuttgart Director 119.85.
+------------------------------
+[LocalVoiceInput] sid=147 ls=1.128 | "Contact stuttgart director one one niner decimal eight five,swiss eight  seven  four,talk to you in a bit."
+[LocalVoicePhonemes] sid=147 | "kˈɑːntækt stˈʌtɡɑːɹt dᵻɹˈɛktɚ wˌʌn wˌʌn nˈaɪnɚ dˈɛsɪməl ˈeɪt fˈaɪv,swˈɪs ˈeɪt sˈɛvən fˈoːɹ,tˈɔːk tuː juː ˈɪn ˈeɪ bˈɪt."
+------------------------------
+[PlayerState] Friday 19:58, lat: 48.6871, lon: 9.2075, alt: 1619, hdg: 254, spd: 150, gs: 151, lastFix: IST39, currFix: RW25, inVector: False, com1: 118.805(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Contact Stuttgart Director 119.85, Swiss 874, talk to you in a bit.
+------------------------------
+[Comms] Set Frequency Com1: 119850000
+[Vectoring] callsign=SWR874|mode=None->GoAround|entry=go-around path installed|curr=GoAroundStart|alt=1864|hdgT=254
+[LocalVoiceInput] sid=147 ls=1.128 | "Stuttgart director, swiss eight  seven  four,good evening, one thousand eight hundred feet."
+[LocalVoicePhonemes] sid=147 | "stˈʌtɡɑːɹt dᵻɹˈɛktɚ, swˈɪs ˈeɪt sˈɛvən fˈoːɹ,ɡˈʊd ˈiːvnɪŋ, wˌʌn θˈaʊzənd ˈeɪt hˈʌndɹɪd fˈiːt."
+------------------------------
+[PlayerState] Friday 19:58, lat: 48.6857, lon: 9.2002, alt: 1906, hdg: 254, spd: 150, gs: 150, lastFix: GoAroundStart, currFix: 56STG, inVector: False, com1: 119.850(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Stuttgart Director, Swiss 874, good evening, 1,800.
+------------------------------
+[ControllerScript] AICommunicationSystem.IFR.TraconGoAroundWithYouScript
+[LocalVoiceInput] sid=163 ls=0.929 | "Swiss eight  seven  four welcome back. Continue."
+[LocalVoicePhonemes] sid=163 | "swˈɪs ˈeɪt sˈɛvən fˈoːɹ wˈɛlkʌm bˈæk. kəntˈɪnjuː."
+------------------------------
+[PlayerState] Friday 19:58, lat: 48.6847, lon: 9.1945, alt: 2172, hdg: 254, spd: 146, gs: 148, lastFix: GoAroundStart, currFix: 56STG, inVector: False, com1: 119.850(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Swiss 874, welcome back. Continue.
+------------------------------
+[LocalVoiceInput] sid=147 ls=1.128 | "Continue, swiss eight  seven  four."
+[LocalVoicePhonemes] sid=147 | "kəntˈɪnjuː, swˈɪs ˈeɪt sˈɛvən fˈoːɹ."
+------------------------------
+[PlayerState] Friday 19:58, lat: 48.6842, lon: 9.1919, alt: 2291, hdg: 254, spd: 145, gs: 148, lastFix: GoAroundStart, currFix: 56STG, inVector: False, com1: 119.850(On), com2: 121.500(On), transponder: 1000(On)
+[Instruction] Continue, Swiss 874.
+------------------------------
+[GoAround] SWR874 passed departure end of 25 at EDDS — runway reservation released
+[Planning] GoAround EBBR/25L: charted procedure REJECTED — top alt 700 vs terrain 173+1000 on leg 0. Falling back to the generated pattern.
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[LocalVoiceInput] sid=163 ls=0.929 | "Condor four zulu yankee, turn left, heading two eight five,intercept the two five localizer, vectors for the approach."
+[LocalVoicePhonemes] sid=163 | "kˈɑːndoːɹ fˈoːɹ zˈuːluː jˈæŋkiː, tˈɜːn lˈɛft, hˈɛdɪŋ tˈuː ˈeɪt fˈaɪv,ˌɪntɚsˈɛpt ðə tˈuː fˈaɪv lˈoʊkəlˌaɪzɚ, vˈɛktɚz fɔːɹ ðə ɐpɹˈoʊtʃ."
+[LocalVoiceInput] sid=162 ls=1.089 | "Turn left, heading two eight five,intercept the two five localizer, condor four zulu yankee."
+[LocalVoicePhonemes] sid=162 | "tˈɜːn lˈɛft, hˈɛdɪŋ tˈuː ˈeɪt fˈaɪv,ˌɪntɚsˈɛpt ðə tˈuː fˈaɪv lˈoʊkəlˌaɪzɚ, kˈɑːndoːɹ fˈoːɹ zˈuːluː jˈæŋkiː."
+[DynamicAirports] evicting dynamic EDNH (out of range)
+[TrafficTurnaround]: SWR40L departs to LEVC in 00h:49m:59s
+[LocalVoiceInput] sid=163 ls=0.929 | "Condor four zulu yankee, four miles from ds five one two,turn left, heading two eight five,maintain four thousand five hundred feet until established, cleared i l s approach runway two five."
+[LocalVoicePhonemes] sid=163 | "kˈɑːndoːɹ fˈoːɹ zˈuːluː jˈæŋkiː, fˈoːɹ mˈaɪlz fɹʌm dˌiːˈɛs fˈaɪv wˌʌn tˈuː,tˈɜːn lˈɛft, hˈɛdɪŋ tˈuː ˈeɪt fˈaɪv,meɪntˈeɪn fˈoːɹ θˈaʊzənd fˈaɪv hˈʌndɹɪd fˈiːt ʌntˈɪl ɪstˈæblɪʃt, klˈɪɹd ˈaɪ ˈɛl ˈɛs ɐpɹˈoʊtʃ ɹˈʌnweɪ tˈuː fˈaɪv."
+[LocalVoiceInput] sid=162 ls=1.089 | "Turn left, heading two eight five,four thousand five hundred feet until established, cleared i l s approach runway two five,condor four zulu yankee."
+[LocalVoicePhonemes] sid=162 | "tˈɜːn lˈɛft, hˈɛdɪŋ tˈuː ˈeɪt fˈaɪv,fˈoːɹ θˈaʊzənd fˈaɪv hˈʌndɹɪd fˈiːt ʌntˈɪl ɪstˈæblɪʃt, klˈɪɹd ˈaɪ ˈɛl ˈɛs ɐpɹˈoʊtʃ ɹˈʌnweɪ tˈuː fˈaɪv,kˈɑːndoːɹ fˈoːɹ zˈuːluː jˈæŋkiː."
+[Traffic] Aircraft (CFG7VH) was unable to find an exit from the runway and was removed.
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[PlayerState] Friday 19:59, lat: 48.6754, lon: 9.1454, alt: 3983, hdg: 255, spd: 153, gs: 160, lastFix: GoAroundStart, currFix: 56STG, inVector: False, com1: 119.850(On), com2: 121.500(On), transponder: 1000(On)
+[WaypointPath] Progress Path
+[VFR - Debug] CircuitManager: Unregistered Turkish 6443 Heavy
+[PlayerState] Friday 19:59, lat: 48.6707, lon: 9.1212, alt: 4628, hdg: 254, spd: 175, gs: 184, lastFix: 56STG, currFix: FA1, inVector: False, com1: 119.850(On), com2: 121.500(On), transponder: 1000(On)
+[WaypointPath] Progress Path
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[Planning] GoAround turn: rwy=02|sign=1|source=terrainVeto|conventionSide=1302ft|chosenSide=583ft|rightHigh=583|leftHigh=1302
+[Planning] GoAround EBBR/25L: charted procedure REJECTED — top alt 700 vs terrain 173+1000 on leg 0. Falling back to the generated pattern.
+[Traffic] Aircraft (OCN6EG) was unable to find an exit from the runway and was removed.
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[Traffic] Aircraft (LHX9JE) was unable to find an exit from the runway and was removed.
+[Traffic] Aircraft (ITI24HY) was unable to find an exit from the runway and was removed.
+[LocalVoiceInput] sid=163 ls=0.929 | "Condor four zulu yankee, contact stuttgart tower one one eight decimal eight zero five."
+[LocalVoicePhonemes] sid=163 | "kˈɑːndoːɹ fˈoːɹ zˈuːluː jˈæŋkiː, kˈɑːntækt stˈʌtɡɑːɹt tˈaʊɚ wˌʌn wˌʌn ˈeɪt dˈɛsɪməl ˈeɪt zˈiəɹoʊ fˈaɪv."
+[LocalVoiceInput] sid=162 ls=1.089 | "Contact tower one one eight decimal eight zero five,condor four zulu yankee."
+[LocalVoicePhonemes] sid=162 | "kˈɑːntækt tˈaʊɚ wˌʌn wˌʌn ˈeɪt dˈɛsɪməl ˈeɪt zˈiəɹoʊ fˈaɪv,kˈɑːndoːɹ fˈoːɹ zˈuːluː jˈæŋkiː."
+[ATIS] Refreshing ATIS for LSZH if required
+[ATIS] METAR updated to METAR LSZH 111950Z VRB01KT CAVOK 13/08 Q1024 NOSIG at LSZH
+[ATIS] ATIS text updated to LSZH ATIS V 2002Z VRB01KT CAVOK 13/08 Q1024 ARR RWY 14 DEP RWY 16 28 TRANSITION-LEVEL FL070 ACKNOWLEDGE RECEIPT OF INFORMATION V AND ADVISE AIRCRAFT TYPE ON FIRST CONTACT  at LSZH
+[ATIS] ATIS spoken updated to Zurich Airport information Victor, two zero zero two zulu, surface wind variable, one knots. Ceiling and visibility OK, Temperature one tree degrees, Dewpoint zero eight degrees, QNH one zero two four, Landing runway one four, Departing runways one six , two eight, Transition level zero seven zero, Advise on initial contact you have information Victor. at LSZH
+[ATIS] Refreshing ATIS for EDDS if required
+[ATIS] METAR updated to METAR EDDS 111950Z AUTO 29004KT CAVOK 15/08 Q1023 NOSIG at EDDS
+[ATIS] ATIS text updated to EDDS ATIS R 2002Z 29004KT CAVOK 15/08 Q1023 RWY 25 IN USE TRANSITION-LEVEL FL050 ACKNOWLEDGE RECEIPT OF INFORMATION R AND ADVISE AIRCRAFT TYPE ON FIRST CONTACT  at EDDS
+[ATIS] ATIS spoken updated to Stuttgart Airport information Romeo, two zero zero two zulu, surface wind two niner zero degrees, four knots. Ceiling and visibility OK, Temperature one five degrees, Dewpoint zero eight degrees, QNH one zero two tree, Landing and departing runway two five, Transition level zero five zero, Advise on initial contact you have information Romeo. at EDDS
+[LocalVoiceInput] sid=163 ls=0.929 | "All aircraft be advised information romeo now current, q n h one zero two three."
+[LocalVoicePhonemes] sid=163 | "ˈɔːl ˈɛɹkɹæft bˈiː ɐdvˈaɪzd ˌɪnfɚmˈeɪʃən ɹˈoʊmɪˌoʊ nˈaʊ kˈɜːɹənt, kjˈuː ˈɛn ˈeɪtʃ wˌʌn zˈiəɹoʊ tˈuː θɹˈiː."
+[DynamicAirports] evicting dynamic EDMN (out of range)
+[PlayerState] Friday 20:02, lat: 48.7715, lon: 9.0549, alt: 4990, hdg: 31, spd: 209, gs: 226, lastFix: FA1, currFix: CR2, inVector: False, com1: 119.850(On), com2: 121.500(On), transponder: 1000(On)
+[WaypointPath] Progress Path
+[ATIS] Refreshing all metars.
+[Comms] Auto-tune skipped — aircraft destroyed before script completion (target comm 130.525)
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[Planning] GoAround EDDG/25: charted procedure REJECTED — charted procedure carries no altitude. Falling back to the generated pattern.
+[DynamicAirports] evicting dynamic EDTZ (out of range)
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+Look rotation viewing vector is zero
+[VFR - Debug] CircuitManager: Unregistered Eurowings 86GR
+[VFR - Debug] CircuitManager: Unregistered Easy 42ZW
+[Traffic] Aircraft (DLH09F) was unable to find an exit from the runway and was removed.
+[VFR - Debug] CircuitManager: Unregistered Swiss 7MV

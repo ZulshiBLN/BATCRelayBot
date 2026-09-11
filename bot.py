@@ -125,6 +125,151 @@ for key in REQUIRED_KEYS:
         log.error("Field '%s' is missing or empty in config.json", key)
         sys.exit(1)
 
+# --- BeyondATC transcript ----------------------------------------------------
+#
+# BeyondATC has no API and no transcript file, but Unity writes Player.log as
+# the game runs, and every transmission involving the player lands there as
+# one block:
+#
+#   [LocalVoiceInput] sid=173 ls=1.258 | "Swiss eight seven four, taxi ..."
+#   [LocalVoicePhonemes] sid=173 | "..."
+#   ------------------------------
+#   [PlayerState] Friday 19:10, lat: ..., com1: 121.755(On), ...
+#   [Instruction] Swiss 874, taxi to holding point A1, runway 28, via N, F, INNER, A.
+#   ------------------------------
+#
+# [Instruction] is the clean text; [PlayerState] beside it carries the sim
+# clock and COM1. The log never says who is speaking, and readbacks by the
+# copilot look exactly like the controller's lines. What does tell them
+# apart: a [ControllerScript] line precedes each exchange with the player, and
+# the first [LocalVoiceInput] after it is always the controller. Voices seen
+# there are controllers; a block whose last voice is one of them is ATC.
+# Checked against a full flight, LSZH-EDDS with a go-around: 29 posted, 33
+# skipped, none wrong. What the player says himself is a
+# [Speech Transcription] block and never an [Instruction].
+
+VOICE_ID_PATTERN = re.compile(r"^\[LocalVoiceInput\] sid=(\d+)")
+PLAYER_STATE_PATTERN = re.compile(
+    r"^\[PlayerState\] (?P<sim_time>[A-Za-z]+ \d\d:\d\d),.*?com1: (?P<com1>[\d.]+)"
+)
+
+
+class Transmission:
+    """One thing ATC said to the player, with the sim clock and frequency."""
+
+    __slots__ = ("sim_time", "com1", "text")
+
+    def __init__(self, sim_time, com1, text):
+        self.sim_time = sim_time
+        self.com1 = com1
+        self.text = text
+
+
+class InstructionParser:
+    """
+    Feed it Player.log lines; it returns a Transmission for each controller
+    line and None for everything else. Learns which voices are controllers as
+    it goes, so it needs the lines in order and from the start of a session
+    - which is what tailing a live file gives it.
+    """
+
+    def __init__(self):
+        self._controller_voices = set()
+        self._next_voice_is_controller = False
+        self._last_voice = None
+        self._sim_time = None
+        self._com1 = None
+
+    def feed(self, line):
+        line = line.rstrip("\r\n")
+
+        if line.startswith("[ControllerScript]"):
+            self._next_voice_is_controller = True
+            return None
+
+        voice = VOICE_ID_PATTERN.match(line)
+        if voice:
+            self._last_voice = voice.group(1)
+            if self._next_voice_is_controller:
+                self._controller_voices.add(self._last_voice)
+                self._next_voice_is_controller = False
+            return None
+
+        state = PLAYER_STATE_PATTERN.match(line)
+        if state:
+            self._sim_time = state.group("sim_time")
+            self._com1 = state.group("com1")
+            return None
+
+        if line.startswith("[Instruction] "):
+            # Consumed either way: an [Instruction] with no voice of its own
+            # must not inherit the previous speaker.
+            voice, self._last_voice = self._last_voice, None
+            if voice in self._controller_voices:
+                return Transmission(self._sim_time, self._com1, line[len("[Instruction] "):])
+
+        return None
+
+
+class LogTailer:
+    """
+    Follows a file that another process is writing, returning whole new lines
+    on each call. Starts at the end: a bot started mid-flight must not replay
+    the flight. A file that shrinks has been replaced - BeyondATC rotates
+    Player.log on launch - and is read from the beginning.
+    """
+
+    def __init__(self, path):
+        self.path = pathlib.Path(path)
+        self._offset = None
+        self._partial = b""
+
+    def read_new_lines(self):
+        try:
+            size = self.path.stat().st_size
+        except OSError:
+            # Not installed, not running yet, or rotating this very moment.
+            return []
+
+        if self._offset is None or size < self._offset:
+            # First sight of the file, or a new one: nothing before this call
+            # was said while anyone was listening - except on rotation, where
+            # the new file is all new.
+            self._offset = size if self._offset is None else 0
+            self._partial = b""
+            if size == self._offset:
+                return []
+
+        if size == self._offset:
+            return []
+
+        with open(self.path, "rb") as f:
+            f.seek(self._offset)
+            data = f.read()
+            self._offset = f.tell()
+
+        # Unity writes UTF-8 without BOM; phoneme lines carry IPA and a read
+        # may cut one in half, so bytes are split first and decoded per line.
+        pieces = (self._partial + data).split(b"\n")
+        self._partial = pieces.pop()
+        return [piece.decode("utf-8", errors="replace").rstrip("\r") for piece in pieces]
+
+
+def batc_log_path():
+    """
+    Where BeyondATC writes Player.log. Unity fixes the location from company
+    and product name, so it is derived rather than asked for; batc_log_path in
+    config.json overrides it for the rare case.
+    """
+    configured = CONFIG.get("batc_log_path")
+    if configured:
+        return pathlib.Path(configured)
+    return (
+        pathlib.Path.home()
+        / "AppData" / "LocalLow" / "Skirmish Mode Games, Inc" / "BeyondATC" / "Player.log"
+    )
+
+
 intents = discord.Intents.default()
 intents.message_content = True  # only needed if you want the text commands below
 
