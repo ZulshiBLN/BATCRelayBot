@@ -17,6 +17,17 @@ Describe "Show-InstallationSummary" {
         }
     }
 
+    # Setup output travels into screenshots and bug reports. The token was
+    # redacted here since 1.4.1; the server ID was printed in full until 1.6.2.
+    It "shows the server ID masked, never in full" {
+        $screen = Show-InstallationSummary -Prerequisites $prereqs -DiscordConfig $discord -InstallPath "C:\Test" 6>&1 |
+            Where-Object { $_ -is [System.Management.Automation.InformationRecord] } |
+            Out-String
+
+        $screen | Should -Not -Match '123456789012345678'
+        $screen | Should -Match '\.\.\.5678'
+    }
+
     It "Executes without errors" {
         { Show-InstallationSummary -Prerequisites $prereqs -DiscordConfig $discord } | Should -Not -Throw
     }

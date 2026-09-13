@@ -29,6 +29,11 @@ see the commit that made it.
   against ffmpeg's list exactly as a typed one would be, and whichever fails
   is asked for on its own. An upgrade is one Enter.
 
+- **The server ID is shown masked.** Setup's summary, the keep question and
+  the config editor print `...` and the last four digits - enough to
+  recognise the server, nothing to copy out of a screenshot. Whoever needs
+  the full ID copies it from Discord, where it came from.
+
 ## [1.6.1] - 2026-09-13
 
 The ATC text grows in place and leaves with the bot.
