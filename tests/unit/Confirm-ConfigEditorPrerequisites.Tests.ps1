@@ -2,11 +2,11 @@
 
 Describe "Confirm-ConfigEditorPrerequisites" {
 
+    # The module, not the one file: dot-sourcing the function alone left it
+    # without Find-BotProcess, so this file passed only when an earlier test
+    # file had already imported the module - and failed 14 of 14 on its own.
     BeforeAll {
-        $functionPath = "$PSScriptRoot\..\..\BATCRelayBot\Private\Confirm-ConfigEditorPrerequisites.ps1"
-        if (Test-Path $functionPath) {
-            . $functionPath
-        }
+        Import-Module "$PSScriptRoot\..\..\BATCRelayBot\BATCRelayBot.psm1" -Force
     }
 
     Context "Installation Directory Validation" {
