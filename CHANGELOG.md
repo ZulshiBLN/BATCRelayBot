@@ -15,6 +15,13 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Entries describe what changed for users. For the reasoning behind a change,
 see the commit that made it.
 
+## [Unreleased]
+
+### Fixed
+
+- The closing screen of setup said the editor changes "the token, server,
+  channel or device". There has been no channel to change since 1.5.0.
+
 ## [1.6.2] - 2026-09-13
 
 An upgrade is one Enter.
