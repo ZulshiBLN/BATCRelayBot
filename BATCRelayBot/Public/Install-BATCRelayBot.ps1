@@ -142,26 +142,17 @@ function Install-BATCRelayBot {
         Write-Host "[4/6] Configuration" -ForegroundColor Cyan
         Write-Host ""
 
-        $discordConfig = Get-DiscordConfiguration -LogPath $logPath
+        # Kept from the file phase 0 migrated where it is complete and the
+        # user says so, asked for where it is not - and a kept value is
+        # checked like a typed one. Without a device the bot would join the
+        # channel and stream silence, so a missing one stops here too.
+        $discordConfig = Resolve-BotConfiguration -ConfigPath $configPath `
+            -FFmpegPath $prerequisites.FFmpeg.Path -SkipAudioDevice:$SkipAudioDevice -LogPath $logPath
         if (-not $discordConfig) {
-            Write-Host "Discord configuration was not completed." -ForegroundColor Red
-            Write-InstallLog "Aborted: Discord configuration incomplete" -LogPath $logPath -Level ERROR
-            return (Stop-Installation -Reason "Discord configuration incomplete" `
+            Write-Host "Configuration was not completed." -ForegroundColor Red
+            Write-InstallLog "Aborted: configuration incomplete" -LogPath $logPath -Level ERROR
+            return (Stop-Installation -Reason "Configuration incomplete" `
                 -LogPath $logPath -PassThru:$PassThru)
-        }
-
-        if ($SkipAudioDevice) {
-            $discordConfig.AudioDeviceName = ""
-            Write-InstallLog "Audio device selection skipped by -SkipAudioDevice" -LogPath $logPath -Level WARN
-        } else {
-            $device = Select-AudioDevice -FFmpegPath $prerequisites.FFmpeg.Path -LogPath $logPath
-            if (-not $device) {
-                Write-Host "No audio device selected - the bot would join the channel but stream silence." -ForegroundColor Red
-                Write-InstallLog "Aborted: no audio device selected" -LogPath $logPath -Level ERROR
-                return (Stop-Installation -Reason "No audio device selected" `
-                    -LogPath $logPath -PassThru:$PassThru)
-            }
-            $discordConfig.AudioDeviceName = $device
         }
 
         # ---- Phase 5: summary --------------------------------------------

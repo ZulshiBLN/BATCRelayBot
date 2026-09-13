@@ -2,51 +2,9 @@
 
 <#
 .SYNOPSIS
-Collects and validates the Discord credentials the bot needs.
-
-.DESCRIPTION
-Returns a hashtable keyed the way New-BotConfigFile expects:
-
-    BotToken, GuildId
-
-The names deliberately mirror bot.py's config keys (guild_id) rather than the
-Discord UI wording ("Server ID"). The old ServerId/ChannelId naming is what
-let the installer write server_id and channel_id into config.json for sixteen
-releases without anyone noticing that bot.py reads neither.
-
-The voice channel is no longer asked for. The bot joins the channel the
-caller is in, or one named in `!BATCjoin`, so a channel chosen at install
-time decided nothing and was one more ID to look up before starting.
+The token and server-ID prompts, and the check of a token against the
+Discord API. Resolve-BotConfiguration decides which of them a run needs.
 #>
-
-function Get-DiscordConfiguration {
-    [OutputType([hashtable])]
-    param(
-        [string]$LogPath
-    )
-
-    Write-Host "Discord Configuration" -ForegroundColor White -BackgroundColor DarkBlue
-    Write-Host "Two values from the Discord developer portal and your server." -ForegroundColor Gray
-    Write-Host ""
-
-    $config = @{
-        BotToken = $null
-        GuildId  = $null
-    }
-
-    $token = Read-DiscordToken -LogPath $LogPath
-    if (-not $token) { return $null }
-    $config.BotToken = $token
-
-    $config.GuildId = Read-DiscordSnowflake `
-        -Label "Server ID (guild)" `
-        -Step "Step 2/2" `
-        -Hint "Discord: Settings > Advanced > Developer Mode, then right-click the server > Copy Server ID" `
-        -LogPath $LogPath
-    if (-not $config.GuildId) { return $null }
-
-    return $config
-}
 
 function Read-DiscordToken {
     <#
@@ -249,7 +207,6 @@ function Test-DiscordBotToken {
 }
 
 Export-ModuleMember -Function @(
-    'Get-DiscordConfiguration',
     'Test-DiscordBotToken',
     'Read-DiscordToken',
     'Read-DiscordSnowflake',

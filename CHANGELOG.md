@@ -15,6 +15,20 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Entries describe what changed for users. For the reasoning behind a change,
 see the commit that made it.
 
+## [Unreleased]
+
+### Changed
+
+- **Setup keeps the configuration it finds.** Running `Install-BATCRelayBot`
+  again - which every update needs, because only setup replaces the bot file
+  - used to ask for the token, the server ID and the audio device from
+  scratch. Now, when `config.json` holds all three, setup shows them and asks
+  once: *Keep this configuration? [Y/n]*. Enter keeps everything; `n` asks
+  the three questions as before; a file with something missing asks only
+  for that. A kept token is checked against Discord and a kept device
+  against ffmpeg's list exactly as a typed one would be, and whichever fails
+  is asked for on its own. An upgrade is one Enter.
+
 ## [1.6.1] - 2026-09-13
 
 The ATC text grows in place and leaves with the bot.
