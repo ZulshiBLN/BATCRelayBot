@@ -223,3 +223,46 @@ Describe "What the uninstaller reports afterwards" {
         }
     }
 }
+
+Describe "A hidden file in the installation" {
+
+    # 1.6.1 keeps transcript-session.json beside config.json with the Hidden
+    # attribute, so nobody tidying the folder deletes it by accident. The
+    # removal loop used -Force and would delete it; the inventories before and
+    # after did not, so it was never counted as removed - and had it been
+    # locked, it would have survived without ever being named as a leftover.
+    It "is removed, and counted, like any other file" {
+        $sandbox = New-Sandbox
+        $hidden = Join-Path $sandbox 'transcript-session.json'
+        '{"channel_id": 1, "message_ids": [2]}' | Set-Content $hidden
+        (Get-Item $hidden).Attributes = 'Hidden'
+
+        try {
+            $removal = Remove-BotContent -BotPath $sandbox -Keep 'uninstall.log'
+
+            $removal.Deleted | Should -Contain 'transcript-session.json'
+            Test-Path $hidden | Should -Be $false
+        } finally {
+            Remove-Item $sandbox -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It "is named as a leftover when it cannot be removed" {
+        $sandbox = New-Sandbox
+        $hidden = Join-Path $sandbox 'transcript-session.json'
+        '{}' | Set-Content $hidden
+        (Get-Item $hidden).Attributes = 'Hidden'
+        $stream = [System.IO.File]::Open($hidden, 'Open', 'Read', 'None')
+
+        try {
+            $result = Invoke-SecureUninstall -BotPath $sandbox -DependencyChoices @{} `
+                -LogDirectory $sandbox 6>$null
+
+            $result.Success | Should -Be $false
+            @($result.Leftovers | Split-Path -Leaf) | Should -Contain 'transcript-session.json'
+        } finally {
+            $stream.Close()
+            Remove-Item $sandbox -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+}

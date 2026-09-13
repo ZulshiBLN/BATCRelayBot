@@ -29,6 +29,22 @@ see the commit that made it.
   back. An edit does not notify anyone: in the voice channel's own chat,
   where the text belongs, the reader is already listening.
 
+- **The pages leave with the bot.** `!BATCleave`, `!BATCshutdown` and
+  `Stop-BATCRelayBot` delete every page of the session; the replies to
+  `!BATC` commands stay, as the trace of what was asked and when. A bot that
+  was killed deletes its pages the next time it starts. No new permission:
+  a bot may delete its own messages, and it does so by id, so Read Message
+  History is still not needed. The pages it posted are remembered in
+  `transcript-session.json` beside `config.json`, hidden, never more than
+  one session's worth; should that file be deleted before the bot is back,
+  that session's pages stay until a moderator removes them.
+
+### Fixed
+
+- **The uninstaller counts hidden files.** It removed them but never listed
+  them as removed, and had one been locked it would have survived without
+  being named as a leftover.
+
 ## [1.6.0] - 2026-09-11
 
 What the controller says, as text, beside the audio.
