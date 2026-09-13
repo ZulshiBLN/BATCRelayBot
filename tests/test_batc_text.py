@@ -67,11 +67,39 @@ class TestFormat:
             "Swiss 874, climb FL100."
         )
 
-    def test_messages_stay_under_the_discord_limit(self):
-        lines = ["x" * 900] * 5
-        messages = bot.messages_from(lines)
-        assert all(len(m) <= 2000 for m in messages)
-        assert "\n".join(messages).split("\n") == lines
+class TestFitLines:
+    """How many lines go onto a page before it is full."""
+
+    def test_takes_what_fits_and_returns_the_rest(self):
+        text, rest = bot.fit_lines("", ["a" * 900, "b" * 900, "c" * 900])
+        assert text == "a" * 900 + "\n" + "b" * 900
+        assert rest == ["c" * 900]
+
+    def test_appends_to_existing_text_with_a_newline(self):
+        text, rest = bot.fit_lines("first", ["second"])
+        assert text == "first\nsecond"
+        assert rest == []
+
+    def test_the_boundary_is_inclusive(self):
+        # 1999 + newline + 0 characters would be 2000: a one-character line
+        # does not fit, an empty page takes exactly 2000.
+        text, rest = bot.fit_lines("x" * 1999, ["y"])
+        assert (text, rest) == ("x" * 1999, ["y"])
+        text, rest = bot.fit_lines("x" * 1998, ["y"])
+        assert (text, rest) == ("x" * 1998 + "\ny", [])
+
+    def test_a_line_longer_than_a_page_is_cut_rather_than_stuck(self):
+        # Otherwise nothing ever fits and the loop spins on it for ever.
+        text, rest = bot.fit_lines("", ["z" * 2500])
+        assert len(text) == 2000
+        assert rest == []
+
+
+def new_message(message_id=1):
+    message = MagicMock()
+    message.id = message_id
+    message.edit = AsyncMock()
+    return message
 
 
 def relay_setup(monkeypatch, transmissions, enabled=True, channel_id=42, channel="default"):
@@ -79,10 +107,13 @@ def relay_setup(monkeypatch, transmissions, enabled=True, channel_id=42, channel
     feed.poll.return_value = transmissions
     if channel == "default":
         channel = MagicMock()
-        channel.send = AsyncMock()
+        channel.send = AsyncMock(side_effect=lambda content: new_message())
     monkeypatch.setattr(bot, "transcript_feed", feed)
     monkeypatch.setattr(bot, "text_enabled", enabled)
     monkeypatch.setattr(bot, "text_channel_id", channel_id)
+    monkeypatch.setattr(bot, "current_page", None)
+    monkeypatch.setattr(bot, "session_pages", [])
+    monkeypatch.setattr(bot, "pending_lines", [])
     monkeypatch.setattr(bot.bot, "get_channel", MagicMock(return_value=channel))
     return feed, channel
 
@@ -155,6 +186,133 @@ class TestTranscriptRelayLoop:
         relay_setup(monkeypatch, [transmission("Swiss 874, climb FL100.")], channel=None)
 
         await bot.transcript_relay()
+
+
+class TestPages:
+    """
+    One message, edited as lines arrive; a new one only when the next line
+    would not fit. Michel chose this over a message per line: a flight is
+    one page, two or three at most, instead of thirty messages.
+    """
+
+    @pytest.mark.asyncio
+    async def test_a_later_line_is_appended_by_editing_not_by_a_new_message(self, monkeypatch):
+        feed, channel = relay_setup(monkeypatch, [transmission("Swiss 874, climb FL100.")])
+        await bot.transcript_relay()
+        page = bot.current_page.message
+
+        feed.poll.return_value = [transmission("Swiss 874, contact Swiss Radar 133.905.", "Friday 19:11")]
+        await bot.transcript_relay()
+
+        channel.send.assert_awaited_once()
+        page.edit.assert_awaited_once_with(
+            content="**19:10** · 121.755 · Swiss 874, climb FL100.\n"
+                    "**19:11** · 121.755 · Swiss 874, contact Swiss Radar 133.905."
+        )
+
+    @pytest.mark.asyncio
+    async def test_a_new_page_starts_only_when_the_line_would_not_fit(self, monkeypatch):
+        long = transmission("x" * 1950, None, None)
+        feed, channel = relay_setup(monkeypatch, [long])
+        await bot.transcript_relay()
+        first = bot.current_page.message
+
+        # 1950 + newline + 49 = 2000: fits, so an edit.
+        feed.poll.return_value = [transmission("y" * 49, None, None)]
+        await bot.transcript_relay()
+        first.edit.assert_awaited_once()
+        assert channel.send.await_count == 1
+
+        # One more character does not, so a second page.
+        feed.poll.return_value = [transmission("z", None, None)]
+        await bot.transcript_relay()
+        assert channel.send.await_count == 2
+        assert channel.send.await_args.args[0] == "z"
+        assert len(bot.session_pages) == 2
+
+    @pytest.mark.asyncio
+    async def test_a_failed_edit_keeps_the_line_for_the_next_poll(self, monkeypatch, caplog):
+        feed, channel = relay_setup(monkeypatch, [transmission("Swiss 874, climb FL100.")])
+        await bot.transcript_relay()
+        page = bot.current_page.message
+        page.edit = AsyncMock(side_effect=[
+            discord.HTTPException(MagicMock(status=502), "Bad Gateway"),
+            None,
+        ])
+
+        feed.poll.return_value = [transmission("Swiss 874, descend FL090.", "Friday 19:11")]
+        with caplog.at_level(logging.WARNING):
+            await bot.transcript_relay()
+        assert bot.pending_lines == ["**19:11** · 121.755 · Swiss 874, descend FL090."]
+        assert sum("ATC text" in r.getMessage() for r in caplog.records) == 1
+
+        feed.poll.return_value = []
+        await bot.transcript_relay()
+        assert bot.pending_lines == []
+        assert page.edit.await_count == 2
+        assert page.edit.await_args.kwargs["content"].endswith("Swiss 874, descend FL090.")
+
+    @pytest.mark.asyncio
+    async def test_a_page_someone_deleted_is_replaced_by_a_new_one(self, monkeypatch):
+        feed, channel = relay_setup(monkeypatch, [transmission("Swiss 874, climb FL100.")])
+        await bot.transcript_relay()
+        page = bot.current_page.message
+        page.edit = AsyncMock(side_effect=discord.NotFound(MagicMock(status=404), "Unknown Message"))
+
+        feed.poll.return_value = [transmission("Swiss 874, descend FL090.", "Friday 19:11")]
+        await bot.transcript_relay()       # the edit 404s; the line stays pending
+        feed.poll.return_value = []
+        await bot.transcript_relay()       # next poll: a new page carries it
+
+        assert channel.send.await_count == 2
+        assert bot.current_page.message is not page
+        assert bot.pending_lines == []
+
+    @pytest.mark.asyncio
+    async def test_switching_text_off_drops_what_was_pending_and_on_continues_the_page(self, monkeypatch):
+        feed, channel = relay_setup(monkeypatch, [transmission("Swiss 874, climb FL100.")])
+        await bot.transcript_relay()
+        page = bot.current_page.message
+        monkeypatch.setattr(bot, "pending_lines", ["stale"])
+
+        ctx = make_text_context()
+        await bot.batc_text.callback(ctx)      # off
+        assert bot.pending_lines == []
+        await bot.batc_text.callback(ctx)      # on again
+
+        feed.poll.return_value = [transmission("Swiss 874, descend FL090.", "Friday 19:11")]
+        await bot.transcript_relay()
+        page.edit.assert_awaited_once()
+        assert channel.send.await_count == 1
+
+    @pytest.mark.asyncio
+    async def test_join_starts_a_fresh_page(self, monkeypatch):
+        monkeypatch.setattr(bot, "current_page", bot.TranscriptPage(new_message(), "old"))
+        monkeypatch.setattr(bot, "session_pages", [new_message()])
+        monkeypatch.setattr(bot, "pending_lines", ["old line"])
+        monkeypatch.setattr(bot, "target_channel_id", None)
+        monkeypatch.setattr(bot, "relay_paused", True)
+        monkeypatch.setattr(bot, "text_channel_id", None)
+        monkeypatch.setattr(bot, "text_enabled", False)
+        voice = MagicMock(spec=discord.VoiceChannel)
+        voice.name = "Tower"
+        voice.id = 111
+        voice.permissions_for.return_value = discord.Permissions.all()
+        guild = MagicMock()
+        guild.voice_channels = [voice]
+        ctx = make_text_context()
+        ctx.guild = guild
+        ctx.author.voice = MagicMock()
+        ctx.author.voice.channel = voice
+        ctx.author.send = AsyncMock()
+
+        with patch("bot.connect_and_stream", new=AsyncMock()):
+            with patch("bot.configured_voice_client", return_value=None):
+                await bot.batc_join.callback(ctx)
+
+        assert bot.current_page is None
+        assert bot.session_pages == []
+        assert bot.pending_lines == []
 
 
 def make_text_context(channel_id=42, channel_name="tower-chat"):

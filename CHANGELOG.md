@@ -15,6 +15,20 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Entries describe what changed for users. For the reasoning behind a change,
 see the commit that made it.
 
+## [Unreleased]
+
+### Changed
+
+- **ATC text is one message that grows, not a message per line.** 1.6.0
+  posted every controller line on its own, so a flight was twenty or thirty
+  messages that stayed in the channel for good. The first line after
+  `!BATCtext` is now a message and every later line is added to it by
+  editing; a new message starts only when the next line would not fit into
+  Discord's 2000 characters. A flight is one page, a long one two or three,
+  and all of them stay until the bot leaves, so the whole flight can be read
+  back. An edit does not notify anyone: in the voice channel's own chat,
+  where the text belongs, the reader is already listening.
+
 ## [1.6.0] - 2026-09-11
 
 What the controller says, as text, beside the audio.

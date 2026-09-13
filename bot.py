@@ -317,20 +317,32 @@ def format_transmission(transmission):
 DISCORD_MESSAGE_LIMIT = 2000
 
 
-def messages_from(lines):
-    """Joins lines into as few messages as fit under Discord's limit."""
-    messages = []
-    current = ""
-    for line in lines:
-        candidate = line if not current else current + "\n" + line
-        if current and len(candidate) > DISCORD_MESSAGE_LIMIT:
-            messages.append(current)
-            current = line
-        else:
-            current = candidate
-    if current:
-        messages.append(current)
-    return messages
+def fit_lines(text, lines):
+    """
+    Appends as many of `lines` to `text` as fit under Discord's limit and
+    returns the new text and the lines left over. A single line longer than
+    the limit is cut to it: otherwise it fits nowhere, and the loop would
+    spin on it for ever.
+    """
+    rest = list(lines)
+    while rest:
+        line = rest[0][:DISCORD_MESSAGE_LIMIT]
+        candidate = line if not text else text + "\n" + line
+        if len(candidate) > DISCORD_MESSAGE_LIMIT:
+            break
+        text = candidate
+        rest.pop(0)
+    return text, rest
+
+
+class TranscriptPage:
+    """One Discord message that grows by editing until it is full."""
+
+    __slots__ = ("message", "text")
+
+    def __init__(self, message, text):
+        self.message = message
+        self.text = text
 
 
 intents = discord.Intents.default()
@@ -621,6 +633,45 @@ text_channel_id = None
 text_enabled = False
 transcript_feed = TranscriptFeed(batc_log_path())
 
+# ATC's lines go into one message that is edited as they arrive, and a new
+# message only when the next line would not fit - a flight is one page, two
+# or three at most, instead of thirty messages. Every page of the session is
+# kept so the flight can be read back; they leave with the bot.
+current_page = None
+session_pages = []
+# Lines formatted but not yet on a page: an edit can fail, and the line is
+# then tried again on the next poll rather than lost.
+pending_lines = []
+flush_failure_logged = False
+
+
+def reset_session_pages():
+    global current_page
+    current_page = None
+    session_pages.clear()
+    pending_lines.clear()
+
+
+async def flush_pending_lines(channel):
+    """
+    Puts pending lines onto the current page, or onto new pages when it is
+    full. Raises what Discord raises; the loop decides what that means.
+    """
+    global current_page
+    while pending_lines:
+        if current_page is not None:
+            text, rest = fit_lines(current_page.text, pending_lines)
+            if text != current_page.text:
+                await current_page.message.edit(content=text)
+                current_page.text = text
+                pending_lines[:] = rest
+                continue
+        text, rest = fit_lines("", pending_lines)
+        message = await channel.send(text)
+        current_page = TranscriptPage(message, text)
+        session_pages.append(message)
+        pending_lines[:] = rest
+
 
 @tasks.loop(seconds=1)
 async def transcript_relay():
@@ -629,9 +680,12 @@ async def transcript_relay():
     drained even while the feed is off: the parser keeps learning voices, and
     switching the feed on must not dump a backlog into the channel.
     """
-    global text_enabled
+    global text_enabled, current_page, flush_failure_logged
     transmissions = transcript_feed.poll()
-    if not transmissions or not text_enabled or text_channel_id is None:
+    if not text_enabled or text_channel_id is None:
+        return
+    pending_lines.extend(format_transmission(t) for t in transmissions)
+    if not pending_lines:
         return
 
     channel = bot.get_channel(text_channel_id)
@@ -639,8 +693,8 @@ async def transcript_relay():
         return
 
     try:
-        for message in messages_from([format_transmission(t) for t in transmissions]):
-            await channel.send(message)
+        await flush_pending_lines(channel)
+        flush_failure_logged = False
     except discord.Forbidden:
         # Once, and off - not every second for as long as the process runs.
         text_enabled = False
@@ -649,6 +703,14 @@ async def transcript_relay():
             "Text is off until the next !BATCtext.",
             getattr(channel, "name", text_channel_id),
         )
+    except discord.NotFound:
+        # Somebody deleted the page under us. The lines are still pending;
+        # the next poll starts a new page for them.
+        current_page = None
+    except discord.HTTPException as error:
+        if not flush_failure_logged:
+            log.warning("ATC text could not be posted (%s); retrying.", error)
+            flush_failure_logged = True
 
 
 @transcript_relay.error
@@ -811,6 +873,7 @@ async def batc_join(ctx: commands.Context, *, channel_name: str = ""):
     # channel.
     text_channel_id = ctx.channel.id
     text_enabled = False
+    reset_session_pages()
 
     try:
         await connect_and_stream()
@@ -843,6 +906,7 @@ async def batc_leave(ctx: commands.Context):
     target_channel_id = None
     text_channel_id = None
     text_enabled = False
+    reset_session_pages()
 
     vc = configured_voice_client()
     if vc:
@@ -894,6 +958,9 @@ async def batc_text(ctx: commands.Context):
         return
 
     text_enabled = not text_enabled
+    if not text_enabled:
+        # What arrived but never made it onto a page is not wanted late.
+        pending_lines.clear()
     if text_enabled:
         where = getattr(bot.get_channel(text_channel_id), "name", None) or ctx.channel.name
         await ctx.send(f"{who}, ATC text is on. Read you in **{where}**.")
