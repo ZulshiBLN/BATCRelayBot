@@ -134,6 +134,18 @@ the voice channel's own chat and the text sits beside the audio. The line
 appears a few seconds *before* you hear it, because BeyondATC writes it when
 its voice starts speaking.
 
+The lines go into **one message that grows**: each new line is added to it,
+and a new message starts only when the next line would not fit into
+Discord's 2000 characters — a flight is one page, a long one two or three.
+That means no notification per line, which is why the voice channel's own
+chat is the place for it: whoever reads there is already listening. Every
+page stays until the bot leaves, so the whole flight can be read back.
+
+**The pages leave with the bot.** `!BATCleave`, `!BATCshutdown` and
+`Stop-BATCRelayBot` delete them; the replies to `!BATC` commands stay. A bot
+that was killed deletes its pages the next time it starts. No extra
+permission is needed for any of this — a bot may delete its own messages.
+
 ## Commands
 
 ### PowerShell

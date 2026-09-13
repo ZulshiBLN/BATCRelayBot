@@ -4,7 +4,7 @@ description: Symptoms, their usual causes, and how to fix them.
 document_type: reference
 audience: users
 applies_to: BATCRelayBot 1.6.0
-updated: 2026-09-11
+updated: 2026-09-13
 ---
 
 # Troubleshooting
@@ -105,6 +105,29 @@ that chain:
 **Text appears before the audio**
 Expected. BeyondATC writes the line when its synthetic voice starts speaking,
 so the text leads the audio by the length of the transmission.
+
+**New lines do not show up as new messages**
+Expected since 1.6.1. The lines are added to one message by editing it, and
+a new message starts only when that one is full. Look at the bottom of the
+bot's last message, not for a new one — and expect no notification: an edit
+does not mark the channel unread.
+
+**The old flight's text is still there**
+The pages are deleted when the bot leaves — `!BATCleave`, `!BATCshutdown`,
+`Stop-BATCRelayBot` — and, for a bot that was killed instead, the next time
+it starts. If they are still there, one of these:
+
+1. The bot was killed and has not been started since. Start it; it cleans
+   up on login.
+2. Discord could not be reached when the bot left. The pages are still
+   listed in `%LOCALAPPDATA%\BATCRelayBot\transcript-session.json` (a hidden
+   file) and go on the next `!BATCjoin`, leave or start.
+3. That file was deleted before the bot came back, or the pages are from a
+   version before 1.6.1. The bot no longer knows them; remove them by hand.
+   Deleting the file is otherwise harmless — the bot starts normally.
+
+The replies to `!BATC` commands are never deleted. That is on purpose: they
+are the record of who asked for what, and when.
 
 **"Timed out connecting to voice"**
 Almost always channel permissions rather than the network. The bot's role
