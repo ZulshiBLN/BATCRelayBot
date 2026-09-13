@@ -93,12 +93,22 @@ replaces it:
 ```powershell
 Stop-BATCRelayBot
 Update-Module BATCRelayBot
+```
+
+Then **open a new PowerShell window** — the one that ran `Update-Module`
+keeps the old version loaded, and setup from there would install the old
+bot; setup notices and tells you so — and run:
+
+```powershell
 Install-BATCRelayBot
 ```
 
-Setup asks for the token, server ID and audio device again. Skip it and a
-chat command added in the new version answers with nothing — the old bot is
-still the one running.
+Setup finds your token, server ID and audio device in the existing
+configuration, shows them and asks once whether to keep them. Enter keeps
+everything; the whole upgrade is one keystroke. A token that Discord no
+longer accepts, or a device ffmpeg no longer lists, is asked for on its own.
+Skip setup and a chat command added in the new version answers with
+nothing — the old bot is still the one running.
 
 ### 3. Route audio in VoiceMeeter
 

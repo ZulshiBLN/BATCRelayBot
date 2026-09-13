@@ -21,9 +21,10 @@ Describe "Test-DiscordBotToken" {
     }
 }
 
-Describe "Get-DiscordConfiguration" {
-    It "Function exists" {
-        { Get-Command Get-DiscordConfiguration -ErrorAction Stop } | Should -Not -Throw
+Describe "The configuration prompts" {
+    It "are reached through Resolve-BotConfiguration, which replaced Get-DiscordConfiguration in 1.6.2" {
+        { Get-Command Resolve-BotConfiguration -ErrorAction Stop } | Should -Not -Throw
+        Get-Command Get-DiscordConfiguration -ErrorAction SilentlyContinue | Should -BeNullOrEmpty
     }
 }
 

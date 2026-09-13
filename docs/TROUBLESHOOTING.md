@@ -3,7 +3,7 @@ title: Troubleshooting
 description: Symptoms, their usual causes, and how to fix them.
 document_type: reference
 audience: users
-applies_to: BATCRelayBot 1.6.1
+applies_to: BATCRelayBot 1.6.2
 updated: 2026-09-13
 ---
 
@@ -39,6 +39,21 @@ and run `Install-BATCRelayBot` again.
 **VoiceMeeter is installed but its devices never appear**
 VoiceMeeter needs a reboot after installation before Windows exposes the
 virtual audio devices.
+
+**Setup says a newer version is installed than the one running**
+You ran `Update-Module` and then `Install-BATCRelayBot` in the same window.
+PowerShell keeps the version it loaded first, so that setup would install
+the old bot under a new banner — it did exactly that before 1.6.2 noticed.
+Close the window, open a new one, run `Install-BATCRelayBot` again. If setup
+only *warns* that it could not compare versions, it carries on; that happens
+when a module path is out of reach or the module runs from a checkout.
+
+**Setup asks for the token again although it is in config.json**
+Since 1.6.2 it should not, unless one of these: you answered `n` to *Keep
+this configuration?*; Discord rejected the stored token — it was reset in
+the developer portal, so a new one is needed; or the file was missing that
+value. The audio device is asked again on its own when ffmpeg no longer
+lists it — usually VoiceMeeter is not running.
 
 **Setup says Python or FFmpeg is missing although you installed it**
 Setup verifies a candidate by running it, so a Microsoft Store stub or a

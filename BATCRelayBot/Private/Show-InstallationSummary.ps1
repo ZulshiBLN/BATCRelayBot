@@ -48,7 +48,7 @@ function Show-InstallationSummary {
     # Never print any part of the token: the console scrollback outlives the
     # installer and often ends up pasted into a bug report.
     Write-Host "  Bot token     [REDACTED]" -ForegroundColor Gray
-    Write-Host "  Server ID     $($DiscordConfig.GuildId)" -ForegroundColor Gray
+    Write-Host "  Server ID     $(Format-Snowflake $DiscordConfig.GuildId)" -ForegroundColor Gray
 
     if ([string]::IsNullOrWhiteSpace($DiscordConfig.AudioDeviceName)) {
         Write-Host "  Audio device  not set - the bot will stream silence" -ForegroundColor Yellow

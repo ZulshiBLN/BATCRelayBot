@@ -74,6 +74,26 @@ function Install-BATCRelayBot {
         Write-Host ""
     }
 
+    # Before anything is touched: is this the newest setup on the machine?
+    # After Update-Module the window keeps the old version loaded, and setup
+    # from there installs the old bot. Nothing should be migrated by a setup
+    # that is about to be told to stop.
+    $currency = Test-ModuleIsCurrent -LogPath $logPath
+    if (-not $currency.Current) {
+        Write-Host "This window is running BATCRelayBot $($currency.Running), but $($currency.Newest) is installed." -ForegroundColor Red
+        Write-Host "PowerShell keeps the version it loaded first, so this setup would install the old bot." -ForegroundColor Yellow
+        Write-Host ""
+        Write-Host "Open a new PowerShell window and run Install-BATCRelayBot again." -ForegroundColor Yellow
+        Write-Host ""
+        Write-InstallLog "Aborted: running $($currency.Running) while $($currency.Newest) is installed" -LogPath $logPath -Level ERROR
+        return (Stop-Installation -Reason "A newer version is installed than the one running" `
+            -LogPath $logPath -PassThru:$PassThru)
+    }
+    if ($currency.Warning) {
+        Write-Host "Could not check whether a newer version is installed: $($currency.Warning)" -ForegroundColor Yellow
+        Write-Host ""
+    }
+
     try {
         # ---- Phase 0: migrate an existing installation -------------------
         $configPath = Join-Path $BotPath "config.json"
@@ -142,26 +162,17 @@ function Install-BATCRelayBot {
         Write-Host "[4/6] Configuration" -ForegroundColor Cyan
         Write-Host ""
 
-        $discordConfig = Get-DiscordConfiguration -LogPath $logPath
+        # Kept from the file phase 0 migrated where it is complete and the
+        # user says so, asked for where it is not - and a kept value is
+        # checked like a typed one. Without a device the bot would join the
+        # channel and stream silence, so a missing one stops here too.
+        $discordConfig = Resolve-BotConfiguration -ConfigPath $configPath `
+            -FFmpegPath $prerequisites.FFmpeg.Path -SkipAudioDevice:$SkipAudioDevice -LogPath $logPath
         if (-not $discordConfig) {
-            Write-Host "Discord configuration was not completed." -ForegroundColor Red
-            Write-InstallLog "Aborted: Discord configuration incomplete" -LogPath $logPath -Level ERROR
-            return (Stop-Installation -Reason "Discord configuration incomplete" `
+            Write-Host "Configuration was not completed." -ForegroundColor Red
+            Write-InstallLog "Aborted: configuration incomplete" -LogPath $logPath -Level ERROR
+            return (Stop-Installation -Reason "Configuration incomplete" `
                 -LogPath $logPath -PassThru:$PassThru)
-        }
-
-        if ($SkipAudioDevice) {
-            $discordConfig.AudioDeviceName = ""
-            Write-InstallLog "Audio device selection skipped by -SkipAudioDevice" -LogPath $logPath -Level WARN
-        } else {
-            $device = Select-AudioDevice -FFmpegPath $prerequisites.FFmpeg.Path -LogPath $logPath
-            if (-not $device) {
-                Write-Host "No audio device selected - the bot would join the channel but stream silence." -ForegroundColor Red
-                Write-InstallLog "Aborted: no audio device selected" -LogPath $logPath -Level ERROR
-                return (Stop-Installation -Reason "No audio device selected" `
-                    -LogPath $logPath -PassThru:$PassThru)
-            }
-            $discordConfig.AudioDeviceName = $device
         }
 
         # ---- Phase 5: summary --------------------------------------------

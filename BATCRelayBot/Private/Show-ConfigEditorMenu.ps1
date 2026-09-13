@@ -50,7 +50,7 @@ function Show-ConfigEditorMenu {
         Write-Host "BATCRelayBot Configuration" -ForegroundColor Cyan
         Write-Host ""
         Write-Host "  1. Bot token          [REDACTED]" -ForegroundColor Gray
-        Write-Host "  2. Server ID          $(Format-ConfigValue $config.guild_id)" -ForegroundColor Gray
+        Write-Host "  2. Server ID          $(Format-Snowflake $config.guild_id)" -ForegroundColor Gray
         Write-Host "  3. Audio device       $(Format-ConfigValue $config.audio_device_name)" -ForegroundColor Gray
         Write-Host ""
         Write-Host "  q. Quit" -ForegroundColor Gray
@@ -135,7 +135,7 @@ function Read-ConfigSnowflake {
 
     Write-Host ""
     Write-Host $definition.Label -ForegroundColor Cyan
-    Write-Host "  Current: $(Format-ConfigValue $CurrentValue)" -ForegroundColor Gray
+    Write-Host "  Current: $(Format-Snowflake $CurrentValue)" -ForegroundColor Gray
     Write-Host "  $($definition.Hint)" -ForegroundColor Gray
     Write-Host ""
 

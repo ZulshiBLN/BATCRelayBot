@@ -15,8 +15,8 @@
 # were counted for no phase at all. Phase 3 scored 0 and phase 4 scored 2
 # against a bound of 4: the assertion could not fail. Calls are resolved by
 # function name now, and followed through the functions they call in turn,
-# because Get-DiscordConfiguration prompts only by way of Read-DiscordToken and
-# Read-DiscordSnowflake.
+# because Resolve-BotConfiguration prompts only by way of Read-DiscordToken,
+# Read-DiscordSnowflake, Select-AudioDevice and Confirm-KeepConfiguration.
 #
 # What is counted is prompt *sites*, not prompts. Select-AudioDevice has three
 # sites - the manual-entry fallback, the selection, and the re-ask - of which a
@@ -80,6 +80,14 @@ BeforeAll {
     # site, so the exemption cannot quietly grow.
     $NotAQuestion = @('Stop-Installation')
 
+    # The heading and the step labels of phase 4 are spread over two files
+    # since 1.6.2: the prompts in Get-DiscordConfiguration.ps1, the run that
+    # decides which of them to ask in Resolve-BotConfiguration.ps1.
+    function Get-ConfigurationPromptSource {
+        ([System.IO.File]::ReadAllText((Join-Path $Module 'Private\Get-DiscordConfiguration.ps1')) +
+         [System.IO.File]::ReadAllText((Join-Path $Module 'Private\Resolve-BotConfiguration.ps1')))
+    }
+
     function Measure-FunctionPrompt {
         param([string]$Name, [string[]]$Seen = @())
 
@@ -137,14 +145,20 @@ Describe "Installer prompts" {
     }
 
     # Phase 4 asks for the token, the server ID and the audio device: three on a
-    # clean run. Five sites, because picking a device has a fallback and a
-    # re-ask that a clean run does not reach.
-    It "phase 4 has no more sites than its three questions need" {
-        Measure-PhasePrompt 4 | Should -BeLessOrEqual 5
+    # clean run. Six sites: picking a device has a fallback and a re-ask that a
+    # clean run does not reach, and since 1.6.2 an upgrade is asked once
+    # whether to keep the configuration it finds - one site, and on that run
+    # the only prompt.
+    It "phase 4 has no more sites than its three questions and the keep question need" {
+        Measure-PhasePrompt 4 | Should -BeLessOrEqual 6
+    }
+
+    It "the keep question is one site, not a second path through the three" {
+        Measure-FunctionPrompt -Name 'Confirm-KeepConfiguration' | Should -Be 1
     }
 
     It "the whole run stays inside the documented ceiling" {
-        (Measure-PhasePrompt 3) + (Measure-PhasePrompt 4) | Should -BeLessOrEqual 7
+        (Measure-PhasePrompt 3) + (Measure-PhasePrompt 4) | Should -BeLessOrEqual 8
     }
 
     It "the one exempt prompt is still just the pause on the way out" {
@@ -156,7 +170,7 @@ Describe "Installer prompts" {
     # Step 2/3. The three counted a voice channel question that had been
     # removed, and the branch that would have printed Step 3/3 was unreachable.
     It "numbers its configuration steps out of the number of steps there are" {
-        $source = [System.IO.File]::ReadAllText((Join-Path $Module 'Private\Get-DiscordConfiguration.ps1'))
+        $source = (Get-ConfigurationPromptSource)
         $steps = [regex]::Matches($source, 'Step (?<n>\d+)/(?<of>\d+)')
 
         $steps.Count | Should -BeGreaterThan 0
@@ -169,7 +183,7 @@ Describe "Installer prompts" {
     }
 
     It "says how many values it is about to ask for, in words that match" {
-        $source = [System.IO.File]::ReadAllText((Join-Path $Module 'Private\Get-DiscordConfiguration.ps1'))
+        $source = (Get-ConfigurationPromptSource)
         $total = [int]([regex]::Match($source, 'Step \d+/(?<of>\d+)').Groups['of'].Value)
 
         $spelled = @{ 1 = 'One'; 2 = 'Two'; 3 = 'Three'; 4 = 'Four' }[$total]
@@ -180,7 +194,7 @@ Describe "Installer prompts" {
     # anything: the bot joins the channel the caller is in, or one they name.
     It "no longer asks for a voice channel" {
         $Phases[4] | Should -Not -Match 'VoiceChannelId'
-        [System.IO.File]::ReadAllText((Join-Path $Module 'Private\Get-DiscordConfiguration.ps1')) |
+        (Get-ConfigurationPromptSource) |
             Should -Not -Match 'Voice channel ID'
     }
 }

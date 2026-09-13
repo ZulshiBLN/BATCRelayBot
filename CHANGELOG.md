@@ -3,7 +3,7 @@ title: Changelog
 description: Release history for the BATCRelayBot PowerShell module and Discord bot.
 document_type: history
 audience: users
-applies_to: BATCRelayBot 1.6.1
+applies_to: BATCRelayBot 1.6.2
 updated: 2026-09-13
 ---
 
@@ -14,6 +14,40 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 Entries describe what changed for users. For the reasoning behind a change,
 see the commit that made it.
+
+## [1.6.2] - 2026-09-13
+
+An upgrade is one Enter.
+
+**Nothing to reinstall this time.** The bot file is unchanged, so
+`Update-Module BATCRelayBot` is the whole upgrade. The next release that
+changes the bot will need setup run again, as before - and from now on that
+is `Update-Module`, a new window, `Install-BATCRelayBot`, Enter.
+
+### Changed
+
+- **Setup keeps the configuration it finds.** Running `Install-BATCRelayBot`
+  again - which every update needs, because only setup replaces the bot file
+  - used to ask for the token, the server ID and the audio device from
+  scratch. Now, when `config.json` holds all three, setup shows them and asks
+  once: *Keep this configuration? [Y/n]*. Enter keeps everything; `n` asks
+  the three questions as before; a file with something missing asks only
+  for that. A kept token is checked against Discord and a kept device
+  against ffmpeg's list exactly as a typed one would be, and whichever fails
+  is asked for on its own. An upgrade is one Enter.
+
+- **The server ID is shown masked.** Setup's summary, the keep question and
+  the config editor print `...` and the last four digits - enough to
+  recognise the server, nothing to copy out of a screenshot. Whoever needs
+  the full ID copies it from Discord, where it came from.
+
+- **Setup stops when a newer version is installed than the one running.**
+  `Update-Module` puts the new version beside the old, but the PowerShell
+  window keeps the one it loaded first - so `Install-BATCRelayBot` typed in
+  that window installed the old bot under a new banner. Setup now says
+  which version it is and which is installed, and asks for a new window.
+  If it cannot tell - a module path out of reach, a copy run from a
+  checkout - it carries on with a warning rather than refusing.
 
 ## [1.6.1] - 2026-09-13
 

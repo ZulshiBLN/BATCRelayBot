@@ -297,6 +297,29 @@ Describe "Show-ConfigEditorMenu" {
         Format-ConfigValue 123456789012345678 | Should -Be "123456789012345678"
     }
 
+    It "shows the server ID masked in the menu, never in full" {
+        $configPath = New-EditorSandbox
+        Mock -ModuleName BATCRelayBot Read-Host { "q" }
+
+        $screen = Show-ConfigEditorMenu -ConfigPath $configPath 6>&1 |
+            Where-Object { $_ -is [System.Management.Automation.InformationRecord] } |
+            Out-String
+
+        $screen | Should -Not -Match '123456789012345678'
+        $screen | Should -Match '\.\.\.5678'
+    }
+
+    It "shows the current server ID masked when asking for a new one" {
+        Mock -ModuleName BATCRelayBot Read-Host { "" }
+
+        $screen = Read-ConfigSnowflake -Field "Guild" -CurrentValue 123456789012345678 6>&1 |
+            Where-Object { $_ -is [System.Management.Automation.InformationRecord] } |
+            Out-String
+
+        $screen | Should -Not -Match '123456789012345678'
+        $screen | Should -Match 'Current: \.\.\.5678'
+    }
+
     It "returns null when the user quits" {
         $configPath = New-EditorSandbox
         Mock -ModuleName BATCRelayBot Read-Host { "q" }
