@@ -107,9 +107,19 @@ notepad $env:LOCALAPPDATA\BATCRelayBot\config.json
 Start-BATCRelayBot
 ```
 
-Keep the file valid JSON, and keep `guild_id` unquoted. Re-running
-`Install-BATCRelayBot` regenerates the whole file if you would rather start
-over.
+Keep the file valid JSON, and keep `guild_id` unquoted.
+
+### By running setup again
+
+`Install-BATCRelayBot` on a machine that already has a `config.json` finds
+the token, server ID and audio device in it and asks once whether to keep
+them. Enter keeps all three; `n` asks for each anew. The detected paths are
+written fresh either way. That is the upgrade path — see the README — and
+also the way to start over: answer `n`.
+
+Setup shows the server ID masked, `...` and its last four digits, as does
+the editor. That is deliberate: the value is a Discord ID, and setup output
+ends up in screenshots. The full value stays in the file.
 
 ## Upgrading from 1.3.x
 
