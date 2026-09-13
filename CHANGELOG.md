@@ -3,8 +3,8 @@ title: Changelog
 description: Release history for the BATCRelayBot PowerShell module and Discord bot.
 document_type: history
 audience: users
-applies_to: BATCRelayBot 1.6.0
-updated: 2026-09-11
+applies_to: BATCRelayBot 1.6.1
+updated: 2026-09-13
 ---
 
 # Changelog
@@ -14,6 +14,43 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 Entries describe what changed for users. For the reasoning behind a change,
 see the commit that made it.
+
+## [1.6.1] - 2026-09-13
+
+The ATC text grows in place and leaves with the bot.
+
+**As with 1.6.0: run `Install-BATCRelayBot` again after `Update-Module`.**
+The change is in the bot file, and only setup copies it into the
+installation. Setup asks for the token, server ID and audio device again;
+keeping them is planned for 1.6.2.
+
+### Changed
+
+- **ATC text is one message that grows, not a message per line.** 1.6.0
+  posted every controller line on its own, so a flight was twenty or thirty
+  messages that stayed in the channel for good. The first line after
+  `!BATCtext` is now a message and every later line is added to it by
+  editing; a new message starts only when the next line would not fit into
+  Discord's 2000 characters. A flight is one page, a long one two or three,
+  and all of them stay until the bot leaves, so the whole flight can be read
+  back. An edit does not notify anyone: in the voice channel's own chat,
+  where the text belongs, the reader is already listening.
+
+- **The pages leave with the bot.** `!BATCleave`, `!BATCshutdown` and
+  `Stop-BATCRelayBot` delete every page of the session; the replies to
+  `!BATC` commands stay, as the trace of what was asked and when. A bot that
+  was killed deletes its pages the next time it starts. No new permission:
+  a bot may delete its own messages, and it does so by id, so Read Message
+  History is still not needed. The pages it posted are remembered in
+  `transcript-session.json` beside `config.json`, hidden, never more than
+  one session's worth; should that file be deleted before the bot is back,
+  that session's pages stay until a moderator removes them.
+
+### Fixed
+
+- **The uninstaller counts hidden files.** It removed them but never listed
+  them as removed, and had one been locked it would have survived without
+  being named as a leftover.
 
 ## [1.6.0] - 2026-09-11
 

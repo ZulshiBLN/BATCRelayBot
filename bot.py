@@ -317,20 +317,100 @@ def format_transmission(transmission):
 DISCORD_MESSAGE_LIMIT = 2000
 
 
-def messages_from(lines):
-    """Joins lines into as few messages as fit under Discord's limit."""
-    messages = []
-    current = ""
-    for line in lines:
-        candidate = line if not current else current + "\n" + line
-        if current and len(candidate) > DISCORD_MESSAGE_LIMIT:
-            messages.append(current)
-            current = line
-        else:
-            current = candidate
-    if current:
-        messages.append(current)
-    return messages
+def fit_lines(text, lines):
+    """
+    Appends as many of `lines` to `text` as fit under Discord's limit and
+    returns the new text and the lines left over. A single line longer than
+    the limit is cut to it: otherwise it fits nowhere, and the loop would
+    spin on it for ever.
+    """
+    rest = list(lines)
+    while rest:
+        line = rest[0][:DISCORD_MESSAGE_LIMIT]
+        candidate = line if not text else text + "\n" + line
+        if len(candidate) > DISCORD_MESSAGE_LIMIT:
+            break
+        text = candidate
+        rest.pop(0)
+    return text, rest
+
+
+class TranscriptPage:
+    """One Discord message that grows by editing until it is full."""
+
+    __slots__ = ("message", "text")
+
+    def __init__(self, message, text):
+        self.message = message
+        self.text = text
+
+
+SESSION_RECORD_PATH = pathlib.Path(__file__).parent / "transcript-session.json"
+# Beyond this the oldest ids fall out and their pages stay in Discord, which
+# is what 1.6.0 did with every page. Reached only if deleting keeps failing.
+SESSION_RECORD_CAP = 200
+FILE_ATTRIBUTE_HIDDEN = 0x02
+FILE_ATTRIBUTE_NORMAL = 0x80
+
+
+class SessionRecord:
+    """
+    Which pages the bot posted this session, on disk, so they can be deleted
+    when it leaves - also by the next start after a kill, when memory is
+    gone. Cleared after every successful cleanup; never more than the cap.
+    Hidden, so nobody tidying the folder deletes it by accident; lost anyway,
+    the bot starts normally and that session's pages stay behind.
+    """
+
+    def __init__(self, path):
+        self.path = pathlib.Path(path)
+
+    def load(self):
+        try:
+            data = json.loads(self.path.read_text(encoding="utf-8"))
+            return data["channel_id"], [int(i) for i in data["message_ids"]]
+        except (OSError, ValueError, KeyError, TypeError):
+            return None, []
+
+    def add(self, channel_id, message_id):
+        recorded_channel, ids = self.load()
+        if recorded_channel != channel_id:
+            ids = []
+        ids.append(message_id)
+        self.replace(channel_id, ids[-SESSION_RECORD_CAP:])
+
+    def replace(self, channel_id, ids):
+        if not ids:
+            self.clear()
+            return
+        try:
+            # Windows refuses to open a hidden file for writing, so the
+            # attribute comes off before the write and goes back on after.
+            # Written in place rather than renamed over: a torn write costs
+            # no more than a kill without a record would.
+            self._set_hidden(False)
+            self.path.write_text(
+                json.dumps({"channel_id": channel_id, "message_ids": list(ids)}),
+                encoding="utf-8",
+            )
+            self._set_hidden(True)
+        except OSError as error:
+            log.warning("Could not write %s: %s", self.path.name, error)
+
+    def clear(self):
+        try:
+            self.path.unlink()
+        except FileNotFoundError:
+            pass
+        except OSError as error:
+            log.warning("Could not remove %s: %s", self.path.name, error)
+
+    def _set_hidden(self, hidden):
+        if os.name != "nt" or not self.path.exists():
+            return
+        import ctypes
+        attributes = FILE_ATTRIBUTE_HIDDEN if hidden else FILE_ATTRIBUTE_NORMAL
+        ctypes.windll.kernel32.SetFileAttributesW(str(self.path), attributes)
 
 
 intents = discord.Intents.default()
@@ -621,6 +701,76 @@ text_channel_id = None
 text_enabled = False
 transcript_feed = TranscriptFeed(batc_log_path())
 
+# ATC's lines go into one message that is edited as they arrive, and a new
+# message only when the next line would not fit - a flight is one page, two
+# or three at most, instead of thirty messages. Every page of the session is
+# kept so the flight can be read back; they leave with the bot.
+current_page = None
+session_record = SessionRecord(SESSION_RECORD_PATH)
+# Lines formatted but not yet on a page: an edit can fail, and the line is
+# then tried again on the next poll rather than lost.
+pending_lines = []
+flush_failure_logged = False
+
+
+def reset_session_pages():
+    global current_page
+    current_page = None
+    pending_lines.clear()
+
+
+async def delete_session_pages():
+    """
+    Deletes every page the record names and clears it. A bot may delete its
+    own messages without Manage Messages, and a partial message is deleted by
+    id without Read Message History - the README says that one is not needed,
+    and it still is not. A page that is already gone is dropped from the
+    record; one that will not go stays in it for the next attempt. Returns
+    how many were deleted.
+    """
+    channel_id, ids = session_record.load()
+    if not ids:
+        return 0
+
+    messageable = bot.get_partial_messageable(channel_id)
+    deleted = 0
+    remaining = []
+    for message_id in ids:
+        try:
+            await messageable.get_partial_message(message_id).delete()
+            deleted += 1
+        except discord.NotFound:
+            pass
+        except discord.HTTPException as error:
+            log.warning("Could not delete ATC text page %s: %s", message_id, error)
+            remaining.append(message_id)
+
+    session_record.replace(channel_id, remaining)
+    if deleted:
+        log.info("Deleted %d ATC text page(s)", deleted)
+    return deleted
+
+
+async def flush_pending_lines(channel):
+    """
+    Puts pending lines onto the current page, or onto new pages when it is
+    full. Raises what Discord raises; the loop decides what that means.
+    """
+    global current_page
+    while pending_lines:
+        if current_page is not None:
+            text, rest = fit_lines(current_page.text, pending_lines)
+            if text != current_page.text:
+                await current_page.message.edit(content=text)
+                current_page.text = text
+                pending_lines[:] = rest
+                continue
+        text, rest = fit_lines("", pending_lines)
+        message = await channel.send(text)
+        current_page = TranscriptPage(message, text)
+        session_record.add(channel.id, message.id)
+        pending_lines[:] = rest
+
 
 @tasks.loop(seconds=1)
 async def transcript_relay():
@@ -629,9 +779,12 @@ async def transcript_relay():
     drained even while the feed is off: the parser keeps learning voices, and
     switching the feed on must not dump a backlog into the channel.
     """
-    global text_enabled
+    global text_enabled, current_page, flush_failure_logged
     transmissions = transcript_feed.poll()
-    if not transmissions or not text_enabled or text_channel_id is None:
+    if not text_enabled or text_channel_id is None:
+        return
+    pending_lines.extend(format_transmission(t) for t in transmissions)
+    if not pending_lines:
         return
 
     channel = bot.get_channel(text_channel_id)
@@ -639,8 +792,8 @@ async def transcript_relay():
         return
 
     try:
-        for message in messages_from([format_transmission(t) for t in transmissions]):
-            await channel.send(message)
+        await flush_pending_lines(channel)
+        flush_failure_logged = False
     except discord.Forbidden:
         # Once, and off - not every second for as long as the process runs.
         text_enabled = False
@@ -649,6 +802,14 @@ async def transcript_relay():
             "Text is off until the next !BATCtext.",
             getattr(channel, "name", text_channel_id),
         )
+    except discord.NotFound:
+        # Somebody deleted the page under us. The lines are still pending;
+        # the next poll starts a new page for them.
+        current_page = None
+    except discord.HTTPException as error:
+        if not flush_failure_logged:
+            log.warning("ATC text could not be posted (%s); retrying.", error)
+            flush_failure_logged = True
 
 
 @transcript_relay.error
@@ -712,14 +873,18 @@ async def shutdown_watcher():
     # If the interpreter exits first the thread is torn down and ffmpeg
     # survives, holding the dshow capture of the VoiceMeeter bus.
     release_audio_source()
-
+    # The pages leave with the bot. Before close(), because afterwards there
+    # is no connection to delete them over - and guarded, because nothing
+    # here may stand between the stop signal and the process ending.
+    try:
+        await delete_session_pages()
+    except Exception:
+        log.exception("Could not delete the ATC text pages on shutdown")
     try:
         STOP_SIGNAL_PATH.unlink()
     except OSError:
         pass
-
     release_pid_file()
-
     await bot.close()
 
 
@@ -753,6 +918,12 @@ async def on_ready():
         shutdown_watcher.start()
     if not transcript_relay.is_running():
         transcript_relay.start()
+    # A non-empty record at login means the last session did not end the
+    # proper way - a kill, or a leave whose deletions failed. Finish it now.
+    try:
+        await delete_session_pages()
+    except Exception:
+        log.exception("Could not delete the previous session's ATC text pages")
 
 
 @bot.command(name="BATCstatus", help="Request current station status.")
@@ -811,6 +982,11 @@ async def batc_join(ctx: commands.Context, *, channel_name: str = ""):
     # channel.
     text_channel_id = ctx.channel.id
     text_enabled = False
+    reset_session_pages()
+    try:
+        await delete_session_pages()
+    except Exception:
+        log.exception("Could not delete the previous session's ATC text pages")
 
     try:
         await connect_and_stream()
@@ -843,6 +1019,13 @@ async def batc_leave(ctx: commands.Context):
     target_channel_id = None
     text_channel_id = None
     text_enabled = False
+    reset_session_pages()
+    # Before the reply: the reply is the one line that stays, and it should
+    # not sit above pages that are about to vanish.
+    try:
+        await delete_session_pages()
+    except Exception:
+        log.exception("Could not delete the ATC text pages on leave")
 
     vc = configured_voice_client()
     if vc:
@@ -894,6 +1077,9 @@ async def batc_text(ctx: commands.Context):
         return
 
     text_enabled = not text_enabled
+    if not text_enabled:
+        # What arrived but never made it onto a page is not wanted late.
+        pending_lines.clear()
     if text_enabled:
         where = getattr(bot.get_channel(text_channel_id), "name", None) or ctx.channel.name
         await ctx.send(f"{who}, ATC text is on. Read you in **{where}**.")

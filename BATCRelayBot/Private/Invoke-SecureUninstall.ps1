@@ -138,9 +138,12 @@ function Invoke-SecureUninstall {
     # leftover - a clean removal calling itself a failure.
     $keepName = Split-Path $logPath -Leaf
 
+    # -Force on every inventory: 1.6.1 keeps transcript-session.json hidden,
+    # and a hidden file the removal deletes but the inventory never saw was
+    # neither counted as removed nor, when locked, named as a leftover.
     $leftovers = @()
     if (Test-Path $BotPath) {
-        $leftovers = @(Get-ChildItem -Path $BotPath -Recurse -File -ErrorAction SilentlyContinue |
+        $leftovers = @(Get-ChildItem -Path $BotPath -Recurse -File -Force -ErrorAction SilentlyContinue |
             Where-Object { $_.Name -ne $keepName } |
             Select-Object -ExpandProperty FullName)
     }
@@ -248,7 +251,7 @@ function Remove-BotContent {
         return @{ Deleted = @(); Blocked = @() }
     }
 
-    $doomed = @(Get-ChildItem -Path $BotPath -Recurse -File -ErrorAction SilentlyContinue |
+    $doomed = @(Get-ChildItem -Path $BotPath -Recurse -File -Force -ErrorAction SilentlyContinue |
         Where-Object { $_.Name -ne $Keep } |
         Select-Object -ExpandProperty Name)
 
@@ -276,7 +279,7 @@ function Remove-BotContent {
         }
     }
 
-    $stillThere = @(Get-ChildItem -Path $BotPath -Recurse -File -ErrorAction SilentlyContinue |
+    $stillThere = @(Get-ChildItem -Path $BotPath -Recurse -File -Force -ErrorAction SilentlyContinue |
         Where-Object { $_.Name -ne $Keep } |
         Select-Object -ExpandProperty Name)
 
