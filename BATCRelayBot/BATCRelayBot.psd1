@@ -1,6 +1,6 @@
 ﻿@{
     RootModule            = 'BATCRelayBot.psm1'
-    ModuleVersion         = '1.6.0'
+    ModuleVersion         = '1.6.1'
     GUID                  = '12345678-1234-1234-1234-123456789012'
     Author                = 'Michel Brosche'
     CompanyName           = ''
@@ -29,7 +29,7 @@
             ProjectUri = 'https://github.com/ZulshiBLN/BATCRelayBot'
             # Shown on the PSGallery package page. Keep this current with the
             # version above - it still described 1.0.0 at 1.3.16.
-            ReleaseNotes = 'New: !BATCtext posts what ATC says, as text, into the channel !BATCjoin was typed in - read from BeyondATC''s own log as it is written, controller side only, off after every join. Nothing to configure; with BeyondATC not running there is simply nothing to post. See CHANGELOG.md.'
+            ReleaseNotes = 'ATC text is now one message that grows as the controller speaks, a new one only when 2000 characters are full, and every page is deleted when the bot leaves - !BATCleave, !BATCshutdown, Stop-BATCRelayBot, or the next start after a kill. The replies to !BATC commands stay. No new permission. Fixed: the uninstaller now counts hidden files. See CHANGELOG.md.'
         }
     }
 }

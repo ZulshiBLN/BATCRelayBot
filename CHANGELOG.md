@@ -3,8 +3,8 @@ title: Changelog
 description: Release history for the BATCRelayBot PowerShell module and Discord bot.
 document_type: history
 audience: users
-applies_to: BATCRelayBot 1.6.0
-updated: 2026-09-11
+applies_to: BATCRelayBot 1.6.1
+updated: 2026-09-13
 ---
 
 # Changelog
@@ -15,7 +15,14 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Entries describe what changed for users. For the reasoning behind a change,
 see the commit that made it.
 
-## [Unreleased]
+## [1.6.1] - 2026-09-13
+
+The ATC text grows in place and leaves with the bot.
+
+**As with 1.6.0: run `Install-BATCRelayBot` again after `Update-Module`.**
+The change is in the bot file, and only setup copies it into the
+installation. Setup asks for the token, server ID and audio device again;
+keeping them is planned for 1.6.2.
 
 ### Changed
 
