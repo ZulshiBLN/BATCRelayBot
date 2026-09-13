@@ -3,7 +3,7 @@ title: Changelog
 description: Release history for the BATCRelayBot PowerShell module and Discord bot.
 document_type: history
 audience: users
-applies_to: BATCRelayBot 1.6.1
+applies_to: BATCRelayBot 1.6.2
 updated: 2026-09-13
 ---
 
@@ -15,7 +15,14 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Entries describe what changed for users. For the reasoning behind a change,
 see the commit that made it.
 
-## [Unreleased]
+## [1.6.2] - 2026-09-13
+
+An upgrade is one Enter.
+
+**Nothing to reinstall this time.** The bot file is unchanged, so
+`Update-Module BATCRelayBot` is the whole upgrade. The next release that
+changes the bot will need setup run again, as before - and from now on that
+is `Update-Module`, a new window, `Install-BATCRelayBot`, Enter.
 
 ### Changed
 
