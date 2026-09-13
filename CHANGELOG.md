@@ -34,6 +34,14 @@ see the commit that made it.
   recognise the server, nothing to copy out of a screenshot. Whoever needs
   the full ID copies it from Discord, where it came from.
 
+- **Setup stops when a newer version is installed than the one running.**
+  `Update-Module` puts the new version beside the old, but the PowerShell
+  window keeps the one it loaded first - so `Install-BATCRelayBot` typed in
+  that window installed the old bot under a new banner. Setup now says
+  which version it is and which is installed, and asks for a new window.
+  If it cannot tell - a module path out of reach, a copy run from a
+  checkout - it carries on with a warning rather than refusing.
+
 ## [1.6.1] - 2026-09-13
 
 The ATC text grows in place and leaves with the bot.

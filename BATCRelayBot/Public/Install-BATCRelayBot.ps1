@@ -74,6 +74,26 @@ function Install-BATCRelayBot {
         Write-Host ""
     }
 
+    # Before anything is touched: is this the newest setup on the machine?
+    # After Update-Module the window keeps the old version loaded, and setup
+    # from there installs the old bot. Nothing should be migrated by a setup
+    # that is about to be told to stop.
+    $currency = Test-ModuleIsCurrent -LogPath $logPath
+    if (-not $currency.Current) {
+        Write-Host "This window is running BATCRelayBot $($currency.Running), but $($currency.Newest) is installed." -ForegroundColor Red
+        Write-Host "PowerShell keeps the version it loaded first, so this setup would install the old bot." -ForegroundColor Yellow
+        Write-Host ""
+        Write-Host "Open a new PowerShell window and run Install-BATCRelayBot again." -ForegroundColor Yellow
+        Write-Host ""
+        Write-InstallLog "Aborted: running $($currency.Running) while $($currency.Newest) is installed" -LogPath $logPath -Level ERROR
+        return (Stop-Installation -Reason "A newer version is installed than the one running" `
+            -LogPath $logPath -PassThru:$PassThru)
+    }
+    if ($currency.Warning) {
+        Write-Host "Could not check whether a newer version is installed: $($currency.Warning)" -ForegroundColor Yellow
+        Write-Host ""
+    }
+
     try {
         # ---- Phase 0: migrate an existing installation -------------------
         $configPath = Join-Path $BotPath "config.json"
