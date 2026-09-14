@@ -46,6 +46,10 @@ function Invoke-BotWatcher {
     # being rotated - and holds it open.
     $rotated = Invoke-BotLogRotation -LogsDirectory $logsDirectory -Keep $KeepLogs
 
+    # bot.py's session header names the module version, and this is the only
+    # process that knows it. Inherited by the child; nothing else reads it.
+    $env:BATCRELAYBOT_MODULE_VERSION = Get-ModuleVersion
+
     $started = Get-Date
     $child = Start-Process `
         -FilePath $Executable `

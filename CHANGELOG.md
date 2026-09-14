@@ -36,6 +36,11 @@ see the commit that made it.
   write nothing for hours, so a bot that had died looked the same in the log
   as one crossing an empty sector. A gap of more than ten minutes between
   heartbeats now means the process was gone.
+- `logs\bot_error.log` opens with a session header - module version, Python,
+  discord.py, and a summary of `config.json` with the token named as set and
+  the server id redacted - and records gateway connects, disconnects and
+  resumes, and the bot's own voice-channel joins, leaves and moves, including
+  a leave it did not ask for. A native crash now leaves a traceback there too.
 
 ### Fixed
 

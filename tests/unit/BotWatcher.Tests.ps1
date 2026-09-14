@@ -145,6 +145,27 @@ Describe "The exit line" {
     }
 }
 
+Describe "What the child is told" {
+
+    # bot.py's session header names the module version, and the watcher is
+    # the only process that knows it. Read from the module, not retyped.
+    It "hands the module version to the bot through the environment" {
+        $sandbox = New-WatcherSandbox
+        try {
+            $seen = Join-Path $sandbox 'seen.txt'
+            $arguments = New-Stub -Sandbox $sandbox -Name 'env' -Body "Set-Content -Path '$seen' -Value `$env:BATCRELAYBOT_MODULE_VERSION; exit 0"
+            Start-BotWatcher -BotPath $sandbox -Executable $script:powershell -Arguments $arguments | Out-Null
+            Wait-ForFile -Path (Join-Path $sandbox 'install.log') -Pattern 'exit code 0\b' | Should -Be $true
+
+            $expected = InModuleScope BATCRelayBot { Get-ModuleVersion }
+            $expected | Should -Not -BeNullOrEmpty
+            "$(Get-Content $seen -Raw)".Trim() | Should -Be $expected
+        } finally {
+            Remove-Sandbox $sandbox
+        }
+    }
+}
+
 Describe "Rotation" {
 
     # Rotate before start, or the redirect has already truncated the file

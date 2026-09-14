@@ -3,11 +3,14 @@ Tests for ATC Relay Bot (bot.py)
 """
 
 import asyncio
+import faulthandler
 import json
 import logging
 import pathlib
+import platform
+import re
 import sys
-from unittest.mock import MagicMock, Mock, patch, AsyncMock
+from unittest.mock import MagicMock, Mock, patch, AsyncMock, PropertyMock
 
 import discord
 import pytest
@@ -1145,6 +1148,170 @@ class TestHeartbeat:
     def test_five_minutes(self):
         """288 lines a day around the clock; rotation keeps the directory bounded."""
         assert bot.HEARTBEAT_SECONDS == 300
+
+
+class TestLifecycleLines:
+    """
+    What happened before the bot died. The 2026-09-13 log had no session
+    start, no gateway events and no voice-state changes - only what the bot
+    itself chose to say, which after "Audio stream started" was nothing. These
+    are the lines that give the exit code in install.log its context.
+    """
+
+    REALISTIC_TOKEN = ("M" * 26) + "." + ("G" * 6) + "." + ("f" * 38)
+
+    @staticmethod
+    def redacted(line):
+        entry = logging.LogRecord("atc-relay", logging.INFO, "bot.py", 1, line, (), None)
+        bot.RedactSecrets().filter(entry)
+        return entry.getMessage()
+
+    def test_session_header_names_the_versions(self, monkeypatch):
+        monkeypatch.setenv("BATCRELAYBOT_MODULE_VERSION", "9.9.9")
+
+        header = "\n".join(bot.session_header())
+
+        assert "9.9.9" in header
+        assert platform.python_version() in header
+        assert discord.__version__ in header
+
+    def test_session_header_without_the_watcher_says_so(self, monkeypatch):
+        """python bot.py by hand has no watcher to tell it the module version."""
+        monkeypatch.delenv("BATCRELAYBOT_MODULE_VERSION", raising=False)
+
+        assert "unknown" in "\n".join(bot.session_header())
+
+    # Criterion 4 of the plan. The header summarises config.json, which holds
+    # the two things the secrets rule forbids in a log - and bot_error.log
+    # travels into bug reports.
+    def test_session_header_carries_no_token_or_id(self, monkeypatch):
+        monkeypatch.setitem(bot.CONFIG, "bot_token", self.REALISTIC_TOKEN)
+        monkeypatch.setitem(bot.CONFIG, "guild_id", 631480440548753408)
+
+        raw = bot.session_header()
+        # Before the redactor, not only after it: the token pattern is a
+        # heuristic, and the header must not be relying on it.
+        assert self.REALISTIC_TOKEN not in "\n".join(raw)
+
+        header = "\n".join(self.redacted(line) for line in raw)
+
+        assert self.REALISTIC_TOKEN not in header
+        assert "631480440548753408" not in header
+        assert not re.search(r"\d{17,20}", header)
+        # Redacted, not omitted: the summary still says a guild is configured.
+        assert "guild" in header.lower()
+        assert bot.CONFIG["audio_device_name"] in header
+
+    @pytest.mark.asyncio
+    async def test_gateway_events_are_logged(self, caplog):
+        with caplog.at_level(logging.INFO, logger="atc-relay"):
+            await bot.bot.on_connect()
+            await bot.bot.on_disconnect()
+            await bot.bot.on_resumed()
+
+        messages = [r.getMessage().lower() for r in caplog.records]
+        assert any("connected" in m and "gateway" in m for m in messages)
+        assert any("disconnected" in m for m in messages)
+        assert any("resumed" in m for m in messages)
+
+    @staticmethod
+    def voice_state(channel_name):
+        state = MagicMock()
+        state.channel = None
+        if channel_name is not None:
+            state.channel = MagicMock()
+            state.channel.name = channel_name
+            state.channel.id = hash(channel_name)
+        return state
+
+    @pytest.fixture
+    def as_the_bot(self):
+        """bot.user is None without a connection; the event compares against it."""
+        me = MagicMock()
+        me.id = 42
+        with patch.object(discord.Client, "user", new_callable=PropertyMock, return_value=me):
+            yield me
+
+    @pytest.mark.asyncio
+    async def test_own_voice_state_changes_are_logged(self, caplog, as_the_bot, monkeypatch):
+        member = MagicMock()
+        member.id = as_the_bot.id
+        monkeypatch.setattr(bot, "relay_paused", True)
+
+        with caplog.at_level(logging.INFO, logger="atc-relay"):
+            await bot.bot.on_voice_state_update(member, self.voice_state(None), self.voice_state("Tower"))
+            await bot.bot.on_voice_state_update(member, self.voice_state("Tower"), self.voice_state("Ground"))
+            await bot.bot.on_voice_state_update(member, self.voice_state("Ground"), self.voice_state(None))
+
+        messages = [r.getMessage() for r in caplog.records]
+        assert any("Joined" in m and "Tower" in m for m in messages)
+        assert any("Moved" in m and "Tower" in m and "Ground" in m for m in messages)
+        assert any("Left" in m and "Ground" in m for m in messages)
+
+    @pytest.mark.asyncio
+    async def test_a_leave_the_bot_did_not_ask_for_is_named(self, caplog, as_the_bot, monkeypatch):
+        """
+        A moderator's disconnect and the bot's own !BATCleave look the same in
+        the event. relay_paused tells them apart: the bot pauses before it
+        leaves, so a leave while relaying came from outside.
+        """
+        member = MagicMock()
+        member.id = as_the_bot.id
+        monkeypatch.setattr(bot, "relay_paused", False)
+
+        with caplog.at_level(logging.INFO, logger="atc-relay"):
+            await bot.bot.on_voice_state_update(member, self.voice_state("Tower"), self.voice_state(None))
+
+        assert any("not by this bot" in r.getMessage() for r in caplog.records)
+
+    @pytest.mark.asyncio
+    async def test_other_members_are_not_logged(self, caplog, as_the_bot):
+        member = MagicMock()
+        member.id = as_the_bot.id + 1
+
+        with caplog.at_level(logging.INFO, logger="atc-relay"):
+            await bot.bot.on_voice_state_update(member, self.voice_state(None), self.voice_state("Tower"))
+
+        assert not caplog.records
+
+    @pytest.mark.asyncio
+    async def test_shutdown_pauses_the_relay_before_leaving(self, monkeypatch, tmp_path):
+        """So the leave on shutdown is recorded as the bot's own, not as a removal."""
+        monkeypatch.setattr(bot, "relay_paused", False)
+        signal = tmp_path / "stop.signal"
+        signal.write_text("")
+        monkeypatch.setattr(bot, "STOP_SIGNAL_PATH", signal)
+        monkeypatch.setattr(bot, "release_audio_source", Mock())
+        monkeypatch.setattr(bot, "release_pid_file", Mock())
+        monkeypatch.setattr(bot, "delete_session_pages", AsyncMock())
+        monkeypatch.setattr(bot.bot, "close", AsyncMock())
+        monkeypatch.setattr(bot.shutdown_watcher, "stop", Mock())
+
+        with patch.object(discord.Client, "voice_clients", new_callable=PropertyMock, return_value=[]):
+            await bot.shutdown_watcher()
+
+        assert bot.relay_paused is True
+
+    def test_faulthandler_is_guarded_without_stderr(self, monkeypatch):
+        """Under pythonw with no redirect sys.stderr is None; enable() would raise."""
+        monkeypatch.setattr(sys, "stderr", None)
+        assert bot.enable_faulthandler() is False
+
+    def test_faulthandler_is_guarded_on_a_stream_without_a_descriptor(self):
+        """A redirect that is not a file - captured output, a pipe wrapper."""
+        import io
+        assert bot.enable_faulthandler(stream=io.StringIO()) is False
+
+    def test_faulthandler_is_enabled_on_a_real_stream(self, tmp_path):
+        was_enabled = faulthandler.is_enabled()
+        try:
+            with open(tmp_path / "err.log", "w") as stream:
+                assert bot.enable_faulthandler(stream=stream) is True
+                assert faulthandler.is_enabled()
+                faulthandler.disable()
+        finally:
+            if was_enabled:
+                faulthandler.enable()
 
 
 def test_bot_py_stays_ascii():
