@@ -131,10 +131,12 @@ The bot comes **online but stays out of the channel**. Join a voice channel
 yourself, type `!BATCjoin` in Discord, and it follows you in — or name one
 with `!BATCjoin Tower`. Stop it with `Stop-BATCRelayBot`.
 
-It runs under a watcher that writes how it ended — when, and with what exit
-code — to `install.log`, and it logs a heartbeat every five minutes. A bot
-that has gone quiet can be told from a dead one; see
-[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md).
+It runs under a watcher. A voice connection lost to a network blip is
+rebuilt within a minute; a bot that dies — a crash, a kill from Task Manager
+— is started again ten seconds later and rejoins its channel, up to three
+times an hour. How it ended is written to `install.log`, and a heartbeat
+every five minutes says it is alive. `Stop-BATCRelayBot` and `!BATCshutdown`
+stop it for good; see [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md).
 
 ### ATC as text
 

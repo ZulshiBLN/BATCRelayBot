@@ -186,7 +186,33 @@ still be running — `Get-BATCRelayBotStatus` knows.
 
 Before the exit, read `bot_error.log` backwards from the last heartbeat:
 `Disconnected from the Discord gateway` marks a network gap, `Left voice
-channel ... not by this bot` a moderator's disconnect.
+channel ... not by this bot` a moderator's disconnect, `Voice client ... is
+not connected - reconnecting it` a voice connection the bot found dead and
+rebuilt on its own.
+
+**The bot died and came back by itself**
+That is the watcher. After any exit that was not asked for — a Python
+error, a native crash, a kill from Task Manager — it starts the bot again
+ten seconds later, and the bot rejoins the channel it was in. `install.log`
+shows the pair:
+
+```
+[WARN] Bot (PID 1234) ended after 2h 14m 3s with exit code -1: terminated from outside ...
+[WARN] Bot restarted by the watcher after 10s (attempt 1 of 3 this hour)
+```
+
+and the new `bot_error.log` opens with `Restarted by the watcher -
+rejoining the voice channel it was in`. ATC text is off after a restart, as
+after any join; say `!BATCtext` again. Three restarts within an hour and the
+watcher gives up with an ERROR line — a bot that keeps dying has a reason,
+and the last `bot_error.<date>-<time>.log` files hold it.
+
+**I killed the bot and it will not stay dead**
+Task Manager is not a stop; the watcher cannot tell it from a crash. Use
+`Stop-BATCRelayBot` or `!BATCshutdown` — both tell the watcher the exit was
+wanted, also while a restart is pending. Ending the watcher itself (the
+`powershell.exe` whose command line names the installation) works too, and
+leaves the bot running.
 
 **"Field 'x' is missing or empty in config.json"**
 The configuration predates 1.4.0 or was edited by hand. Run
@@ -212,7 +238,13 @@ Discord, or:
 New-Item "$env:LOCALAPPDATA\BATCRelayBot\stop.signal" -ItemType File -Force
 ```
 
-The bot checks for that file every second, leaves the channel and exits.
+The bot checks for that file every second, leaves the channel and exits; the
+watcher reads the same file and does not restart it.
+
+**`Get-BATCRelayBotStatus` says RESTARTING**
+The bot ended in the last ten seconds and its watcher is about to start it
+again. Wait, or `Stop-BATCRelayBot` to stop the restart. `Start-BATCRelayBot`
+refuses in that moment rather than start a second bot beside the one coming.
 
 **`!BATCleave` and the bot comes back**
 Fixed in 1.4.0. Before that the watchdog reconnected within ten seconds.
