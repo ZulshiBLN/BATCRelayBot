@@ -26,6 +26,15 @@ with patch("pathlib.Path.exists", return_value=True):
             import bot
 
 
+@pytest.fixture(autouse=True)
+def voice_session_in_tmp(tmp_path, monkeypatch):
+    """
+    !BATCjoin writes voice-session.json next to bot.py. Left alone, every
+    join test would write into the checkout - the surroundings rule.
+    """
+    monkeypatch.setattr(bot, "VOICE_SESSION_PATH", tmp_path / "voice-session.json")
+
+
 class TestLoadConfig:
     """Tests for load_config() function"""
 
@@ -919,6 +928,8 @@ class TestJoinPermissions:
         guild = MagicMock()
         guild.voice_channels = [channel]
         ctx = make_context(guild, channel)
+        # The join remembers where it was typed; a MagicMock id is not JSON.
+        ctx.channel.id = 777000111222333444
 
         monkeypatch.setattr(bot, "target_channel_id", None)
         monkeypatch.setattr(bot, "relay_paused", True)
@@ -1478,6 +1489,129 @@ class TestVoiceReconnect:
             await bot.shutdown_watcher()
 
         assert flag_at_close["value"] is True
+
+
+class TestRejoinAfterRestart:
+    """
+    A bot the watcher restarted comes back into the channel it was in. A bot
+    started any other way stands by, as since 1.4.0: starting at boot must
+    not put it in a channel. The watcher sets BATCRELAYBOT_RESTART=1 and
+    nothing else does; voice-session.json is what !BATCjoin remembers.
+    """
+
+    CHANNEL = 555000111222333444
+    TEXT = 666000111222333444
+
+    @pytest.fixture(autouse=True)
+    def session_file(self, tmp_path, monkeypatch):
+        path = tmp_path / "voice-session.json"
+        monkeypatch.setattr(bot, "VOICE_SESSION_PATH", path)
+        monkeypatch.setattr(bot, "relay_paused", True)
+        monkeypatch.setattr(bot, "target_channel_id", None)
+        monkeypatch.setattr(bot, "text_channel_id", None)
+        monkeypatch.delenv("BATCRELAYBOT_RESTART", raising=False)
+        return path
+
+    def write_session(self, path):
+        path.write_text(json.dumps({"target_channel_id": self.CHANNEL, "text_channel_id": self.TEXT}))
+
+    # Criterion 4 of the plan, both halves.
+    def test_a_restarted_bot_rejoins(self, session_file, monkeypatch, caplog):
+        self.write_session(session_file)
+        monkeypatch.setenv("BATCRELAYBOT_RESTART", "1")
+
+        with caplog.at_level(logging.INFO, logger="atc-relay"):
+            assert bot.restore_voice_session() is True
+
+        assert bot.relay_paused is False
+        assert bot.target_channel_id == self.CHANNEL
+        assert bot.text_channel_id == self.TEXT
+        assert any("restart" in r.getMessage().lower() for r in caplog.records)
+
+    def test_a_fresh_start_stands_by_and_forgets(self, session_file):
+        self.write_session(session_file)
+
+        assert bot.restore_voice_session() is False
+
+        assert bot.relay_paused is True
+        assert bot.target_channel_id is None
+        # Forgotten, or a crash next week would rejoin a channel from today.
+        assert not session_file.exists()
+
+    def test_a_restart_with_nothing_remembered_stands_by(self, monkeypatch):
+        monkeypatch.setenv("BATCRELAYBOT_RESTART", "1")
+
+        assert bot.restore_voice_session() is False
+        assert bot.relay_paused is True
+
+    def test_a_torn_file_is_ignored(self, session_file, monkeypatch):
+        session_file.write_text("{not json")
+        monkeypatch.setenv("BATCRELAYBOT_RESTART", "1")
+
+        assert bot.restore_voice_session() is False
+        assert bot.relay_paused is True
+
+    @pytest.mark.asyncio
+    async def test_on_ready_restores_before_the_watchdog_starts(self, monkeypatch):
+        order = []
+        monkeypatch.setattr(bot, "restore_voice_session", lambda: order.append("restore"))
+        monkeypatch.setattr(bot.watchdog, "is_running", Mock(return_value=False))
+        monkeypatch.setattr(bot.watchdog, "start", Mock(side_effect=lambda: order.append("watchdog")))
+        monkeypatch.setattr(bot.shutdown_watcher, "is_running", Mock(return_value=True))
+        monkeypatch.setattr(bot.transcript_relay, "is_running", Mock(return_value=True))
+        monkeypatch.setattr(bot, "delete_session_pages", AsyncMock())
+
+        await bot.on_ready()
+
+        assert order == ["restore", "watchdog"]
+
+    @pytest.mark.asyncio
+    async def test_join_remembers_the_channels(self, session_file, monkeypatch):
+        channel = make_voice_channel("Tower", self.CHANNEL)
+        ctx = make_context(MagicMock(), author_channel=channel)
+        ctx.channel.id = self.TEXT
+        monkeypatch.setattr(bot, "missing_join_permissions", lambda *_: [])
+        monkeypatch.setattr(bot, "delete_session_pages", AsyncMock())
+        monkeypatch.setattr(bot, "reset_session_pages", Mock())
+
+        with patch("bot.connect_and_stream", new=AsyncMock()):
+            with patch("bot.configured_voice_client", return_value=None):
+                await bot.batc_join.callback(ctx)
+
+        assert json.loads(session_file.read_text()) == {
+            "target_channel_id": self.CHANNEL,
+            "text_channel_id": self.TEXT,
+        }
+
+    @pytest.mark.asyncio
+    async def test_leave_forgets(self, session_file, monkeypatch):
+        self.write_session(session_file)
+        ctx = make_context(MagicMock())
+        monkeypatch.setattr(bot, "delete_session_pages", AsyncMock())
+        monkeypatch.setattr(bot, "reset_session_pages", Mock())
+
+        with patch("bot.configured_voice_client", return_value=None):
+            await bot.batc_leave.callback(ctx)
+
+        assert not session_file.exists()
+
+    @pytest.mark.asyncio
+    async def test_a_clean_shutdown_forgets(self, session_file, monkeypatch, tmp_path):
+        """A stopped bot is not restarted, so a stale file would only mislead."""
+        self.write_session(session_file)
+        signal = tmp_path / "stop.signal"
+        signal.write_text("")
+        monkeypatch.setattr(bot, "STOP_SIGNAL_PATH", signal)
+        monkeypatch.setattr(bot, "release_audio_source", Mock())
+        monkeypatch.setattr(bot, "release_pid_file", Mock())
+        monkeypatch.setattr(bot, "delete_session_pages", AsyncMock())
+        monkeypatch.setattr(bot.bot, "close", AsyncMock())
+        monkeypatch.setattr(bot.shutdown_watcher, "stop", Mock())
+
+        with patch.object(discord.Client, "voice_clients", new_callable=PropertyMock, return_value=[]):
+            await bot.shutdown_watcher()
+
+        assert not session_file.exists()
 
 
 def test_bot_py_stays_ascii():

@@ -36,9 +36,12 @@ see the commit that made it.
   write nothing for hours, so a bot that had died looked the same in the log
   as one crossing an empty sector. A gap of more than ten minutes between
   heartbeats now means the process was gone.
-- The bot comes back when it dies. The watcher restarts it ten seconds after
-  any exit that was not asked for - a Python error, a native crash, a kill
-  from Task Manager - and writes a line to `install.log` for each restart.
+- The bot comes back when it dies - and back into the voice channel it was
+  in, with ATC text off until `!BATCtext`, as after any join. The watcher
+  restarts it ten seconds after any exit that was not asked for - a Python
+  error, a native crash, a kill from Task Manager - and writes a line to
+  `install.log` for each restart. A bot started any other way still stands
+  by: starting at boot does not put it in a channel.
   Three restarts within an hour and it stops trying, with an ERROR line, so
   a crash loop stays visible. `Stop-BATCRelayBot` and `!BATCshutdown` end
   the bot for good, also while a restart is pending.

@@ -105,6 +105,10 @@ log = logging.getLogger("atc-relay")
 CONFIG_PATH = pathlib.Path(__file__).parent / "config.json"
 STOP_SIGNAL_PATH = pathlib.Path(__file__).parent / "stop.signal"
 PID_FILE_PATH = pathlib.Path(__file__).parent / "bot.pid"
+# Where the bot was, for the watcher's restart to put it back. Written by
+# !BATCjoin, removed by !BATCleave, a clean shutdown and any start that is
+# not a restart.
+VOICE_SESSION_PATH = pathlib.Path(__file__).parent / "voice-session.json"
 
 
 def load_config() -> dict:
@@ -983,6 +987,8 @@ async def shutdown_watcher():
         STOP_SIGNAL_PATH.unlink()
     except OSError:
         pass
+    # A stopped bot is not restarted, so the file would only mislead later.
+    forget_voice_session()
     release_pid_file()
     await bot.close()
 
@@ -1116,10 +1122,64 @@ async def on_voice_state_update(member, before, after):
         log.info("Moved from voice channel %s to %s", before.channel.name, after.channel.name)
 
 
+def remember_voice_session():
+    """Where the bot is, so a restart can put it back."""
+    try:
+        VOICE_SESSION_PATH.write_text(
+            json.dumps({"target_channel_id": target_channel_id, "text_channel_id": text_channel_id}),
+            encoding="utf-8",
+        )
+    except OSError as error:
+        log.warning("Could not write %s: %s", VOICE_SESSION_PATH.name, error)
+
+
+def forget_voice_session():
+    try:
+        VOICE_SESSION_PATH.unlink()
+    except FileNotFoundError:
+        pass
+    except OSError as error:
+        log.warning("Could not remove %s: %s", VOICE_SESSION_PATH.name, error)
+
+
+def restore_voice_session() -> bool:
+    """
+    Rejoins the remembered channel - only when the watcher restarted us.
+
+    BATCRELAYBOT_RESTART is set by the watcher for a restart and by nothing
+    else, so a start at boot or from Start-BATCRelayBot still stands by, as
+    since 1.4.0. Such a start also forgets the file: a crash next week must
+    not rejoin a channel from today.
+    """
+    global relay_paused, target_channel_id, text_channel_id
+
+    if os.environ.get("BATCRELAYBOT_RESTART") != "1":
+        forget_voice_session()
+        return False
+
+    try:
+        remembered = json.loads(VOICE_SESSION_PATH.read_text(encoding="utf-8"))
+        target = int(remembered["target_channel_id"])
+        text = remembered.get("text_channel_id")
+    except FileNotFoundError:
+        return False
+    except (OSError, ValueError, TypeError, KeyError) as error:
+        log.warning("Ignoring %s after the restart: %s", VOICE_SESSION_PATH.name, error)
+        return False
+
+    target_channel_id = target
+    text_channel_id = int(text) if text is not None else None
+    relay_paused = False
+    log.warning("Restarted by the watcher - rejoining the voice channel it was in")
+    return True
+
+
 @bot.event
 async def on_ready():
     log.info("Logged in as %s", bot.user)
-    log.info("Standing by - use !BATCjoin in Discord to join the voice channel.")
+    # Before the watchdog starts: its first tick is what does the rejoining.
+    if not restore_voice_session():
+        log.info("Standing by - use !BATCjoin in Discord to join the voice channel.")
     if not watchdog.is_running():
         watchdog.start()
     if not shutdown_watcher.is_running():
@@ -1190,6 +1250,8 @@ async def batc_join(ctx: commands.Context, *, channel_name: str = ""):
     # channel.
     text_channel_id = ctx.channel.id
     text_enabled = False
+    # Before the connect: a kill during the handshake still comes back here.
+    remember_voice_session()
     reset_session_pages()
     try:
         await delete_session_pages()
@@ -1227,6 +1289,7 @@ async def batc_leave(ctx: commands.Context):
     target_channel_id = None
     text_channel_id = None
     text_enabled = False
+    forget_voice_session()
     reset_session_pages()
     # Before the reply: the reply is the one line that stays, and it should
     # not sit above pages that are about to vanish.
