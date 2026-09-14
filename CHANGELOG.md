@@ -30,6 +30,12 @@ see the commit that made it.
   every start, the last five sessions in total. It used to be truncated.
 - `Start-BATCRelayBot` reports the bot's process id and the watcher's, and
   says so if the bot has not come up within five seconds.
+- The bot writes a heartbeat line to `logs\bot_error.log` every five minutes:
+  relaying or standing by, which channel, connected, playing, gateway
+  latency - whether or not it is in a voice channel. A healthy relay used to
+  write nothing for hours, so a bot that had died looked the same in the log
+  as one crossing an empty sector. A gap of more than ten minutes between
+  heartbeats now means the process was gone.
 
 ### Fixed
 

@@ -37,10 +37,12 @@ Configuration: config.json (see config.example.json)
 import asyncio
 import json
 import logging
+import math
 import os
 import pathlib
 import re
 import sys
+import time
 
 import discord
 from discord.ext import commands, tasks
@@ -818,6 +820,48 @@ async def transcript_relay_error(error: Exception):
     transcript_relay.restart()
 
 
+# One line every five minutes saying the bot is alive, and in what state.
+#
+# A healthy relay writes nothing: connect_and_stream() takes no branch when
+# all is well, and a paused bot returns before it. So on 2026-09-13 the log's
+# last line was 21:46 for a bot that died around 22:28, and a dead bot and a
+# bot crossing an empty sector looked identical. Two missed beats - a gap over
+# ten minutes - mean the process was gone or its event loop wedged; one is
+# jitter. 288 lines a day; the watcher's rotation keeps the directory bounded.
+HEARTBEAT_SECONDS = 300
+_last_heartbeat = None
+
+
+def heartbeat_line() -> str:
+    """The state in one line: relaying or standing by, where, and how well."""
+    vc = configured_voice_client()
+    connected = bool(vc and vc.is_connected())
+    playing = bool(vc and vc.is_playing())
+    where = vc.channel.name if connected and vc.channel else "out of voice"
+    mode = "standing by" if relay_paused else "relaying"
+
+    # nan until the gateway has answered a heartbeat of its own.
+    latency = bot.latency
+    latency_text = f"{latency * 1000:.0f} ms" if math.isfinite(latency) else "unknown"
+
+    return (
+        f"Heartbeat: {mode}; {where}; connected={connected}; "
+        f"playing={playing}; gateway latency {latency_text}"
+    )
+
+
+def beat_heart(now: float | None = None) -> bool:
+    """Logs the heartbeat when one is due. Returns whether it did."""
+    global _last_heartbeat
+    if now is None:
+        now = time.monotonic()
+    if _last_heartbeat is not None and now - _last_heartbeat < HEARTBEAT_SECONDS:
+        return False
+    _last_heartbeat = now
+    log.info(heartbeat_line())
+    return True
+
+
 @tasks.loop(seconds=10)
 async def watchdog():
     """
@@ -825,6 +869,9 @@ async def watchdog():
     and (re)connects / restarts the stream if needed (e.g. after a
     connection drop).
     """
+    # First, above the pause return: a paused bot is exactly the one whose
+    # silence cannot otherwise be told from death.
+    beat_heart()
     if relay_paused:
         return
     try:

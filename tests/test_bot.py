@@ -1081,6 +1081,72 @@ class TestLogRedaction:
         ), "the filter is not on the root handler, so library lines bypass it"
 
 
+class TestHeartbeat:
+    """
+    On 2026-09-13 the bot died around 22:28 and bot_error.log ended at 21:46 on
+    "Audio stream started". Everything after that was a healthy relay, which
+    writes nothing - so the last line of the log was the last time something
+    changed, not the moment of death. Quiet is normal here: a sector at cruise
+    can pass with no ATC line for thirty minutes.
+
+    The heartbeat is one line every five minutes naming the state. Two missed
+    beats mean the process was gone or its event loop wedged; the log can
+    then say when.
+    """
+
+    @pytest.fixture(autouse=True)
+    def fresh_heart(self, monkeypatch):
+        monkeypatch.setattr(bot, "_last_heartbeat", None)
+
+    # Criterion 2 of the plan. Behind the pause return it would still pass an
+    # unpaused test - and a paused bot is exactly the one whose silence is
+    # otherwise indistinguishable from death.
+    @pytest.mark.asyncio
+    async def test_beats_while_the_relay_is_paused(self, caplog):
+        with patch.object(bot, "relay_paused", True):
+            with patch.object(bot, "connect_and_stream", new=AsyncMock()) as connect:
+                with caplog.at_level(logging.INFO, logger="atc-relay"):
+                    await bot.watchdog()
+
+        connect.assert_not_called()
+        assert "Heartbeat" in caplog.text
+        assert "standing by" in caplog.text
+
+    def test_is_not_repeated_within_the_interval(self, caplog):
+        with caplog.at_level(logging.INFO, logger="atc-relay"):
+            assert bot.beat_heart(now=1000.0) is True
+            assert bot.beat_heart(now=1000.0 + bot.HEARTBEAT_SECONDS - 1) is False
+            assert bot.beat_heart(now=1000.0 + bot.HEARTBEAT_SECONDS) is True
+
+        assert caplog.text.count("Heartbeat") == 2
+
+    def test_names_the_channel_and_the_stream_state(self, mock_voice_client):
+        mock_voice_client.is_playing.return_value = True
+        mock_voice_client.channel.name = "Tower"
+
+        with patch.object(bot, "relay_paused", False):
+            with patch("bot.configured_voice_client", return_value=mock_voice_client):
+                line = bot.heartbeat_line()
+
+        assert "relaying" in line
+        assert "Tower" in line
+        assert "connected=True" in line
+        assert "playing=True" in line
+
+    def test_says_so_when_out_of_voice(self):
+        with patch.object(bot, "relay_paused", True):
+            with patch("bot.configured_voice_client", return_value=None):
+                line = bot.heartbeat_line()
+
+        assert "standing by" in line
+        assert "connected=False" in line
+        assert "playing=False" in line
+
+    def test_five_minutes(self):
+        """288 lines a day around the clock; rotation keeps the directory bounded."""
+        assert bot.HEARTBEAT_SECONDS == 300
+
+
 def test_bot_py_stays_ascii():
     """
     A BOM-less file with non-ASCII is read as ANSI by PowerShell 5.1, and this
