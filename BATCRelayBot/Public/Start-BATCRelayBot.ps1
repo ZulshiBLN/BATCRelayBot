@@ -5,12 +5,19 @@ function Start-BATCRelayBot {
 
     .DESCRIPTION
     Reads config.json, starts VoiceMeeter and BeyondATC if not running,
-    waits for them to initialize, then starts bot.py in the background.
-    Logs output to logs\bot_output.log and logs\bot_error.log.
+    waits for them to initialize, then starts bot.py in the background under
+    a watcher process. The bot logs to logs\bot_output.log and
+    logs\bot_error.log; the previous bot_error.log is kept aside, the last
+    five in total. The watcher records how the bot ends - exit code and time -
+    in install.log, which is the file to read when the bot has gone quiet.
 
     .PARAMETER BotPath
     Path to the bot installation directory.
     Defaults to $env:LOCALAPPDATA\BATCRelayBot
+
+    .PARAMETER PidTimeoutSeconds
+    How long to wait for the watcher to report the bot's process id.
+    Defaults to 5.
 
     .EXAMPLE
     Start-BATCRelayBot
@@ -20,7 +27,8 @@ function Start-BATCRelayBot {
     #>
 
     param(
-        [string]$BotPath = (Join-Path $env:LOCALAPPDATA "BATCRelayBot")
+        [string]$BotPath = (Join-Path $env:LOCALAPPDATA "BATCRelayBot"),
+        [int]$PidTimeoutSeconds = 5
     )
 
     $ErrorActionPreference = "Stop"
@@ -149,20 +157,37 @@ function Start-BATCRelayBot {
         Remove-Item $pidFile -Force -ErrorAction SilentlyContinue
     }
 
-    $process = Start-Process `
-        -FilePath $pythonw `
-        -ArgumentList "bot.py" `
-        -WorkingDirectory $BotPath `
-        -WindowStyle Hidden `
-        -RedirectStandardOutput $logFile `
-        -RedirectStandardError $errorLogFile `
-        -PassThru
+    # The watcher starts the bot, not this function: it is the process that
+    # is still there when the bot dies, and the only one that can write down
+    # how. It writes bot.pid with the child's id, which is waited for below.
+    $watcher = Start-BotWatcher -BotPath $BotPath -Executable $pythonw
 
-    $process.Id | Out-File -FilePath $pidFile -Encoding ascii
+    # For a pid that names a live bot, not for the file to exist: the stale
+    # removal above swallows failure, and existence alone could hand back the
+    # old number.
+    $botPid = $null
+    $deadline = (Get-Date).AddSeconds($PidTimeoutSeconds)
+    while ((Get-Date) -lt $deadline) {
+        $text = Get-Content $pidFile -ErrorAction SilentlyContinue
+        if ($text -match '^\d+$' -and (Test-BotPidAlive -ProcessId ([int]$text) -Executable $pythonw)) {
+            $botPid = [int]$text
+            break
+        }
+        Start-Sleep -Milliseconds 200
+    }
 
-    Write-Host "Bot started (PID $($process.Id))." -ForegroundColor Green
+    if ($null -eq $botPid) {
+        Write-Host "The watcher (PID $($watcher.Id)) did not report a bot pid within $PidTimeoutSeconds second(s)." -ForegroundColor Yellow
+        Write-Host "Check $(Join-Path $BotPath 'install.log') and $errorLogFile." -ForegroundColor Yellow
+        Write-InstallLog -LogPath (Join-Path $BotPath "install.log") -Level WARN `
+            -Message "Start-BATCRelayBot: watcher (PID $($watcher.Id)) did not report a bot pid within $PidTimeoutSeconds second(s)"
+        return
+    }
+
+    Write-Host "Bot started (PID $botPid), watched by PID $($watcher.Id)." -ForegroundColor Green
     Write-Host "Output: $logFile" -ForegroundColor Cyan
     Write-Host "Errors: $errorLogFile" -ForegroundColor Cyan
+    Write-Host "How it ends is recorded in: $(Join-Path $BotPath 'install.log')" -ForegroundColor Cyan
     Write-Host "Stop with: Stop-BATCRelayBot" -ForegroundColor Cyan
 }
 

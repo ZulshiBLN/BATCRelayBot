@@ -45,6 +45,16 @@ function Invoke-SecureUninstall {
     # ---- 1: stop the bot ------------------------------------------------
     Write-Host "  [1/5] Stopping the bot" -ForegroundColor Gray
     try {
+        # The watcher first. Stopping the bot wakes it to record the exit in
+        # install.log - inside the directory step 3 is about to empty - and
+        # Write-InstallLog would create the file again, a leftover this
+        # removal made itself.
+        $watchers = @(Stop-BotWatcher -BotPath $BotPath)
+        if ($watchers.Count -gt 0) {
+            "[OK] Ended the bot watcher first (PIDs: $($watchers -join ', ')) so it cannot write into the directory being removed" |
+                Add-Content $logPath -Encoding UTF8
+        }
+
         $stopResult = Stop-BotProcess -BotPath $BotPath -TimeoutSeconds 15
 
         switch ($stopResult.Method) {

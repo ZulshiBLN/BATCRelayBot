@@ -17,6 +17,20 @@ see the commit that made it.
 
 ## [Unreleased]
 
+### Added
+
+- `Start-BATCRelayBot` starts the bot under a watcher process. When the bot
+  ends - however it ends - the watcher writes the time, how long it ran and
+  the exit code to `install.log`: `0` for a clean exit, `1` for a Python error
+  (traceback in `logs\bot_error.log`), `-1` when something terminated it from
+  outside. A forced `Stop-BATCRelayBot` records itself there too, so it can
+  be told apart from Task Manager. Until now a bot that died quietly left no
+  trace of when or why.
+- The previous `logs\bot_error.log` is kept aside under a timestamped name at
+  every start, the last five sessions in total. It used to be truncated.
+- `Start-BATCRelayBot` reports the bot's process id and the watcher's, and
+  says so if the bot has not come up within five seconds.
+
 ### Fixed
 
 - The closing screen of setup said the editor changes "the token, server,

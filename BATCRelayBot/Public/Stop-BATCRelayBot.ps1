@@ -54,6 +54,11 @@ function Stop-BATCRelayBot {
     } else {
         Write-Host "Bot did not respond in time and was terminated." -ForegroundColor Yellow
 
+        # The watcher records the exit as -1, which is also what Task Manager
+        # looks like. This line is what tells the two apart afterwards.
+        Write-InstallLog -LogPath (Join-Path $BotPath "install.log") -Level WARN `
+            -Message "Bot (PID $($running -join ', ')) did not respond to stop.signal within ${Timeout}s and was terminated by Stop-BATCRelayBot"
+
         # A terminated bot takes ffmpeg with it without closing the capture
         # it held on a VoiceMeeter bus, and VoiceMeeter's engine can be left
         # in a state where nothing on the machine plays audio. Restarting the
