@@ -40,7 +40,8 @@ def mock_discord_intents():
 
 @pytest.fixture
 def mock_voice_client():
-    """Create a mock Discord voice client"""
+    """A connected, idle voice client. is_connected and is_playing are set
+    explicitly: on a MagicMock they would be truthy mocks, not booleans."""
     vc = MagicMock()
     vc.is_connected.return_value = True
     vc.is_playing.return_value = False
@@ -48,20 +49,3 @@ def mock_voice_client():
     vc.channel.id = 987654321098765432
     vc.channel.name = "ATC Channel"
     return vc
-
-
-@pytest.fixture
-def mock_guild(mock_voice_client):
-    """Create a mock Discord guild"""
-    guild = MagicMock()
-    guild.id = 123456789012345678
-    guild.name = "Test Server"
-    guild.voice_client = mock_voice_client
-
-    channel = MagicMock()
-    channel.id = 987654321098765432
-    channel.name = "ATC Channel"
-    channel.connect = MagicMock()
-
-    guild.get_channel.return_value = channel
-    return guild
