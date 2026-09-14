@@ -4,7 +4,7 @@ description: Symptoms, their usual causes, and how to fix them.
 document_type: reference
 audience: users
 applies_to: BATCRelayBot 1.6.2
-updated: 2026-09-13
+updated: 2026-09-14
 ---
 
 # Troubleshooting
@@ -19,7 +19,14 @@ updated: 2026-09-13
 | Uninstall | `%APPDATA%\BATCRelayBot-Uninstall\` |
 
 `install.log` records every step from the first one, so a failed setup always
-leaves a trace even if the window closed.
+leaves a trace even if the window closed. Since 1.7.0 it also records every
+start and every end of the bot — how long it ran and with what exit code —
+because it is the one file a restart does not touch.
+
+`bot_error.log` is the bot's own log: a session header, gateway and voice
+events, and a heartbeat every five minutes. It starts fresh with every start;
+the previous one is kept beside it as `bot_error.<date>-<time>.log`, five
+sessions in all.
 
 ## Setup
 
@@ -152,6 +159,34 @@ channel — server-wide permissions are not enough.
 **Bot starts and immediately disconnects**
 Check `bot_error.log`. Usual causes: wrong channel ID, missing permissions,
 or Discord rate limiting.
+
+**The bot went quiet — is it dead, or is nothing happening?**
+Quiet is normal: at cruise a sector can pass with no ATC line for half an
+hour. Two things tell a dead bot from a quiet one.
+
+1. **The heartbeat.** `bot_error.log` gets a `Heartbeat:` line every five
+   minutes whether or not the bot is in a channel, naming its state. If the
+   last one is more than ten minutes old, the process is gone or stuck.
+2. **The exit line.** When the bot ends, `install.log` gets a line like
+   `Bot (PID 1234) ended after 2h 14m 3s with exit code -1: ...`. The code
+   says how:
+
+| Exit code | What happened |
+|---|---|
+| `0` | Clean exit — `Stop-BATCRelayBot`, `!BATCshutdown` or `stop.signal` |
+| `1` | A Python error. The traceback is at the end of `bot_error.log` |
+| `-1` | Terminated from outside, with no chance to write anything: Task Manager, `taskkill`, a Windows shutdown — or `Stop-BATCRelayBot` after the bot did not answer within fifteen seconds, which writes its own line saying so just before |
+| `-1073741510` | Console closed or CTRL+C (`0xC000013A`) |
+| `-1073741819` | A native crash, access violation (`0xC0000005`). Look for the `faulthandler` dump at the end of `bot_error.log` |
+| other negative | A native crash; the line gives the NTSTATUS in hex |
+
+If there is no exit line at all, the bot was started without the watcher
+(`python bot.py` by hand) or the watcher itself was killed; the process may
+still be running — `Get-BATCRelayBotStatus` knows.
+
+Before the exit, read `bot_error.log` backwards from the last heartbeat:
+`Disconnected from the Discord gateway` marks a network gap, `Left voice
+channel ... not by this bot` a moderator's disconnect.
 
 **"Field 'x' is missing or empty in config.json"**
 The configuration predates 1.4.0 or was edited by hand. Run

@@ -145,6 +145,26 @@ Describe "The exit line" {
     }
 }
 
+Describe "The exit-code table" {
+
+    # Get-ExitCodeMeaning is the authority; docs/TROUBLESHOOTING.md mirrors it
+    # for someone with a dead bot and no PowerShell open. The codes are read
+    # out of the switch, not retyped here.
+    It "in docs/TROUBLESHOOTING.md names every code the watcher can explain" {
+        $source = Join-Path $PSScriptRoot '..\..\BATCRelayBot\Private\Watch-BotProcess.ps1'
+        $ast = [System.Management.Automation.Language.Parser]::ParseFile($source, [ref]$null, [ref]$null)
+        $function = $ast.Find({ param($n) $n -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -eq 'Get-ExitCodeMeaning' }, $true)
+        $switch = $function.Find({ param($n) $n -is [System.Management.Automation.Language.SwitchStatementAst] }, $true)
+        $codes = @($switch.Clauses | ForEach-Object { $_.Item1.Extent.Text })
+        $codes.Count | Should -BeGreaterThan 3 -Because "the switch is where the codes live"
+
+        $doc = Get-Content (Join-Path $PSScriptRoot '..\..\docs\TROUBLESHOOTING.md') -Raw
+        foreach ($code in $codes) {
+            $doc | Should -Match ('\| `' + [regex]::Escape($code) + '` \|') -Because "exit code $code has a meaning the table does not give"
+        }
+    }
+}
+
 Describe "What the child is told" {
 
     # bot.py's session header names the module version, and the watcher is

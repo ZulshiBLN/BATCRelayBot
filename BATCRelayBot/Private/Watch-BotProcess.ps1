@@ -116,7 +116,8 @@ function Write-BotExitLine {
 function Get-ExitCodeMeaning {
     <#
     .SYNOPSIS
-    What an exit code says about how the bot ended. Mirrored in README.md.
+    What an exit code says about how the bot ended. The table in
+    docs/TROUBLESHOOTING.md mirrors this switch.
     #>
     [OutputType([string])]
     param([Parameter(Mandatory = $true)][int]$ExitCode)
