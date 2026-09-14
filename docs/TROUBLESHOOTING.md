@@ -19,7 +19,7 @@ updated: 2026-09-14
 | Uninstall | `%APPDATA%\BATCRelayBot-Uninstall\` |
 
 `install.log` records every step from the first one, so a failed setup always
-leaves a trace even if the window closed. Since 1.7.0 it also records every
+leaves a trace even if the window closed. Since 1.6.3 it also records every
 start and every end of the bot — how long it ran and with what exit code —
 because it is the one file a restart does not touch.
 
