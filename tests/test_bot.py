@@ -287,11 +287,14 @@ async def test_connect_and_stream_already_connected(monkeypatch):
     voice_client = AsyncMock()
     voice_client.channel.id = channel.id
 
-    # is_playing() and play() are synchronous in discord.py. Left as AsyncMock
-    # attributes they return coroutines, and a coroutine is always truthy - so
-    # "if not voice_client.is_playing()" was always false and the streaming
-    # branch was never reached, whatever return_value said. That is what the
-    # "coroutine was never awaited" warning in every test run was reporting.
+    # is_playing(), is_connected() and play() are synchronous in discord.py.
+    # Left as AsyncMock attributes they return coroutines, and a coroutine is
+    # always truthy - so "if not voice_client.is_playing()" was always false
+    # and the streaming branch was never reached, whatever return_value said.
+    # That is what the "coroutine was never awaited" warning in every test run
+    # was reporting. is_connected has to be explicit for the same reason: a
+    # truthy coroutine would make the reconnect branch unreachable.
+    voice_client.is_connected = Mock(return_value=True)
     voice_client.is_playing = Mock(return_value=False)
     voice_client.play = Mock()
 
@@ -323,6 +326,7 @@ async def test_connect_and_stream_does_not_restart_a_running_stream(monkeypatch)
 
     voice_client = AsyncMock()
     voice_client.channel.id = channel.id
+    voice_client.is_connected = Mock(return_value=True)
     voice_client.is_playing = Mock(return_value=True)
     voice_client.play = Mock()
 
@@ -671,6 +675,7 @@ class TestReplyWording:
         ctx.author.display_name = "Zulshi"
 
         voice_client = AsyncMock()
+        voice_client.is_connected = Mock(return_value=True)
         voice_client.channel.name = "Tower"
 
         monkeypatch.setattr(bot, "target_channel_id", 111)
@@ -683,7 +688,10 @@ class TestReplyWording:
         assert "Good day" in reply
 
         # The name is read before disconnecting; afterwards there is none.
-        voice_client.disconnect.assert_awaited_once()
+        # force=True: without it, a client the library has lost returns
+        # from disconnect() with nothing torn down (voice_state.py:509), which
+        # is why the bot stayed visible in the channel on 2026-09-14 13:13:32.
+        voice_client.disconnect.assert_awaited_once_with(force=True)
         assert bot.target_channel_id is None
 
     @pytest.mark.asyncio
@@ -1013,6 +1021,7 @@ class TestShutdownSurvivesFailure:
 
         ctx = make_context(MagicMock())
         voice_client = AsyncMock()
+        voice_client.is_connected = Mock(return_value=True)
         voice_client.channel.name = "Tower"
 
         with patch("bot.configured_voice_client", return_value=voice_client):
@@ -1312,6 +1321,163 @@ class TestLifecycleLines:
         finally:
             if was_enabled:
                 faulthandler.enable()
+
+
+class TestVoiceReconnect:
+    """
+    2026-09-14, 13:06:39: DNS failed for a moment. discord.py lost the voice
+    websocket and, retrying, left guild.voice_client registered with
+    is_connected() False and is_playing() True. connect_and_stream() took no
+    branch in that state - client present, channel matches, "playing" - and
+    the watchdog did nothing for seven minutes.
+
+    The fix reconnects the same client: voice_client.connect() is the one call
+    that cancels the library's own poller task; disconnect() in either form
+    leaves it running, and an orphaned poller retrying against a new client is
+    what tore the channel down from 13:14 to 13:16.
+    """
+
+    CHANNEL_ID = 555000111222333444
+
+    def stuck_client(self):
+        client = AsyncMock()
+        client.channel.id = self.CHANNEL_ID
+        client.channel.name = "Tower"
+        client.is_connected = Mock(return_value=False)
+        client.is_playing = Mock(return_value=True)
+        client.stop = Mock()
+        client.play = Mock()
+        return client
+
+    def guild_with(self, client):
+        guild = MagicMock()
+        channel = MagicMock(spec=discord.VoiceChannel)
+        channel.id = self.CHANNEL_ID
+        channel.name = "Tower"
+        guild.get_channel = Mock(return_value=channel)
+        guild.voice_client = client
+        return guild, channel
+
+    # Criterion 1 of the plan.
+    @pytest.mark.asyncio
+    async def test_reconnects_a_client_the_library_left_registered(self, monkeypatch):
+        client = self.stuck_client()
+        guild, _ = self.guild_with(client)
+        monkeypatch.setattr(bot, "target_channel_id", self.CHANNEL_ID)
+        release = Mock()
+        monkeypatch.setattr(bot, "release_audio_source", release)
+
+        with patch.object(bot.bot, "get_guild", return_value=guild):
+            with patch("bot.make_audio_source", return_value=MagicMock()):
+                await bot.connect_and_stream()
+
+        client.stop.assert_called_once()
+        release.assert_called_once()
+        client.connect.assert_awaited_once()
+        assert client.connect.await_args.kwargs.get("reconnect") is True
+        # Still not connected afterwards, as far as the mock says: no play().
+        client.play.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_streams_again_once_the_reconnect_succeeds(self, monkeypatch):
+        client = self.stuck_client()
+        guild, _ = self.guild_with(client)
+        monkeypatch.setattr(bot, "target_channel_id", self.CHANNEL_ID)
+        monkeypatch.setattr(bot, "release_audio_source", Mock())
+
+        async def connected(**_):
+            client.is_connected = Mock(return_value=True)
+            client.is_playing = Mock(return_value=False)
+
+        client.connect = AsyncMock(side_effect=connected)
+
+        with patch.object(bot.bot, "get_guild", return_value=guild):
+            with patch("bot.make_audio_source", return_value=MagicMock()):
+                await bot.connect_and_stream()
+
+        client.play.assert_called_once()
+
+    # Criterion 2: play() never on a client that is not connected. A
+    # channel.connect() that returns while the handshake is still in flight
+    # must not be handed a source - "Not connected to voice", three times, at
+    # 13:13:45-13:14:04.
+    @pytest.mark.asyncio
+    async def test_does_not_play_on_a_client_that_is_still_connecting(self, monkeypatch):
+        guild, channel = self.guild_with(None)
+        fresh = self.stuck_client()
+        fresh.is_playing = Mock(return_value=False)
+        channel.connect = AsyncMock(return_value=fresh)
+        monkeypatch.setattr(bot, "target_channel_id", self.CHANNEL_ID)
+
+        with patch.object(bot.bot, "get_guild", return_value=guild):
+            with patch("bot.make_audio_source", return_value=MagicMock()):
+                await bot.connect_and_stream()
+
+        channel.connect.assert_awaited_once()
+        fresh.play.assert_not_called()
+
+    # Criterion 2: one handshake at a time. !BATCjoin unpauses before its own
+    # connect(), so the watchdog's next tick used to start a second one.
+    @pytest.mark.asyncio
+    async def test_watchdog_skips_its_tick_while_a_handshake_is_running(self, monkeypatch):
+        monkeypatch.setattr(bot, "relay_paused", False)
+        monkeypatch.setattr(bot, "_last_heartbeat", 0.0)
+        monkeypatch.setattr(bot, "beat_heart", Mock())
+
+        async with bot._voice_lock:
+            with patch.object(bot, "connect_and_stream", new=AsyncMock()) as connect:
+                await bot.watchdog()
+
+        connect.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_connect_and_stream_holds_the_lock(self, monkeypatch):
+        """The command path and the watchdog share it, or the skip means nothing."""
+        seen = {}
+
+        async def inner():
+            seen["locked"] = bot._voice_lock.locked()
+
+        monkeypatch.setattr(bot, "_connect_and_stream", inner)
+        await bot.connect_and_stream()
+
+        assert seen["locked"] is True
+        assert not bot._voice_lock.locked()
+
+    @pytest.mark.asyncio
+    async def test_a_disconnect_during_shutdown_is_not_a_reconnect(self, caplog, monkeypatch):
+        """The clean stop at 15:26:31 logged "reconnecting" with nothing reconnecting."""
+        monkeypatch.setattr(bot, "shutting_down", True)
+
+        with caplog.at_level(logging.INFO, logger="atc-relay"):
+            await bot.bot.on_disconnect()
+
+        assert caplog.records
+        assert all(r.levelno < logging.WARNING for r in caplog.records)
+        assert "reconnecting" not in caplog.text
+
+    @pytest.mark.asyncio
+    async def test_shutdown_sets_the_flag_before_closing(self, monkeypatch, tmp_path):
+        monkeypatch.setattr(bot, "shutting_down", False)
+        signal = tmp_path / "stop.signal"
+        signal.write_text("")
+        monkeypatch.setattr(bot, "STOP_SIGNAL_PATH", signal)
+        monkeypatch.setattr(bot, "release_audio_source", Mock())
+        monkeypatch.setattr(bot, "release_pid_file", Mock())
+        monkeypatch.setattr(bot, "delete_session_pages", AsyncMock())
+        monkeypatch.setattr(bot.shutdown_watcher, "stop", Mock())
+
+        flag_at_close = {}
+
+        async def close():
+            flag_at_close["value"] = bot.shutting_down
+
+        monkeypatch.setattr(bot.bot, "close", close)
+
+        with patch.object(discord.Client, "voice_clients", new_callable=PropertyMock, return_value=[]):
+            await bot.shutdown_watcher()
+
+        assert flag_at_close["value"] is True
 
 
 def test_bot_py_stays_ascii():

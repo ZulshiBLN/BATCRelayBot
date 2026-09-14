@@ -44,6 +44,19 @@ see the commit that made it.
 
 ### Fixed
 
+- A short network drop could leave the bot in the voice channel, silent, for
+  as long as it ran: discord.py kept the lost connection registered as
+  "playing", and the watchdog saw nothing to do. Seen on 2026-09-14 after a
+  DNS blip - seven minutes of silence until someone typed a command. The
+  watchdog now reconnects a client that is registered but not connected, on
+  its next ten-second tick, and starts the stream again.
+- `!BATCjoin` and the watchdog no longer start two voice handshakes at once,
+  which tore each other down for two minutes on 2026-09-14; and the stream
+  is no longer started on a client whose handshake is still in flight.
+- `!BATCleave` on a connection the library had already lost left the bot
+  visible in the channel. It now forces the disconnect.
+- A clean shutdown no longer logs "Disconnected from the Discord gateway -
+  reconnecting".
 - The closing screen of setup said the editor changes "the token, server,
   channel or device". There has been no channel to change since 1.5.0.
 

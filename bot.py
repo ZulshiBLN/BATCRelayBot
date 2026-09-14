@@ -657,7 +657,23 @@ async def report_missing_permissions(ctx, channel, missing):
     )
 
 
+# One voice handshake at a time. !BATCjoin unpauses the relay before its own
+# connect(), so the watchdog's next tick used to start a second handshake
+# beside it; on 2026-09-14 the two tore each other down for two minutes. The
+# command path takes the lock; the watchdog skips its tick while it is held.
+_voice_lock = asyncio.Lock()
+
+# How long one reconnect handshake may take. The library's own default is
+# 30 s as well; named here because the watchdog stands still meanwhile.
+VOICE_CONNECT_TIMEOUT = 30.0
+
+
 async def connect_and_stream():
+    async with _voice_lock:
+        await _connect_and_stream()
+
+
+async def _connect_and_stream():
     guild = bot.get_guild(CONFIG["guild_id"])
     if guild is None:
         log.error("Guild %s not found - is the bot on that server?", CONFIG["guild_id"])
@@ -677,9 +693,33 @@ async def connect_and_stream():
     if voice_client is None:
         voice_client = await channel.connect(reconnect=True)
         log.info("Connected to voice channel: %s", channel.name)
+    elif not voice_client.is_connected():
+        # The library lost the socket and left the client registered, not
+        # connected, and "playing" - 2026-09-14 13:06:39, after a DNS blip.
+        # In that state the branches below see nothing to do, and the relay
+        # stays silent for as long as the process runs. Reconnecting the
+        # same client is the one call that also cancels the library's own
+        # poller task (voice_state.py:440-442); disconnect() in either form
+        # leaves that poller alive to fight the next handshake. If connect()
+        # raises, the library has already torn down and deregistered the
+        # client, and the next tick starts afresh.
+        log.warning("Voice client for %s is not connected - reconnecting it", channel.name)
+        voice_client.stop()
+        release_audio_source()
+        await voice_client.connect(reconnect=True, timeout=VOICE_CONNECT_TIMEOUT)
+        log.info("Reconnected to voice channel: %s", channel.name)
+        if voice_client.channel.id != channel.id:
+            await voice_client.move_to(channel)
+            log.info("Moved to voice channel: %s", channel.name)
     elif voice_client.channel.id != channel.id:
         await voice_client.move_to(channel)
         log.info("Moved to voice channel: %s", channel.name)
+
+    # play() on a client whose handshake is still in flight raises "Not
+    # connected to voice" - three times on 2026-09-14 - and starts an ffmpeg
+    # that nothing consumes. The next tick will find a connected client.
+    if not voice_client.is_connected():
+        return
 
     if not voice_client.is_playing():
         global current_source
@@ -876,6 +916,11 @@ async def watchdog():
     beat_heart()
     if relay_paused:
         return
+    # !BATCjoin is mid-handshake. Skipped rather than queued: a tick that
+    # waits for the lock would run right after the command, with nothing to
+    # do, and the one after that is ten seconds away anyway.
+    if _voice_lock.locked():
+        return
     try:
         await connect_and_stream()
     except Exception:
@@ -909,9 +954,11 @@ async def shutdown_watcher():
     shutdown_watcher.stop()
     if watchdog.is_running():
         watchdog.stop()
-    # So on_voice_state_update records the leave below as the bot's own.
-    global relay_paused
+    # So on_voice_state_update records the leave below as the bot's own, and
+    # on_disconnect does not announce a reconnect that is not coming.
+    global relay_paused, shutting_down
     relay_paused = True
+    shutting_down = True
 
     for vc in list(bot.voice_clients):
         try:
@@ -1023,8 +1070,16 @@ async def on_connect():
     log.info("Connected to the Discord gateway")
 
 
+# Set by shutdown_watcher before it closes the connection. The gateway event
+# that follows is the same one a network drop raises.
+shutting_down = False
+
+
 @bot.event
 async def on_disconnect():
+    if shutting_down:
+        log.info("Disconnected from the Discord gateway - shutting down")
+        return
     # discord.py reconnects on its own; this line is how a gap in the
     # heartbeats is told apart from a network that was down.
     log.warning("Disconnected from the Discord gateway - reconnecting")
@@ -1184,7 +1239,11 @@ async def batc_leave(ctx: commands.Context):
     if vc:
         # Read before disconnecting: afterwards there is no channel to name.
         left = vc.channel.name
-        await vc.disconnect()
+        # force=True: for a client the library has lost, disconnect() without
+        # it returns with nothing torn down (voice_state.py:509) - the bot
+        # stayed visible in the channel after the leave at 13:13:32 on
+        # 2026-09-14. For a connected client the two are the same call.
+        await vc.disconnect(force=True)
         release_audio_source()
         await ctx.send(
             f"{ctx.author.display_name}, contact {station_name()} again in "
