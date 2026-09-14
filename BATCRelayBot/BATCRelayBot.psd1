@@ -1,6 +1,6 @@
 ﻿@{
     RootModule            = 'BATCRelayBot.psm1'
-    ModuleVersion         = '1.6.2'
+    ModuleVersion         = '1.6.3'
     GUID                  = '12345678-1234-1234-1234-123456789012'
     Author                = 'Michel Brosche'
     CompanyName           = ''
@@ -29,7 +29,7 @@
             ProjectUri = 'https://github.com/ZulshiBLN/BATCRelayBot'
             # Shown on the PSGallery package page. Keep this current with the
             # version above - it still described 1.0.0 at 1.3.16.
-            ReleaseNotes = 'Setup keeps the configuration it finds: on an upgrade it shows the token (redacted), server ID and audio device and asks once whether to keep them - Enter keeps all three, so an upgrade is one keystroke. A kept token is checked against Discord and a kept device against ffmpeg like typed ones. Setup stops when a newer version is installed than the one running and asks for a new window. The server ID is shown masked. See CHANGELOG.md.'
+            ReleaseNotes = 'The bot runs under a watcher that records how it ended - exit code, time, duration - in install.log, and restarts it ten seconds after any exit that was not asked for, back into the channel it was in, up to three times an hour. A heartbeat every five minutes tells a quiet bot from a dead one. A voice connection lost to a network blip is rebuilt by the bot itself; before, it could sit silent in the channel for as long as it ran. This release changes bot.py: run Update-Module, then Install-BATCRelayBot in a new window and press Enter. See CHANGELOG.md.'
         }
     }
 }

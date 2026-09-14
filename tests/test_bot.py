@@ -3,11 +3,14 @@ Tests for ATC Relay Bot (bot.py)
 """
 
 import asyncio
+import faulthandler
 import json
 import logging
 import pathlib
+import platform
+import re
 import sys
-from unittest.mock import MagicMock, Mock, patch, AsyncMock
+from unittest.mock import MagicMock, Mock, patch, AsyncMock, PropertyMock
 
 import discord
 import pytest
@@ -21,6 +24,15 @@ with patch("pathlib.Path.exists", return_value=True):
             "audio_device_name": "Voicemeeter Out MME",
         }):
             import bot
+
+
+@pytest.fixture(autouse=True)
+def voice_session_in_tmp(tmp_path, monkeypatch):
+    """
+    !BATCjoin writes voice-session.json next to bot.py. Left alone, every
+    join test would write into the checkout - the surroundings rule.
+    """
+    monkeypatch.setattr(bot, "VOICE_SESSION_PATH", tmp_path / "voice-session.json")
 
 
 class TestLoadConfig:
@@ -284,11 +296,14 @@ async def test_connect_and_stream_already_connected(monkeypatch):
     voice_client = AsyncMock()
     voice_client.channel.id = channel.id
 
-    # is_playing() and play() are synchronous in discord.py. Left as AsyncMock
-    # attributes they return coroutines, and a coroutine is always truthy - so
-    # "if not voice_client.is_playing()" was always false and the streaming
-    # branch was never reached, whatever return_value said. That is what the
-    # "coroutine was never awaited" warning in every test run was reporting.
+    # is_playing(), is_connected() and play() are synchronous in discord.py.
+    # Left as AsyncMock attributes they return coroutines, and a coroutine is
+    # always truthy - so "if not voice_client.is_playing()" was always false
+    # and the streaming branch was never reached, whatever return_value said.
+    # That is what the "coroutine was never awaited" warning in every test run
+    # was reporting. is_connected has to be explicit for the same reason: a
+    # truthy coroutine would make the reconnect branch unreachable.
+    voice_client.is_connected = Mock(return_value=True)
     voice_client.is_playing = Mock(return_value=False)
     voice_client.play = Mock()
 
@@ -320,6 +335,7 @@ async def test_connect_and_stream_does_not_restart_a_running_stream(monkeypatch)
 
     voice_client = AsyncMock()
     voice_client.channel.id = channel.id
+    voice_client.is_connected = Mock(return_value=True)
     voice_client.is_playing = Mock(return_value=True)
     voice_client.play = Mock()
 
@@ -668,6 +684,7 @@ class TestReplyWording:
         ctx.author.display_name = "Zulshi"
 
         voice_client = AsyncMock()
+        voice_client.is_connected = Mock(return_value=True)
         voice_client.channel.name = "Tower"
 
         monkeypatch.setattr(bot, "target_channel_id", 111)
@@ -680,7 +697,10 @@ class TestReplyWording:
         assert "Good day" in reply
 
         # The name is read before disconnecting; afterwards there is none.
-        voice_client.disconnect.assert_awaited_once()
+        # force=True: without it, a client the library has lost returns
+        # from disconnect() with nothing torn down (voice_state.py:509), which
+        # is why the bot stayed visible in the channel on 2026-09-14 13:13:32.
+        voice_client.disconnect.assert_awaited_once_with(force=True)
         assert bot.target_channel_id is None
 
     @pytest.mark.asyncio
@@ -908,6 +928,8 @@ class TestJoinPermissions:
         guild = MagicMock()
         guild.voice_channels = [channel]
         ctx = make_context(guild, channel)
+        # The join remembers where it was typed; a MagicMock id is not JSON.
+        ctx.channel.id = 777000111222333444
 
         monkeypatch.setattr(bot, "target_channel_id", None)
         monkeypatch.setattr(bot, "relay_paused", True)
@@ -1010,6 +1032,7 @@ class TestShutdownSurvivesFailure:
 
         ctx = make_context(MagicMock())
         voice_client = AsyncMock()
+        voice_client.is_connected = Mock(return_value=True)
         voice_client.channel.name = "Tower"
 
         with patch("bot.configured_voice_client", return_value=voice_client):
@@ -1079,6 +1102,542 @@ class TestLogRedaction:
             any(isinstance(f, bot.RedactSecrets) for f in handler.filters)
             for handler in handlers
         ), "the filter is not on the root handler, so library lines bypass it"
+
+
+class TestHeartbeat:
+    """
+    On 2026-09-13 the bot died around 22:28 and bot_error.log ended at 21:46 on
+    "Audio stream started". Everything after that was a healthy relay, which
+    writes nothing - so the last line of the log was the last time something
+    changed, not the moment of death. Quiet is normal here: a sector at cruise
+    can pass with no ATC line for thirty minutes.
+
+    The heartbeat is one line every five minutes naming the state. Two missed
+    beats mean the process was gone or its event loop wedged; the log can
+    then say when.
+    """
+
+    @pytest.fixture(autouse=True)
+    def fresh_heart(self, monkeypatch):
+        monkeypatch.setattr(bot, "_last_heartbeat", None)
+
+    # Criterion 2 of the plan. Behind the pause return it would still pass an
+    # unpaused test - and a paused bot is exactly the one whose silence is
+    # otherwise indistinguishable from death.
+    @pytest.mark.asyncio
+    async def test_beats_while_the_relay_is_paused(self, caplog):
+        with patch.object(bot, "relay_paused", True):
+            with patch.object(bot, "connect_and_stream", new=AsyncMock()) as connect:
+                with caplog.at_level(logging.INFO, logger="atc-relay"):
+                    await bot.watchdog()
+
+        connect.assert_not_called()
+        assert "Heartbeat" in caplog.text
+        assert "standing by" in caplog.text
+
+    def test_is_not_repeated_within_the_interval(self, caplog):
+        with caplog.at_level(logging.INFO, logger="atc-relay"):
+            assert bot.beat_heart(now=1000.0) is True
+            assert bot.beat_heart(now=1000.0 + bot.HEARTBEAT_SECONDS - 1) is False
+            assert bot.beat_heart(now=1000.0 + bot.HEARTBEAT_SECONDS) is True
+
+        assert caplog.text.count("Heartbeat") == 2
+
+    def test_names_the_channel_and_the_stream_state(self, mock_voice_client):
+        mock_voice_client.is_playing.return_value = True
+        mock_voice_client.channel.name = "Tower"
+
+        with patch.object(bot, "relay_paused", False):
+            with patch("bot.configured_voice_client", return_value=mock_voice_client):
+                line = bot.heartbeat_line()
+
+        assert "relaying" in line
+        assert "Tower" in line
+        assert "connected=True" in line
+        assert "playing=True" in line
+
+    def test_says_so_when_out_of_voice(self):
+        with patch.object(bot, "relay_paused", True):
+            with patch("bot.configured_voice_client", return_value=None):
+                line = bot.heartbeat_line()
+
+        assert "standing by" in line
+        assert "connected=False" in line
+        assert "playing=False" in line
+
+    def test_five_minutes(self):
+        """288 lines a day around the clock; rotation keeps the directory bounded."""
+        assert bot.HEARTBEAT_SECONDS == 300
+
+
+class TestLifecycleLines:
+    """
+    What happened before the bot died. The 2026-09-13 log had no session
+    start, no gateway events and no voice-state changes - only what the bot
+    itself chose to say, which after "Audio stream started" was nothing. These
+    are the lines that give the exit code in install.log its context.
+    """
+
+    REALISTIC_TOKEN = ("M" * 26) + "." + ("G" * 6) + "." + ("f" * 38)
+
+    @staticmethod
+    def redacted(line):
+        entry = logging.LogRecord("atc-relay", logging.INFO, "bot.py", 1, line, (), None)
+        bot.RedactSecrets().filter(entry)
+        return entry.getMessage()
+
+    def test_session_header_names_the_versions(self, monkeypatch):
+        monkeypatch.setenv("BATCRELAYBOT_MODULE_VERSION", "9.9.9")
+
+        header = "\n".join(bot.session_header())
+
+        assert "9.9.9" in header
+        assert platform.python_version() in header
+        assert discord.__version__ in header
+
+    def test_session_header_without_the_watcher_says_so(self, monkeypatch):
+        """python bot.py by hand has no watcher to tell it the module version."""
+        monkeypatch.delenv("BATCRELAYBOT_MODULE_VERSION", raising=False)
+
+        assert "unknown" in "\n".join(bot.session_header())
+
+    # Criterion 4 of the plan. The header summarises config.json, which holds
+    # the two things the secrets rule forbids in a log - and bot_error.log
+    # travels into bug reports.
+    def test_session_header_carries_no_token_or_id(self, monkeypatch):
+        monkeypatch.setitem(bot.CONFIG, "bot_token", self.REALISTIC_TOKEN)
+        monkeypatch.setitem(bot.CONFIG, "guild_id", 631480440548753408)
+
+        raw = bot.session_header()
+        # Before the redactor, not only after it: the token pattern is a
+        # heuristic, and the header must not be relying on it.
+        assert self.REALISTIC_TOKEN not in "\n".join(raw)
+
+        header = "\n".join(self.redacted(line) for line in raw)
+
+        assert self.REALISTIC_TOKEN not in header
+        assert "631480440548753408" not in header
+        assert not re.search(r"\d{17,20}", header)
+        # Redacted, not omitted: the summary still says a guild is configured.
+        assert "guild" in header.lower()
+        assert bot.CONFIG["audio_device_name"] in header
+
+    @pytest.mark.asyncio
+    async def test_gateway_events_are_logged(self, caplog):
+        with caplog.at_level(logging.INFO, logger="atc-relay"):
+            await bot.bot.on_connect()
+            await bot.bot.on_disconnect()
+            await bot.bot.on_resumed()
+
+        messages = [r.getMessage().lower() for r in caplog.records]
+        assert any("connected" in m and "gateway" in m for m in messages)
+        assert any("disconnected" in m for m in messages)
+        assert any("resumed" in m for m in messages)
+
+    @staticmethod
+    def voice_state(channel_name):
+        state = MagicMock()
+        state.channel = None
+        if channel_name is not None:
+            state.channel = MagicMock()
+            state.channel.name = channel_name
+            state.channel.id = hash(channel_name)
+        return state
+
+    @pytest.fixture
+    def as_the_bot(self):
+        """bot.user is None without a connection; the event compares against it."""
+        me = MagicMock()
+        me.id = 42
+        with patch.object(discord.Client, "user", new_callable=PropertyMock, return_value=me):
+            yield me
+
+    @pytest.mark.asyncio
+    async def test_own_voice_state_changes_are_logged(self, caplog, as_the_bot, monkeypatch):
+        member = MagicMock()
+        member.id = as_the_bot.id
+        monkeypatch.setattr(bot, "relay_paused", True)
+
+        with caplog.at_level(logging.INFO, logger="atc-relay"):
+            await bot.bot.on_voice_state_update(member, self.voice_state(None), self.voice_state("Tower"))
+            await bot.bot.on_voice_state_update(member, self.voice_state("Tower"), self.voice_state("Ground"))
+            await bot.bot.on_voice_state_update(member, self.voice_state("Ground"), self.voice_state(None))
+
+        messages = [r.getMessage() for r in caplog.records]
+        assert any("Joined" in m and "Tower" in m for m in messages)
+        assert any("Moved" in m and "Tower" in m and "Ground" in m for m in messages)
+        assert any("Left" in m and "Ground" in m for m in messages)
+
+    @pytest.mark.asyncio
+    async def test_a_leave_the_bot_did_not_ask_for_is_named(self, caplog, as_the_bot, monkeypatch):
+        """
+        A moderator's disconnect and the bot's own !BATCleave look the same in
+        the event. relay_paused tells them apart: the bot pauses before it
+        leaves, so a leave while relaying came from outside.
+        """
+        member = MagicMock()
+        member.id = as_the_bot.id
+        monkeypatch.setattr(bot, "relay_paused", False)
+
+        with caplog.at_level(logging.INFO, logger="atc-relay"):
+            await bot.bot.on_voice_state_update(member, self.voice_state("Tower"), self.voice_state(None))
+
+        assert any("not by this bot" in r.getMessage() for r in caplog.records)
+
+    @pytest.mark.asyncio
+    async def test_other_members_are_not_logged(self, caplog, as_the_bot):
+        member = MagicMock()
+        member.id = as_the_bot.id + 1
+
+        with caplog.at_level(logging.INFO, logger="atc-relay"):
+            await bot.bot.on_voice_state_update(member, self.voice_state(None), self.voice_state("Tower"))
+
+        assert not caplog.records
+
+    @pytest.mark.asyncio
+    async def test_shutdown_pauses_the_relay_before_leaving(self, monkeypatch, tmp_path):
+        """So the leave on shutdown is recorded as the bot's own, not as a removal."""
+        monkeypatch.setattr(bot, "relay_paused", False)
+        signal = tmp_path / "stop.signal"
+        signal.write_text("")
+        monkeypatch.setattr(bot, "STOP_SIGNAL_PATH", signal)
+        monkeypatch.setattr(bot, "release_audio_source", Mock())
+        monkeypatch.setattr(bot, "release_pid_file", Mock())
+        monkeypatch.setattr(bot, "delete_session_pages", AsyncMock())
+        monkeypatch.setattr(bot.bot, "close", AsyncMock())
+        monkeypatch.setattr(bot.shutdown_watcher, "stop", Mock())
+
+        with patch.object(discord.Client, "voice_clients", new_callable=PropertyMock, return_value=[]):
+            await bot.shutdown_watcher()
+
+        assert bot.relay_paused is True
+
+    def test_faulthandler_is_guarded_without_stderr(self, monkeypatch):
+        """Under pythonw with no redirect sys.stderr is None; enable() would raise."""
+        monkeypatch.setattr(sys, "stderr", None)
+        assert bot.enable_faulthandler() is False
+
+    def test_faulthandler_is_guarded_on_a_stream_without_a_descriptor(self):
+        """A redirect that is not a file - captured output, a pipe wrapper."""
+        import io
+        assert bot.enable_faulthandler(stream=io.StringIO()) is False
+
+    def test_faulthandler_is_enabled_on_a_real_stream(self, tmp_path):
+        was_enabled = faulthandler.is_enabled()
+        try:
+            with open(tmp_path / "err.log", "w") as stream:
+                assert bot.enable_faulthandler(stream=stream) is True
+                assert faulthandler.is_enabled()
+                faulthandler.disable()
+        finally:
+            if was_enabled:
+                faulthandler.enable()
+
+
+class TestVoiceReconnect:
+    """
+    2026-09-14, 13:06:39: DNS failed for a moment. discord.py lost the voice
+    websocket and, retrying, left guild.voice_client registered with
+    is_connected() False and is_playing() True. connect_and_stream() took no
+    branch in that state - client present, channel matches, "playing" - and
+    the watchdog did nothing for seven minutes.
+
+    The fix reconnects the same client: voice_client.connect() is the one call
+    that cancels the library's own poller task; disconnect() in either form
+    leaves it running, and an orphaned poller retrying against a new client is
+    what tore the channel down from 13:14 to 13:16.
+    """
+
+    CHANNEL_ID = 555000111222333444
+
+    def stuck_client(self):
+        client = AsyncMock()
+        client.channel.id = self.CHANNEL_ID
+        client.channel.name = "Tower"
+        client.is_connected = Mock(return_value=False)
+        client.is_playing = Mock(return_value=True)
+        client.stop = Mock()
+        client.play = Mock()
+        return client
+
+    def guild_with(self, client):
+        guild = MagicMock()
+        channel = MagicMock(spec=discord.VoiceChannel)
+        channel.id = self.CHANNEL_ID
+        channel.name = "Tower"
+        guild.get_channel = Mock(return_value=channel)
+        guild.voice_client = client
+        return guild, channel
+
+    # Criterion 1 of the plan.
+    @pytest.mark.asyncio
+    async def test_reconnects_a_client_the_library_left_registered(self, monkeypatch):
+        client = self.stuck_client()
+        guild, _ = self.guild_with(client)
+        monkeypatch.setattr(bot, "target_channel_id", self.CHANNEL_ID)
+        release = Mock()
+        monkeypatch.setattr(bot, "release_audio_source", release)
+
+        with patch.object(bot.bot, "get_guild", return_value=guild):
+            with patch("bot.make_audio_source", return_value=MagicMock()):
+                await bot.connect_and_stream()
+
+        client.stop.assert_called_once()
+        release.assert_called_once()
+        client.connect.assert_awaited_once()
+        assert client.connect.await_args.kwargs.get("reconnect") is True
+        # Still not connected afterwards, as far as the mock says: no play().
+        client.play.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_streams_again_once_the_reconnect_succeeds(self, monkeypatch):
+        client = self.stuck_client()
+        guild, _ = self.guild_with(client)
+        monkeypatch.setattr(bot, "target_channel_id", self.CHANNEL_ID)
+        monkeypatch.setattr(bot, "release_audio_source", Mock())
+
+        async def connected(**_):
+            client.is_connected = Mock(return_value=True)
+            client.is_playing = Mock(return_value=False)
+
+        client.connect = AsyncMock(side_effect=connected)
+
+        with patch.object(bot.bot, "get_guild", return_value=guild):
+            with patch("bot.make_audio_source", return_value=MagicMock()):
+                await bot.connect_and_stream()
+
+        client.play.assert_called_once()
+
+    # Criterion 2: play() never on a client that is not connected. A
+    # channel.connect() that returns while the handshake is still in flight
+    # must not be handed a source - "Not connected to voice", three times, at
+    # 13:13:45-13:14:04.
+    @pytest.mark.asyncio
+    async def test_does_not_play_on_a_client_that_is_still_connecting(self, monkeypatch):
+        guild, channel = self.guild_with(None)
+        fresh = self.stuck_client()
+        fresh.is_playing = Mock(return_value=False)
+        channel.connect = AsyncMock(return_value=fresh)
+        monkeypatch.setattr(bot, "target_channel_id", self.CHANNEL_ID)
+
+        with patch.object(bot.bot, "get_guild", return_value=guild):
+            with patch("bot.make_audio_source", return_value=MagicMock()):
+                await bot.connect_and_stream()
+
+        channel.connect.assert_awaited_once()
+        fresh.play.assert_not_called()
+
+    # Criterion 2: one handshake at a time. !BATCjoin unpauses before its own
+    # connect(), so the watchdog's next tick used to start a second one.
+    @pytest.mark.asyncio
+    async def test_watchdog_skips_its_tick_while_a_handshake_is_running(self, monkeypatch):
+        monkeypatch.setattr(bot, "relay_paused", False)
+        monkeypatch.setattr(bot, "_last_heartbeat", 0.0)
+        monkeypatch.setattr(bot, "beat_heart", Mock())
+
+        async with bot._voice_lock:
+            with patch.object(bot, "connect_and_stream", new=AsyncMock()) as connect:
+                await bot.watchdog()
+
+        connect.assert_not_called()
+
+    # Criterion 5, live on 2026-09-14 16:42:00: the tick after a timed-out
+    # handshake started the next join 9 ms later, and Discord's late "leave"
+    # for the abandoned attempt threw the fresh client straight out again -
+    # thirty seconds lost. discord.py names this race in voice_state.py:539.
+    @pytest.mark.asyncio
+    async def test_waits_after_a_failed_handshake_before_the_next(self, monkeypatch):
+        monkeypatch.setattr(bot, "relay_paused", False)
+        monkeypatch.setattr(bot, "beat_heart", Mock())
+        monkeypatch.setattr(bot, "_voice_retry_after", 0.0)
+        clock = {"now": 1000.0}
+        monkeypatch.setattr(bot.time, "monotonic", lambda: clock["now"])
+
+        failing = AsyncMock(side_effect=RuntimeError("Timed out connecting to voice"))
+        with patch.object(bot, "connect_and_stream", new=failing):
+            await bot.watchdog()
+        failing.assert_awaited_once()
+
+        with patch.object(bot, "connect_and_stream", new=AsyncMock()) as connect:
+            clock["now"] += bot.VOICE_RETRY_COOLDOWN - 1
+            await bot.watchdog()
+            connect.assert_not_called()
+
+            clock["now"] += 1
+            await bot.watchdog()
+            connect.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_connect_and_stream_holds_the_lock(self, monkeypatch):
+        """The command path and the watchdog share it, or the skip means nothing."""
+        seen = {}
+
+        async def inner():
+            seen["locked"] = bot._voice_lock.locked()
+
+        monkeypatch.setattr(bot, "_connect_and_stream", inner)
+        await bot.connect_and_stream()
+
+        assert seen["locked"] is True
+        assert not bot._voice_lock.locked()
+
+    @pytest.mark.asyncio
+    async def test_a_disconnect_during_shutdown_is_not_a_reconnect(self, caplog, monkeypatch):
+        """The clean stop at 15:26:31 logged "reconnecting" with nothing reconnecting."""
+        monkeypatch.setattr(bot, "shutting_down", True)
+
+        with caplog.at_level(logging.INFO, logger="atc-relay"):
+            await bot.bot.on_disconnect()
+
+        assert caplog.records
+        assert all(r.levelno < logging.WARNING for r in caplog.records)
+        assert "reconnecting" not in caplog.text
+
+    @pytest.mark.asyncio
+    async def test_shutdown_sets_the_flag_before_closing(self, monkeypatch, tmp_path):
+        monkeypatch.setattr(bot, "shutting_down", False)
+        signal = tmp_path / "stop.signal"
+        signal.write_text("")
+        monkeypatch.setattr(bot, "STOP_SIGNAL_PATH", signal)
+        monkeypatch.setattr(bot, "release_audio_source", Mock())
+        monkeypatch.setattr(bot, "release_pid_file", Mock())
+        monkeypatch.setattr(bot, "delete_session_pages", AsyncMock())
+        monkeypatch.setattr(bot.shutdown_watcher, "stop", Mock())
+
+        flag_at_close = {}
+
+        async def close():
+            flag_at_close["value"] = bot.shutting_down
+
+        monkeypatch.setattr(bot.bot, "close", close)
+
+        with patch.object(discord.Client, "voice_clients", new_callable=PropertyMock, return_value=[]):
+            await bot.shutdown_watcher()
+
+        assert flag_at_close["value"] is True
+
+
+class TestRejoinAfterRestart:
+    """
+    A bot the watcher restarted comes back into the channel it was in. A bot
+    started any other way stands by, as since 1.4.0: starting at boot must
+    not put it in a channel. The watcher sets BATCRELAYBOT_RESTART=1 and
+    nothing else does; voice-session.json is what !BATCjoin remembers.
+    """
+
+    CHANNEL = 555000111222333444
+    TEXT = 666000111222333444
+
+    @pytest.fixture(autouse=True)
+    def session_file(self, tmp_path, monkeypatch):
+        path = tmp_path / "voice-session.json"
+        monkeypatch.setattr(bot, "VOICE_SESSION_PATH", path)
+        monkeypatch.setattr(bot, "relay_paused", True)
+        monkeypatch.setattr(bot, "target_channel_id", None)
+        monkeypatch.setattr(bot, "text_channel_id", None)
+        monkeypatch.delenv("BATCRELAYBOT_RESTART", raising=False)
+        return path
+
+    def write_session(self, path):
+        path.write_text(json.dumps({"target_channel_id": self.CHANNEL, "text_channel_id": self.TEXT}))
+
+    # Criterion 4 of the plan, both halves.
+    def test_a_restarted_bot_rejoins(self, session_file, monkeypatch, caplog):
+        self.write_session(session_file)
+        monkeypatch.setenv("BATCRELAYBOT_RESTART", "1")
+
+        with caplog.at_level(logging.INFO, logger="atc-relay"):
+            assert bot.restore_voice_session() is True
+
+        assert bot.relay_paused is False
+        assert bot.target_channel_id == self.CHANNEL
+        assert bot.text_channel_id == self.TEXT
+        assert any("restart" in r.getMessage().lower() for r in caplog.records)
+
+    def test_a_fresh_start_stands_by_and_forgets(self, session_file):
+        self.write_session(session_file)
+
+        assert bot.restore_voice_session() is False
+
+        assert bot.relay_paused is True
+        assert bot.target_channel_id is None
+        # Forgotten, or a crash next week would rejoin a channel from today.
+        assert not session_file.exists()
+
+    def test_a_restart_with_nothing_remembered_stands_by(self, monkeypatch):
+        monkeypatch.setenv("BATCRELAYBOT_RESTART", "1")
+
+        assert bot.restore_voice_session() is False
+        assert bot.relay_paused is True
+
+    def test_a_torn_file_is_ignored(self, session_file, monkeypatch):
+        session_file.write_text("{not json")
+        monkeypatch.setenv("BATCRELAYBOT_RESTART", "1")
+
+        assert bot.restore_voice_session() is False
+        assert bot.relay_paused is True
+
+    @pytest.mark.asyncio
+    async def test_on_ready_restores_before_the_watchdog_starts(self, monkeypatch):
+        order = []
+        monkeypatch.setattr(bot, "restore_voice_session", lambda: order.append("restore"))
+        monkeypatch.setattr(bot.watchdog, "is_running", Mock(return_value=False))
+        monkeypatch.setattr(bot.watchdog, "start", Mock(side_effect=lambda: order.append("watchdog")))
+        monkeypatch.setattr(bot.shutdown_watcher, "is_running", Mock(return_value=True))
+        monkeypatch.setattr(bot.transcript_relay, "is_running", Mock(return_value=True))
+        monkeypatch.setattr(bot, "delete_session_pages", AsyncMock())
+
+        await bot.on_ready()
+
+        assert order == ["restore", "watchdog"]
+
+    @pytest.mark.asyncio
+    async def test_join_remembers_the_channels(self, session_file, monkeypatch):
+        channel = make_voice_channel("Tower", self.CHANNEL)
+        ctx = make_context(MagicMock(), author_channel=channel)
+        ctx.channel.id = self.TEXT
+        monkeypatch.setattr(bot, "missing_join_permissions", lambda *_: [])
+        monkeypatch.setattr(bot, "delete_session_pages", AsyncMock())
+        monkeypatch.setattr(bot, "reset_session_pages", Mock())
+
+        with patch("bot.connect_and_stream", new=AsyncMock()):
+            with patch("bot.configured_voice_client", return_value=None):
+                await bot.batc_join.callback(ctx)
+
+        assert json.loads(session_file.read_text()) == {
+            "target_channel_id": self.CHANNEL,
+            "text_channel_id": self.TEXT,
+        }
+
+    @pytest.mark.asyncio
+    async def test_leave_forgets(self, session_file, monkeypatch):
+        self.write_session(session_file)
+        ctx = make_context(MagicMock())
+        monkeypatch.setattr(bot, "delete_session_pages", AsyncMock())
+        monkeypatch.setattr(bot, "reset_session_pages", Mock())
+
+        with patch("bot.configured_voice_client", return_value=None):
+            await bot.batc_leave.callback(ctx)
+
+        assert not session_file.exists()
+
+    @pytest.mark.asyncio
+    async def test_a_clean_shutdown_forgets(self, session_file, monkeypatch, tmp_path):
+        """A stopped bot is not restarted, so a stale file would only mislead."""
+        self.write_session(session_file)
+        signal = tmp_path / "stop.signal"
+        signal.write_text("")
+        monkeypatch.setattr(bot, "STOP_SIGNAL_PATH", signal)
+        monkeypatch.setattr(bot, "release_audio_source", Mock())
+        monkeypatch.setattr(bot, "release_pid_file", Mock())
+        monkeypatch.setattr(bot, "delete_session_pages", AsyncMock())
+        monkeypatch.setattr(bot.bot, "close", AsyncMock())
+        monkeypatch.setattr(bot.shutdown_watcher, "stop", Mock())
+
+        with patch.object(discord.Client, "voice_clients", new_callable=PropertyMock, return_value=[]):
+            await bot.shutdown_watcher()
+
+        assert not session_file.exists()
 
 
 def test_bot_py_stays_ascii():

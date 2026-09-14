@@ -35,12 +35,16 @@ Configuration: config.json (see config.example.json)
 """
 
 import asyncio
+import faulthandler
 import json
 import logging
+import math
 import os
 import pathlib
+import platform
 import re
 import sys
+import time
 
 import discord
 from discord.ext import commands, tasks
@@ -101,6 +105,10 @@ log = logging.getLogger("atc-relay")
 CONFIG_PATH = pathlib.Path(__file__).parent / "config.json"
 STOP_SIGNAL_PATH = pathlib.Path(__file__).parent / "stop.signal"
 PID_FILE_PATH = pathlib.Path(__file__).parent / "bot.pid"
+# Where the bot was, for the watcher's restart to put it back. Written by
+# !BATCjoin, removed by !BATCleave, a clean shutdown and any start that is
+# not a restart.
+VOICE_SESSION_PATH = pathlib.Path(__file__).parent / "voice-session.json"
 
 
 def load_config() -> dict:
@@ -653,7 +661,32 @@ async def report_missing_permissions(ctx, channel, missing):
     )
 
 
+# One voice handshake at a time. !BATCjoin unpauses the relay before its own
+# connect(), so the watchdog's next tick used to start a second handshake
+# beside it; on 2026-09-14 the two tore each other down for two minutes. The
+# command path takes the lock; the watchdog skips its tick while it is held.
+_voice_lock = asyncio.Lock()
+
+# How long one reconnect handshake may take. The library's own default is
+# 30 s as well; named here because the watchdog stands still meanwhile.
+VOICE_CONNECT_TIMEOUT = 30.0
+
+# After a handshake fails, the next one waits this long. On 2026-09-14 at
+# 16:42:00 the tick after a timed-out handshake started the next join 9 ms
+# later, and Discord's late "leave" for the abandoned attempt threw the
+# fresh client straight out again - thirty seconds lost. discord.py names
+# the race in voice_state.py:539; a few seconds is enough for the leave to
+# land first.
+VOICE_RETRY_COOLDOWN = 5.0
+_voice_retry_after = 0.0
+
+
 async def connect_and_stream():
+    async with _voice_lock:
+        await _connect_and_stream()
+
+
+async def _connect_and_stream():
     guild = bot.get_guild(CONFIG["guild_id"])
     if guild is None:
         log.error("Guild %s not found - is the bot on that server?", CONFIG["guild_id"])
@@ -673,9 +706,33 @@ async def connect_and_stream():
     if voice_client is None:
         voice_client = await channel.connect(reconnect=True)
         log.info("Connected to voice channel: %s", channel.name)
+    elif not voice_client.is_connected():
+        # The library lost the socket and left the client registered, not
+        # connected, and "playing" - 2026-09-14 13:06:39, after a DNS blip.
+        # In that state the branches below see nothing to do, and the relay
+        # stays silent for as long as the process runs. Reconnecting the
+        # same client is the one call that also cancels the library's own
+        # poller task (voice_state.py:440-442); disconnect() in either form
+        # leaves that poller alive to fight the next handshake. If connect()
+        # raises, the library has already torn down and deregistered the
+        # client, and the next tick starts afresh.
+        log.warning("Voice client for %s is not connected - reconnecting it", channel.name)
+        voice_client.stop()
+        release_audio_source()
+        await voice_client.connect(reconnect=True, timeout=VOICE_CONNECT_TIMEOUT)
+        log.info("Reconnected to voice channel: %s", channel.name)
+        if voice_client.channel.id != channel.id:
+            await voice_client.move_to(channel)
+            log.info("Moved to voice channel: %s", channel.name)
     elif voice_client.channel.id != channel.id:
         await voice_client.move_to(channel)
         log.info("Moved to voice channel: %s", channel.name)
+
+    # play() on a client whose handshake is still in flight raises "Not
+    # connected to voice" - three times on 2026-09-14 - and starts an ffmpeg
+    # that nothing consumes. The next tick will find a connected client.
+    if not voice_client.is_connected():
+        return
 
     if not voice_client.is_playing():
         global current_source
@@ -818,6 +875,48 @@ async def transcript_relay_error(error: Exception):
     transcript_relay.restart()
 
 
+# One line every five minutes saying the bot is alive, and in what state.
+#
+# A healthy relay writes nothing: connect_and_stream() takes no branch when
+# all is well, and a paused bot returns before it. So on 2026-09-13 the log's
+# last line was 21:46 for a bot that died around 22:28, and a dead bot and a
+# bot crossing an empty sector looked identical. Two missed beats - a gap over
+# ten minutes - mean the process was gone or its event loop wedged; one is
+# jitter. 288 lines a day; the watcher's rotation keeps the directory bounded.
+HEARTBEAT_SECONDS = 300
+_last_heartbeat = None
+
+
+def heartbeat_line() -> str:
+    """The state in one line: relaying or standing by, where, and how well."""
+    vc = configured_voice_client()
+    connected = bool(vc and vc.is_connected())
+    playing = bool(vc and vc.is_playing())
+    where = vc.channel.name if connected and vc.channel else "out of voice"
+    mode = "standing by" if relay_paused else "relaying"
+
+    # nan until the gateway has answered a heartbeat of its own.
+    latency = bot.latency
+    latency_text = f"{latency * 1000:.0f} ms" if math.isfinite(latency) else "unknown"
+
+    return (
+        f"Heartbeat: {mode}; {where}; connected={connected}; "
+        f"playing={playing}; gateway latency {latency_text}"
+    )
+
+
+def beat_heart(now: float | None = None) -> bool:
+    """Logs the heartbeat when one is due. Returns whether it did."""
+    global _last_heartbeat
+    if now is None:
+        now = time.monotonic()
+    if _last_heartbeat is not None and now - _last_heartbeat < HEARTBEAT_SECONDS:
+        return False
+    _last_heartbeat = now
+    log.info(heartbeat_line())
+    return True
+
+
 @tasks.loop(seconds=10)
 async def watchdog():
     """
@@ -825,12 +924,24 @@ async def watchdog():
     and (re)connects / restarts the stream if needed (e.g. after a
     connection drop).
     """
+    # First, above the pause return: a paused bot is exactly the one whose
+    # silence cannot otherwise be told from death.
+    beat_heart()
     if relay_paused:
+        return
+    # !BATCjoin is mid-handshake. Skipped rather than queued: a tick that
+    # waits for the lock would run right after the command, with nothing to
+    # do, and the one after that is ten seconds away anyway.
+    if _voice_lock.locked():
+        return
+    global _voice_retry_after
+    if time.monotonic() < _voice_retry_after:
         return
     try:
         await connect_and_stream()
     except Exception:
-        log.exception("Error in watchdog cycle")
+        _voice_retry_after = time.monotonic() + VOICE_RETRY_COOLDOWN
+        log.exception("Error in watchdog cycle - next attempt in %.0fs", VOICE_RETRY_COOLDOWN)
 
 
 @tasks.loop(seconds=1)
@@ -860,6 +971,11 @@ async def shutdown_watcher():
     shutdown_watcher.stop()
     if watchdog.is_running():
         watchdog.stop()
+    # So on_voice_state_update records the leave below as the bot's own, and
+    # on_disconnect does not announce a reconnect that is not coming.
+    global relay_paused, shutting_down
+    relay_paused = True
+    shutting_down = True
 
     for vc in list(bot.voice_clients):
         try:
@@ -884,6 +1000,8 @@ async def shutdown_watcher():
         STOP_SIGNAL_PATH.unlink()
     except OSError:
         pass
+    # A stopped bot is not restarted, so the file would only mislead later.
+    forget_voice_session()
     release_pid_file()
     await bot.close()
 
@@ -908,10 +1026,173 @@ async def watchdog_error(error: Exception):
     watchdog.restart()
 
 
+# --- Lifecycle lines ---------------------------------------------------------
+#
+# What happened before the bot died. The 2026-09-13 log had no session start,
+# no gateway events and no voice-state changes - only what the bot chose to
+# say, which after "Audio stream started" was nothing. These lines are the
+# context for the exit code the watcher writes to install.log.
+
+
+def session_header() -> list[str]:
+    """
+    The first lines of a session: what is running, and on what.
+
+    The module version comes from the watcher, which is the only process that
+    knows it; a bot started by hand has none. config.json is summarised, never
+    quoted: the token is named as set or missing, and the guild id goes
+    through RedactSecrets like every other line.
+    """
+    module_version = os.environ.get("BATCRELAYBOT_MODULE_VERSION") or "unknown (started without the watcher)"
+    return [
+        f"Session start: BATCRelayBot module {module_version}, "
+        f"Python {platform.python_version()}, discord.py {discord.__version__}, "
+        f"{platform.platform()}",
+        f"Running {sys.executable} as PID {os.getpid()}",
+        f"Config: guild {CONFIG['guild_id']}; audio device {CONFIG['audio_device_name']!r}; "
+        f"ffmpeg {CONFIG.get('ffmpeg_path') or 'from PATH'}; "
+        f"bot_token {'set' if CONFIG.get('bot_token') else 'missing'}; "
+        f"BeyondATC log {batc_log_path()}",
+    ]
+
+
+def log_session_header():
+    for line in session_header():
+        log.info(line)
+
+
+def enable_faulthandler(stream=None) -> bool:
+    """
+    A native crash - in the voice codec, in ffmpeg's pipe, in a driver - ends
+    the process with an NTSTATUS and no Python traceback. faulthandler writes
+    one for every thread as the process goes down, into the same stream as
+    the log, where the watcher's exit line points.
+
+    Guarded: under pythonw without a redirect sys.stderr is None, and a stream
+    without a file descriptor cannot be used. Neither is a reason not to start.
+    The dump names files, lines and functions only - no values, so nothing the
+    redactor guards can reach it.
+    """
+    if stream is None:
+        stream = sys.stderr
+    if stream is None:
+        return False
+    try:
+        faulthandler.enable(file=stream, all_threads=True)
+    except (AttributeError, OSError, ValueError, RuntimeError):
+        return False
+    return True
+
+
+@bot.event
+async def on_connect():
+    log.info("Connected to the Discord gateway")
+
+
+# Set by shutdown_watcher before it closes the connection. The gateway event
+# that follows is the same one a network drop raises.
+shutting_down = False
+
+
+@bot.event
+async def on_disconnect():
+    if shutting_down:
+        log.info("Disconnected from the Discord gateway - shutting down")
+        return
+    # discord.py reconnects on its own; this line is how a gap in the
+    # heartbeats is told apart from a network that was down.
+    log.warning("Disconnected from the Discord gateway - reconnecting")
+
+
+@bot.event
+async def on_resumed():
+    log.info("Gateway session resumed")
+
+
+@bot.event
+async def on_voice_state_update(member, before, after):
+    """
+    The bot's own voice-state changes, as Discord saw them.
+
+    connect_and_stream() logs what the bot meant to do; this logs what
+    happened, including what a moderator did to it. A leave while the relay is
+    not paused came from outside: the bot pauses before it leaves itself.
+    """
+    if bot.user is None or member.id != bot.user.id:
+        return
+
+    if before.channel is None and after.channel is not None:
+        log.info("Joined voice channel %s", after.channel.name)
+    elif before.channel is not None and after.channel is None:
+        if relay_paused:
+            log.info("Left voice channel %s", before.channel.name)
+        else:
+            log.warning(
+                "Left voice channel %s - not by this bot; the watchdog will rejoin",
+                before.channel.name,
+            )
+    elif before.channel is not None and after.channel is not None and before.channel.id != after.channel.id:
+        log.info("Moved from voice channel %s to %s", before.channel.name, after.channel.name)
+
+
+def remember_voice_session():
+    """Where the bot is, so a restart can put it back."""
+    try:
+        VOICE_SESSION_PATH.write_text(
+            json.dumps({"target_channel_id": target_channel_id, "text_channel_id": text_channel_id}),
+            encoding="utf-8",
+        )
+    except OSError as error:
+        log.warning("Could not write %s: %s", VOICE_SESSION_PATH.name, error)
+
+
+def forget_voice_session():
+    try:
+        VOICE_SESSION_PATH.unlink()
+    except FileNotFoundError:
+        pass
+    except OSError as error:
+        log.warning("Could not remove %s: %s", VOICE_SESSION_PATH.name, error)
+
+
+def restore_voice_session() -> bool:
+    """
+    Rejoins the remembered channel - only when the watcher restarted us.
+
+    BATCRELAYBOT_RESTART is set by the watcher for a restart and by nothing
+    else, so a start at boot or from Start-BATCRelayBot still stands by, as
+    since 1.4.0. Such a start also forgets the file: a crash next week must
+    not rejoin a channel from today.
+    """
+    global relay_paused, target_channel_id, text_channel_id
+
+    if os.environ.get("BATCRELAYBOT_RESTART") != "1":
+        forget_voice_session()
+        return False
+
+    try:
+        remembered = json.loads(VOICE_SESSION_PATH.read_text(encoding="utf-8"))
+        target = int(remembered["target_channel_id"])
+        text = remembered.get("text_channel_id")
+    except FileNotFoundError:
+        return False
+    except (OSError, ValueError, TypeError, KeyError) as error:
+        log.warning("Ignoring %s after the restart: %s", VOICE_SESSION_PATH.name, error)
+        return False
+
+    target_channel_id = target
+    text_channel_id = int(text) if text is not None else None
+    relay_paused = False
+    log.warning("Restarted by the watcher - rejoining the voice channel it was in")
+    return True
+
+
 @bot.event
 async def on_ready():
     log.info("Logged in as %s", bot.user)
-    log.info("Standing by - use !BATCjoin in Discord to join the voice channel.")
+    # Before the watchdog starts: its first tick is what does the rejoining.
+    if not restore_voice_session():
+        log.info("Standing by - use !BATCjoin in Discord to join the voice channel.")
     if not watchdog.is_running():
         watchdog.start()
     if not shutdown_watcher.is_running():
@@ -982,6 +1263,8 @@ async def batc_join(ctx: commands.Context, *, channel_name: str = ""):
     # channel.
     text_channel_id = ctx.channel.id
     text_enabled = False
+    # Before the connect: a kill during the handshake still comes back here.
+    remember_voice_session()
     reset_session_pages()
     try:
         await delete_session_pages()
@@ -1019,6 +1302,7 @@ async def batc_leave(ctx: commands.Context):
     target_channel_id = None
     text_channel_id = None
     text_enabled = False
+    forget_voice_session()
     reset_session_pages()
     # Before the reply: the reply is the one line that stays, and it should
     # not sit above pages that are about to vanish.
@@ -1031,7 +1315,11 @@ async def batc_leave(ctx: commands.Context):
     if vc:
         # Read before disconnecting: afterwards there is no channel to name.
         left = vc.channel.name
-        await vc.disconnect()
+        # force=True: for a client the library has lost, disconnect() without
+        # it returns with nothing torn down (voice_state.py:509) - the bot
+        # stayed visible in the channel after the leave at 13:13:32 on
+        # 2026-09-14. For a connected client the two are the same call.
+        await vc.disconnect(force=True)
         release_audio_source()
         await ctx.send(
             f"{ctx.author.display_name}, contact {station_name()} again in "
@@ -1149,4 +1437,7 @@ async def batc_shutdown_error(ctx: commands.Context, error):
 
 
 if __name__ == "__main__":
+    log_session_header()
+    if not enable_faulthandler():
+        log.warning("faulthandler is off - a native crash will leave no traceback")
     bot.run(CONFIG["bot_token"], log_handler=None)

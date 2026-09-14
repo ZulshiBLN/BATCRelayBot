@@ -7,7 +7,21 @@ AfterAll {
     Remove-Module BATCRelayBot -Force -ErrorAction SilentlyContinue
 }
 
+# Nothing here may depend on the machine: not on winget being present, not
+# on what it has installed, and not on a console being attached. Read-Host is
+# mocked everywhere because a real one waits for ever on a piped stdin - which
+# is how this file hung a full run on 2026-09-13. The "no input" branch is
+# tested on purpose, below, by a Read-Host that throws.
 Describe "Get-DependencyChoices" {
+
+    BeforeEach {
+        Mock -ModuleName BATCRelayBot Read-Host { '' }
+        Mock -ModuleName BATCRelayBot Test-WingetPresent { $true }
+        Mock -ModuleName BATCRelayBot Get-InstalledWingetPackage {
+            if ($IdPrefix -eq 'Python.Python') { @(@{ Id = 'Python.Python.3.12'; Version = '3.12.10' }) }
+            else { @(@{ Id = 'Gyan.FFmpeg'; Version = '9.0.1' }) }
+        }
+    }
 
     Context "Return Value Structure" {
 
@@ -52,13 +66,33 @@ Describe "Get-DependencyChoices" {
 
     Context "Default Behavior" {
 
-        It "Returns No for all choices by default" {
-            $result = Get-DependencyChoices
+        It "Returns No for all choices when Enter is the answer" {
+            $result = Get-DependencyChoices 6>$null
 
-            # If WinGet not available, all should be false
-            # If WinGet available, defaults might vary based on system
-            $result.RemovePython | Should -BeOfType [bool]
-            $result.RemoveFFmpeg | Should -BeOfType [bool]
+            $result.RemovePython | Should -BeFalse
+            $result.RemoveFFmpeg | Should -BeFalse
+            Should -Invoke -ModuleName BATCRelayBot Read-Host -Times 2 -Exactly
+        }
+
+        It "Removes only what was answered yes to" {
+            Mock -ModuleName BATCRelayBot Read-Host { if ($Prompt -match 'Python') { 'y' } else { 'n' } }
+
+            $result = Get-DependencyChoices 6>$null
+
+            $result.RemovePython | Should -BeTrue
+            $result.RemoveFFmpeg | Should -BeFalse
+            $result.PythonPackages.Count | Should -Be 1
+        }
+
+        # A non-interactive host has no console; Read-Host throws there. The
+        # answer has to be no, because nothing may be removed by accident.
+        It "Keeps everything when no input is available" {
+            Mock -ModuleName BATCRelayBot Read-Host { throw "no console" }
+
+            $result = Get-DependencyChoices 6>$null
+
+            $result.RemovePython | Should -BeFalse
+            $result.RemoveFFmpeg | Should -BeFalse
         }
 
         # The module is not offered here. Uninstalling the module that is
@@ -88,6 +122,15 @@ Describe "Get-DependencyChoices" {
 }
 
 Describe "Phase 3: Optional Dependency Prompts" {
+
+    BeforeEach {
+        Mock -ModuleName BATCRelayBot Read-Host { '' }
+        Mock -ModuleName BATCRelayBot Test-WingetPresent { $true }
+        Mock -ModuleName BATCRelayBot Get-InstalledWingetPackage {
+            if ($IdPrefix -eq 'Python.Python') { @(@{ Id = 'Python.Python.3.12'; Version = '3.12.10' }) }
+            else { @(@{ Id = 'Gyan.FFmpeg'; Version = '9.0.1' }) }
+        }
+    }
 
     It "Function exists" {
         { Get-Command Get-DependencyChoices -ErrorAction Stop } | Should -Not -Throw
@@ -120,6 +163,15 @@ Describe "Phase 3: Optional Dependency Prompts" {
 }
 
 Describe "Phase 3: Dependency Detection Logic" {
+
+    BeforeEach {
+        Mock -ModuleName BATCRelayBot Read-Host { '' }
+        Mock -ModuleName BATCRelayBot Test-WingetPresent { $true }
+        Mock -ModuleName BATCRelayBot Get-InstalledWingetPackage {
+            if ($IdPrefix -eq 'Python.Python') { @(@{ Id = 'Python.Python.3.12'; Version = '3.12.10' }) }
+            else { @(@{ Id = 'Gyan.FFmpeg'; Version = '9.0.1' }) }
+        }
+    }
 
     It "Detects Python if installed" {
         $result = Get-DependencyChoices

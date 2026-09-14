@@ -93,7 +93,16 @@ Describe "Start-BATCRelayBot" {
                 param($Path)
 
                 Mock Find-BotProcess { @() }
-                Mock Start-Process { [pscustomobject]@{ Id = 1234 } }
+                # Since the watcher, bot.pid is written by the watcher with
+                # the child's id, and this function waits for it. The stale
+                # file has to be gone before then, or the wait could return
+                # the old number as if it were the new bot.
+                Mock Start-BotWatcher {
+                    Test-Path (Join-Path $Path 'bot.pid') | Should -Be $false -Because "the stale pid must be gone before the watcher writes"
+                    "1234" | Set-Content (Join-Path $Path 'bot.pid')
+                    [pscustomobject]@{ Id = 77 }
+                }
+                Mock Test-BotPidAlive { $true }
 
                 Start-BATCRelayBot -BotPath $Path 6>$null
             }

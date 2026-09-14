@@ -155,7 +155,15 @@ function Stop-BotProcess {
             }
             Start-Sleep -Milliseconds 500
         }
-        Remove-Item $stopSignal -Force -ErrorAction SilentlyContinue
+        # The signal stays on disk through the kill below. The watcher sees
+        # -1 with the signal present, knows the kill was wanted, and removes
+        # it instead of restarting the bot. Removed here only when no watcher
+        # will: a leftover would stop the next bot within a second.
+    } else {
+        # No signal, so to the watcher this kill would look like Task
+        # Manager, and it would bring the bot back. End the watcher first;
+        # Stop-BATCRelayBot writes its own line for this case.
+        Stop-BotWatcher -BotPath $BotPath | Out-Null
     }
 
     # Children first. ffmpeg is started by the bot and holds the recording
@@ -181,6 +189,10 @@ function Stop-BotProcess {
     }
 
     $stillRunning = @(Find-BotProcess -BotPath $BotPath)
+
+    if ($signalWritten -and @(Find-BotWatcher -BotPath $BotPath).Count -eq 0) {
+        Remove-Item $stopSignal -Force -ErrorAction SilentlyContinue
+    }
 
     return @{
         Stopped    = ($stillRunning.Count -eq 0)

@@ -3,8 +3,8 @@ title: Troubleshooting
 description: Symptoms, their usual causes, and how to fix them.
 document_type: reference
 audience: users
-applies_to: BATCRelayBot 1.6.2
-updated: 2026-09-13
+applies_to: BATCRelayBot 1.6.3
+updated: 2026-09-14
 ---
 
 # Troubleshooting
@@ -16,10 +16,17 @@ updated: 2026-09-13
 | Installation | `%LOCALAPPDATA%\BATCRelayBot\install.log` |
 | Bot output | `%LOCALAPPDATA%\BATCRelayBot\logs\bot_output.log` |
 | Bot errors | `%LOCALAPPDATA%\BATCRelayBot\logs\bot_error.log` |
-| Uninstall | `%APPDATA%\BATCRelayBot-Uninstall\` |
+| Uninstall | `%LOCALAPPDATA%\BATCRelayBot\uninstall.log` — the one file the uninstaller leaves behind |
 
 `install.log` records every step from the first one, so a failed setup always
-leaves a trace even if the window closed.
+leaves a trace even if the window closed. Since 1.6.3 it also records every
+start and every end of the bot — how long it ran and with what exit code —
+because it is the one file a restart does not touch.
+
+`bot_error.log` is the bot's own log: a session header, gateway and voice
+events, and a heartbeat every five minutes. It starts fresh with every start;
+the previous one is kept beside it as `bot_error.<date>-<time>.log`, five
+sessions in all.
 
 ## Setup
 
@@ -153,6 +160,60 @@ channel — server-wide permissions are not enough.
 Check `bot_error.log`. Usual causes: wrong channel ID, missing permissions,
 or Discord rate limiting.
 
+**The bot went quiet — is it dead, or is nothing happening?**
+Quiet is normal: at cruise a sector can pass with no ATC line for half an
+hour. Two things tell a dead bot from a quiet one.
+
+1. **The heartbeat.** `bot_error.log` gets a `Heartbeat:` line every five
+   minutes whether or not the bot is in a channel, naming its state. If the
+   last one is more than ten minutes old, the process is gone or stuck.
+2. **The exit line.** When the bot ends, `install.log` gets a line like
+   `Bot (PID 1234) ended after 2h 14m 3s with exit code -1: ...`. The code
+   says how:
+
+| Exit code | What happened |
+|---|---|
+| `0` | Clean exit — `Stop-BATCRelayBot`, `!BATCshutdown` or `stop.signal` |
+| `1` | A Python error. The traceback is at the end of `bot_error.log` |
+| `-1` | Terminated from outside, with no chance to write anything: Task Manager, `taskkill`, a Windows shutdown — or `Stop-BATCRelayBot` after the bot did not answer within fifteen seconds, which writes its own line saying so just before |
+| `-1073741510` | Console closed or CTRL+C (`0xC000013A`) |
+| `-1073741819` | A native crash, access violation (`0xC0000005`). Look for the `faulthandler` dump at the end of `bot_error.log` |
+| other negative | A native crash; the line gives the NTSTATUS in hex |
+
+If there is no exit line at all, the bot was started without the watcher
+(`python bot.py` by hand) or the watcher itself was killed; the process may
+still be running — `Get-BATCRelayBotStatus` knows.
+
+Before the exit, read `bot_error.log` backwards from the last heartbeat:
+`Disconnected from the Discord gateway` marks a network gap, `Left voice
+channel ... not by this bot` a moderator's disconnect, `Voice client ... is
+not connected - reconnecting it` a voice connection the bot found dead and
+rebuilt on its own.
+
+**The bot died and came back by itself**
+That is the watcher. After any exit that was not asked for — a Python
+error, a native crash, a kill from Task Manager — it starts the bot again
+ten seconds later, and the bot rejoins the channel it was in. `install.log`
+shows the pair:
+
+```
+[WARN] Bot (PID 1234) ended after 2h 14m 3s with exit code -1: terminated from outside ...
+[WARN] Bot restarted by the watcher after 10s (attempt 1 of 3 this hour)
+```
+
+and the new `bot_error.log` opens with `Restarted by the watcher -
+rejoining the voice channel it was in`. ATC text is off after a restart, as
+after any join; say `!BATCtext` again. Three restarts within an hour and the
+watcher gives up with an ERROR line — a bot that keeps dying has a reason,
+and the last `bot_error.<date>-<time>.log` files hold it.
+
+**I killed the bot and it will not stay dead**
+Task Manager is not a stop; the watcher cannot tell it from a crash. Use
+`Stop-BATCRelayBot` or `!BATCshutdown` — both tell the watcher the exit was
+wanted, also while a restart is pending. Ending the watcher itself (the
+`powershell.exe` whose command line names the installation) works too, and
+leaves the bot running.
+
 **"Field 'x' is missing or empty in config.json"**
 The configuration predates 1.4.0 or was edited by hand. Run
 `Install-BATCRelayBot` to migrate it, or see
@@ -177,7 +238,13 @@ Discord, or:
 New-Item "$env:LOCALAPPDATA\BATCRelayBot\stop.signal" -ItemType File -Force
 ```
 
-The bot checks for that file every second, leaves the channel and exits.
+The bot checks for that file every second, leaves the channel and exits; the
+watcher reads the same file and does not restart it.
+
+**`Get-BATCRelayBotStatus` says RESTARTING**
+The bot ended in the last ten seconds and its watcher is about to start it
+again. Wait, or `Stop-BATCRelayBot` to stop the restart. `Start-BATCRelayBot`
+refuses in that moment rather than start a second bot beside the one coming.
 
 **`!BATCleave` and the bot comes back**
 Fixed in 1.4.0. Before that the watchdog reconnected within ten seconds.

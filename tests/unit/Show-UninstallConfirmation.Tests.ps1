@@ -7,7 +7,14 @@ AfterAll {
     Remove-Module BATCRelayBot -Force -ErrorAction SilentlyContinue
 }
 
+# Read-Host is mocked in every test: a real one waits for ever on a piped
+# stdin, which is how this file hung a full run on 2026-09-13. The "no input"
+# branch is tested on purpose by a Read-Host that throws.
 Describe "Show-UninstallConfirmation" {
+
+    BeforeEach {
+        Mock -ModuleName BATCRelayBot Read-Host { '' }
+    }
 
     Context "Return Value Structure" {
 
@@ -39,10 +46,9 @@ Describe "Show-UninstallConfirmation" {
             { Show-UninstallConfirmation } | Should -Not -Throw
         }
 
-        It "Defaults to not confirmed (no input)" {
-            $result = Show-UninstallConfirmation
-            # Without input, should default to cancelled
-            $result.Confirmed | Should -BeOfType [bool]
+        It "Defaults to not confirmed on an empty answer" {
+            $result = Show-UninstallConfirmation 6>$null
+            $result.Confirmed | Should -BeFalse
         }
 
         It "Accepts RemovalPlan parameter" {
@@ -123,20 +129,31 @@ Describe "Show-UninstallConfirmation" {
             { Show-UninstallConfirmation } | Should -Not -Throw
         }
 
-        It "Requires explicit yes for confirmation" {
-            # Default behavior without input should be not confirmed
-            $result = Show-UninstallConfirmation
-            # Without exact "yes" input, should be false
-            $result.Confirmed | Should -BeOfType [bool]
+        It "Requires the word uninstall - yes is not enough" {
+            Mock -ModuleName BATCRelayBot Read-Host { 'yes' }
+            (Show-UninstallConfirmation 6>$null).Confirmed | Should -BeFalse
         }
 
-        It "Gracefully handles no input (test mode)" {
-            { Show-UninstallConfirmation } | Should -Not -Throw
+        It "Confirms on the word uninstall" {
+            Mock -ModuleName BATCRelayBot Read-Host { 'uninstall' }
+            (Show-UninstallConfirmation 6>$null).Confirmed | Should -BeTrue
+        }
+
+        # A non-interactive host has no console; Read-Host throws there. That
+        # has to read as cancelled, never as confirmed.
+        It "Cancels when no input is available" {
+            Mock -ModuleName BATCRelayBot Read-Host { throw "no console" }
+            { Show-UninstallConfirmation 6>$null } | Should -Not -Throw
+            (Show-UninstallConfirmation 6>$null).Confirmed | Should -BeFalse
         }
     }
 }
 
 Describe "Phase 4: Final Confirmation Screen" {
+
+    BeforeEach {
+        Mock -ModuleName BATCRelayBot Read-Host { '' }
+    }
 
     It "Function exists" {
         { Get-Command Show-UninstallConfirmation -ErrorAction Stop } | Should -Not -Throw

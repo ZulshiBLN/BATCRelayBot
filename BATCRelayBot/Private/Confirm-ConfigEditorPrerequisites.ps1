@@ -79,3 +79,5 @@ function Confirm-ConfigEditorPrerequisites {
         Errors      = $errors
     }
 }
+
+Export-ModuleMember -Function @('Confirm-ConfigEditorPrerequisites')

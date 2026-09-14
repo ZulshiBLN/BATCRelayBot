@@ -38,7 +38,9 @@ function Get-BATCRelayBotStatus {
 
     $status = [PSCustomObject]@{
         IsRunning    = $false
+        IsRestarting = $false
         ProcessId    = $null
+        WatcherId    = $null
         PidFile      = $pidFile
         Uptime       = $null
         OrphanedFromPidFile = $false
@@ -85,6 +87,16 @@ function Get-BATCRelayBotStatus {
         }
     }
 
+    # No bot but a watcher: the bot ended and comes back in a few seconds.
+    # "NOT RUNNING" would be true for a moment and wrong for the next hour.
+    if (-not $status.IsRunning) {
+        $watchers = @(Find-BotWatcher -BotPath $BotPath)
+        if ($watchers.Count -gt 0) {
+            $status.IsRestarting = $true
+            $status.WatcherId = $watchers[0]
+        }
+    }
+
     if ($status.IsRunning) {
         Write-Host "Bot Status: RUNNING" -ForegroundColor Green
         Write-Host "  PID: $($status.ProcessId)" -ForegroundColor Cyan
@@ -92,6 +104,9 @@ function Get-BATCRelayBotStatus {
         if ($status.OrphanedFromPidFile) {
             Write-Host "  Note: found without a valid bot.pid - Stop-BATCRelayBot can still stop it." -ForegroundColor Yellow
         }
+    } elseif ($status.IsRestarting) {
+        Write-Host "Bot Status: RESTARTING (watcher PID $($status.WatcherId))" -ForegroundColor Yellow
+        Write-Host "  The bot ended and its watcher is bringing it back. install.log says why." -ForegroundColor Cyan
     } else {
         Write-Host "Bot Status: NOT RUNNING" -ForegroundColor Yellow
     }

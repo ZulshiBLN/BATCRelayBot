@@ -3,8 +3,8 @@ title: Changelog
 description: Release history for the BATCRelayBot PowerShell module and Discord bot.
 document_type: history
 audience: users
-applies_to: BATCRelayBot 1.6.2
-updated: 2026-09-13
+applies_to: BATCRelayBot 1.6.3
+updated: 2026-09-14
 ---
 
 # Changelog
@@ -14,6 +14,75 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 Entries describe what changed for users. For the reasoning behind a change,
 see the commit that made it.
+
+## [Unreleased]
+
+## [1.6.3] - 2026-09-14
+
+A bot that says when it died and why, heals its voice connection, and comes
+back when it is killed.
+
+**This one changes the bot file**, so the upgrade is both steps:
+`Update-Module BATCRelayBot`, then in a new window `Install-BATCRelayBot`
+and Enter. Skip the second and the old bot keeps running under the new
+module - without the watcher, the heartbeat or the reconnect.
+
+### Added
+
+- `Start-BATCRelayBot` starts the bot under a watcher process. When the bot
+  ends - however it ends - the watcher writes the time, how long it ran and
+  the exit code to `install.log`: `0` for a clean exit, `1` for a Python error
+  (traceback in `logs\bot_error.log`), `-1` when something terminated it from
+  outside. A forced `Stop-BATCRelayBot` records itself there too, so it can
+  be told apart from Task Manager. Until now a bot that died quietly left no
+  trace of when or why.
+- The previous `logs\bot_error.log` is kept aside under a timestamped name at
+  every start, the last five sessions in total. It used to be truncated.
+- `Start-BATCRelayBot` reports the bot's process id and the watcher's, and
+  says so if the bot has not come up within five seconds.
+- The bot writes a heartbeat line to `logs\bot_error.log` every five minutes:
+  relaying or standing by, which channel, connected, playing, gateway
+  latency - whether or not it is in a voice channel. A healthy relay used to
+  write nothing for hours, so a bot that had died looked the same in the log
+  as one crossing an empty sector. A gap of more than ten minutes between
+  heartbeats now means the process was gone.
+- The bot comes back when it dies - and back into the voice channel it was
+  in, with ATC text off until `!BATCtext`, as after any join. The watcher
+  restarts it ten seconds after any exit that was not asked for - a Python
+  error, a native crash, a kill from Task Manager - and writes a line to
+  `install.log` for each restart. A bot started any other way still stands
+  by: starting at boot does not put it in a channel.
+  Three restarts within an hour and it stops trying, with an ERROR line, so
+  a crash loop stays visible. `Stop-BATCRelayBot` and `!BATCshutdown` end
+  the bot for good, also while a restart is pending.
+  `Get-BATCRelayBotStatus` says RESTARTING in that moment instead of NOT
+  RUNNING, and `Start-BATCRelayBot` waits for a pending restart rather than
+  starting a second bot beside it.
+- `logs\bot_error.log` opens with a session header - module version, Python,
+  discord.py, and a summary of `config.json` with the token named as set and
+  the server id redacted - and records gateway connects, disconnects and
+  resumes, and the bot's own voice-channel joins, leaves and moves, including
+  a leave it did not ask for. A native crash now leaves a traceback there too.
+
+### Fixed
+
+- A short network drop could leave the bot in the voice channel, silent, for
+  as long as it ran: discord.py kept the lost connection registered as
+  "playing", and the watchdog saw nothing to do. Seen on 2026-09-14 after a
+  DNS blip - seven minutes of silence until someone typed a command. The
+  watchdog now reconnects a client that is registered but not connected, on
+  its next ten-second tick, and starts the stream again. After a handshake
+  that fails it waits five seconds before the next, so Discord's late
+  answer to the abandoned one cannot throw the new connection out.
+- `!BATCjoin` and the watchdog no longer start two voice handshakes at once,
+  which tore each other down for two minutes on 2026-09-14; and the stream
+  is no longer started on a client whose handshake is still in flight.
+- `!BATCleave` on a connection the library had already lost left the bot
+  visible in the channel. It now forces the disconnect.
+- A clean shutdown no longer logs "Disconnected from the Discord gateway -
+  reconnecting".
+- The closing screen of setup said the editor changes "the token, server,
+  channel or device". There has been no channel to change since 1.5.0.
 
 ## [1.6.2] - 2026-09-13
 

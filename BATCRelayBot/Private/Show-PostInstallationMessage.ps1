@@ -47,7 +47,7 @@ function Show-PostInstallationMessage {
     Write-Host "    Start-BATCRelayBot       starts the bot and connects it to Discord" -ForegroundColor Gray
     Write-Host "    Get-BATCRelayBotStatus   reports whether it is running" -ForegroundColor Gray
     Write-Host "    Stop-BATCRelayBot        stops it and leaves the voice channel" -ForegroundColor Gray
-    Write-Host "    Edit-BATCRelayBotConfig  changes the token, server, channel or device" -ForegroundColor Gray
+    Write-Host "    Edit-BATCRelayBotConfig  changes the token, server or device" -ForegroundColor Gray
     Write-Host "    Uninstall-BATCRelayBot   removes this installation" -ForegroundColor Gray
     Write-Host ""
     Write-Host "    Start it, then type !batchelp in your Discord server. If the bot" -ForegroundColor Gray
