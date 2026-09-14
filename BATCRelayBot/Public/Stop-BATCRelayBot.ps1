@@ -36,6 +36,35 @@ function Stop-BATCRelayBot {
     $running = @(Find-BotProcess -BotPath $BotPath)
 
     if ($running.Count -eq 0) {
+        # No bot, but a watcher: the bot ended and the watcher is in its
+        # restart delay. Before this, "No running bot found" here was
+        # followed ten seconds later by a bot nobody had asked for. The
+        # signal is what the watcher waits for during that delay.
+        $watchers = @(Find-BotWatcher -BotPath $BotPath)
+        if ($watchers.Count -gt 0) {
+            Write-Host "The bot is not running, but its watcher (PID $($watchers -join ', ')) is about to restart it - telling it not to..." -ForegroundColor Cyan
+            $stopSignal = Join-Path $BotPath "stop.signal"
+            New-Item -Path $stopSignal -ItemType File -Force -ErrorAction SilentlyContinue | Out-Null
+
+            $deadline = (Get-Date).AddSeconds($Timeout)
+            while ((Get-Date) -lt $deadline -and @(Find-BotWatcher -BotPath $BotPath).Count -gt 0) {
+                Start-Sleep -Milliseconds 500
+            }
+
+            if (@(Find-BotWatcher -BotPath $BotPath).Count -gt 0) {
+                # A bot may have come up in the meantime; it reads the same
+                # signal. The watcher itself is ended so nothing follows.
+                Stop-BotWatcher -BotPath $BotPath | Out-Null
+                Stop-BotProcess -BotPath $BotPath -TimeoutSeconds $Timeout | Out-Null
+                Write-Host "The watcher did not stop on its own and was ended." -ForegroundColor Yellow
+            } else {
+                Write-Host "The watcher has stopped; the bot will not be restarted." -ForegroundColor Green
+            }
+            Remove-Item $stopSignal -Force -ErrorAction SilentlyContinue
+            Remove-Item $pidFile -Force -ErrorAction SilentlyContinue
+            return
+        }
+
         Write-Host "No running bot found for $BotPath." -ForegroundColor Yellow
         Remove-Item $pidFile -Force -ErrorAction SilentlyContinue
         return

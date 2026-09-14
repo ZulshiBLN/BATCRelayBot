@@ -28,13 +28,94 @@ the module scope, the way Remove-BotContent is.
 function Invoke-BotWatcher {
     <#
     .SYNOPSIS
-    Runs inside the watcher process: start the bot, wait, record the exit.
+    Runs inside the watcher process: start the bot, wait, record the exit,
+    and bring the bot back when the exit was not wanted.
+
+    .DESCRIPTION
+    Wanted is exit 0, or stop.signal on disk - at the exit, or arriving
+    during the delay, which is how Stop-BATCRelayBot reaches a watcher that
+    is between two bots. Everything else restarts after the delay, up to
+    MaxRestartsPerHour times; then an ERROR line, and the watcher ends, so a
+    crash loop stays visible instead of running forever. -1 restarts too:
+    Michel's decision of 2026-09-14, because 2026-09-13 was a -1 and stayed
+    dead until morning.
     #>
     param(
         [Parameter(Mandatory = $true)][string]$BotPath,
         [Parameter(Mandatory = $true)][string]$Executable,
         [string]$Arguments = "bot.py",
-        [int]$KeepLogs = 5
+        [int]$KeepLogs = 5,
+        [int]$RestartDelaySeconds = 10,
+        [int]$MaxRestartsPerHour = 3
+    )
+
+    $installLog = Join-Path $BotPath "install.log"
+    $stopSignal = Join-Path $BotPath "stop.signal"
+    $restarts = New-Object System.Collections.Generic.List[datetime]
+    $attempt = 0
+
+    while ($true) {
+        $child = Start-BotChild -BotPath $BotPath -Executable $Executable -Arguments $Arguments `
+            -KeepLogs $KeepLogs -Restart:($attempt -gt 0)
+        $started = Get-Date
+
+        $child.WaitForExit()
+
+        Write-BotExitLine -BotPath $BotPath -ChildPid $child.Id -ExitCode $child.ExitCode -Started $started
+
+        # Wanted: nothing to do. The signal is consumed here, or the next
+        # bot would read it and stop within a second.
+        if ($child.ExitCode -eq 0) { return }
+        if (Test-Path $stopSignal) {
+            Remove-Item $stopSignal -Force -ErrorAction SilentlyContinue
+            return
+        }
+        # Uninstalled underneath us - Write-BotExitLine stayed silent for the
+        # same reason.
+        if (-not (Test-Path (Join-Path $BotPath "bot.py"))) { return }
+
+        $hourAgo = (Get-Date).AddHours(-1)
+        $recent = @($restarts | Where-Object { $_ -gt $hourAgo })
+        if ($recent.Count -ge $MaxRestartsPerHour) {
+            Write-InstallLog -LogPath $installLog -Level ERROR `
+                -Message "Bot ended $($recent.Count + 1) times within an hour - giving up; not restarting. Start-BATCRelayBot starts it again by hand"
+            return
+        }
+
+        # The delay is where Stop-BATCRelayBot can still reach us: it finds
+        # no bot, sees the watcher, and writes the signal.
+        $deadline = (Get-Date).AddSeconds($RestartDelaySeconds)
+        while ((Get-Date) -lt $deadline) {
+            if (Test-Path $stopSignal) {
+                Remove-Item $stopSignal -Force -ErrorAction SilentlyContinue
+                Write-InstallLog -LogPath $installLog -Level INFO `
+                    -Message "stop.signal arrived during the restart delay - not restarting"
+                return
+            }
+            Start-Sleep -Milliseconds 200
+        }
+
+        $restarts.Add((Get-Date))
+        $attempt++
+        Write-InstallLog -LogPath $installLog -Level WARN `
+            -Message "Bot restarted by the watcher after ${RestartDelaySeconds}s (attempt $attempt of $MaxRestartsPerHour this hour)"
+    }
+}
+
+function Start-BotChild {
+    <#
+    .SYNOPSIS
+    Rotates the log, starts one bot process, records its pid and start.
+
+    .OUTPUTS
+    The child's Process object, with its Handle touched.
+    #>
+    param(
+        [Parameter(Mandatory = $true)][string]$BotPath,
+        [Parameter(Mandatory = $true)][string]$Executable,
+        [string]$Arguments = "bot.py",
+        [int]$KeepLogs = 5,
+        [switch]$Restart
     )
 
     $logsDirectory = Join-Path $BotPath "logs"
@@ -50,7 +131,10 @@ function Invoke-BotWatcher {
     # process that knows it. Inherited by the child; nothing else reads it.
     $env:BATCRELAYBOT_MODULE_VERSION = Get-ModuleVersion
 
-    $started = Get-Date
+    # Only a restarted bot may rejoin the channel it was in. A first start
+    # stands by, so starting at boot does not put the bot in a channel.
+    $env:BATCRELAYBOT_RESTART = if ($Restart) { "1" } else { $null }
+
     $child = Start-Process `
         -FilePath $Executable `
         -ArgumentList $Arguments `
@@ -71,9 +155,7 @@ function Invoke-BotWatcher {
     Write-InstallLog -LogPath (Join-Path $BotPath "install.log") -Level INFO `
         -Message "Bot started (PID $($child.Id)), watched by PID $PID$kept"
 
-    $child.WaitForExit()
-
-    Write-BotExitLine -BotPath $BotPath -ChildPid $child.Id -ExitCode $child.ExitCode -Started $started
+    return $child
 }
 
 function Write-BotExitLine {
@@ -204,6 +286,8 @@ function Start-BotWatcher {
         [Parameter(Mandatory = $true)][string]$BotPath,
         [Parameter(Mandatory = $true)][string]$Executable,
         [string]$Arguments = "bot.py",
+        [int]$RestartDelaySeconds = 10,
+        [int]$MaxRestartsPerHour = 3,
         [string]$ModulePath = $MyInvocation.MyCommand.Module.Path
     )
 
@@ -211,7 +295,8 @@ function Start-BotWatcher {
 
     $command = @(
         "Import-Module $(& $quote $ModulePath) -Force -WarningAction SilentlyContinue",
-        "& (Get-Module BATCRelayBot) { Invoke-BotWatcher -BotPath $(& $quote $BotPath) -Executable $(& $quote $Executable) -Arguments $(& $quote $Arguments) }"
+        ("& (Get-Module BATCRelayBot) { Invoke-BotWatcher -BotPath $(& $quote $BotPath) -Executable $(& $quote $Executable) " +
+         "-Arguments $(& $quote $Arguments) -RestartDelaySeconds $RestartDelaySeconds -MaxRestartsPerHour $MaxRestartsPerHour }")
     ) -join "; "
 
     $encoded = [Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($command))

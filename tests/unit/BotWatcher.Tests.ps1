@@ -145,6 +145,313 @@ Describe "The exit line" {
     }
 }
 
+Describe "Restart" {
+
+    # 2026-09-13, 22:28: the bot died with no traceback and bot.pid on disk -
+    # almost certainly exit -1 - and stayed dead until somebody noticed. The
+    # watcher now brings it back, unless the exit was wanted: exit 0, or
+    # stop.signal present at the exit or during the delay. Michel decided on
+    # 2026-09-14 that -1 comes back too. Delays are seconds here so the tests
+    # do not wait; the default is ten.
+
+    BeforeAll {
+        # A stub that fails once and then stays up: exit 1 on the first run,
+        # sleep on every later one. The marker file is what tells them apart.
+        function New-FailOnceStub {
+            param([string]$Sandbox)
+            $marker = Join-Path $Sandbox 'ran-once'
+            New-Stub -Sandbox $Sandbox -Name 'failonce' -Body "if (Test-Path '$marker') { Start-Sleep -Seconds 60 } else { Set-Content '$marker' 'x'; exit 1 }"
+        }
+    }
+
+    It "restarts a child that exits 1, and names the attempt" {
+        $sandbox = New-WatcherSandbox
+        try {
+            $arguments = New-FailOnceStub -Sandbox $sandbox
+            Start-BotWatcher -BotPath $sandbox -Executable $script:powershell -Arguments $arguments -RestartDelaySeconds 1 | Out-Null
+
+            $log = Join-Path $sandbox 'install.log'
+            Wait-ForFile -Path $log -Pattern 'exit code 1\b' | Should -Be $true
+            Wait-ForFile -Path $log -Pattern 'restarted.*attempt 1 of 3' | Should -Be $true
+
+            # bot.pid names the new child, which is up.
+            $second = Wait-ForPid -PidFile (Join-Path $sandbox 'bot.pid')
+            $second | Should -Not -BeNullOrEmpty
+            Start-Sleep -Milliseconds 500
+            (Get-Process -Id $second -ErrorAction SilentlyContinue) | Should -Not -BeNullOrEmpty -Because "the restarted child stays up"
+            (Get-Content $log -Raw) | Should -Match "\[WARN\].*restarted"
+        } finally {
+            Remove-Sandbox $sandbox
+        }
+    }
+
+    It "tells a restarted child that it is one" {
+        # Phase 3 reads BATCRELAYBOT_RESTART to rejoin the previous channel;
+        # a first start must not carry it, or a start at boot would join.
+        $sandbox = New-WatcherSandbox
+        try {
+            $seen = Join-Path $sandbox 'seen.txt'
+            $marker = Join-Path $sandbox 'ran-once'
+            $arguments = New-Stub -Sandbox $sandbox -Name 'env' -Body "Add-Content '$seen' ('[' + `$env:BATCRELAYBOT_RESTART + ']'); if (Test-Path '$marker') { exit 0 } else { Set-Content '$marker' 'x'; exit 1 }"
+            Start-BotWatcher -BotPath $sandbox -Executable $script:powershell -Arguments $arguments -RestartDelaySeconds 1 | Out-Null
+
+            Wait-ForFile -Path (Join-Path $sandbox 'install.log') -Pattern 'exit code 0\b' | Should -Be $true
+            @(Get-Content $seen) | Should -Be @('[]', '[1]')
+        } finally {
+            Remove-Sandbox $sandbox
+        }
+    }
+
+    It "does not restart after a clean exit" {
+        $sandbox = New-WatcherSandbox
+        try {
+            $arguments = New-Stub -Sandbox $sandbox -Name 'clean' -Body 'exit 0'
+            $watcher = Start-BotWatcher -BotPath $sandbox -Executable $script:powershell -Arguments $arguments -RestartDelaySeconds 1
+            $log = Join-Path $sandbox 'install.log'
+            Wait-ForFile -Path $log -Pattern 'exit code 0\b' | Should -Be $true
+
+            Start-Sleep -Seconds 2
+            (Get-Content $log -Raw) | Should -Not -Match 'restarted'
+            (Get-Process -Id $watcher.Id -ErrorAction SilentlyContinue) | Should -BeNullOrEmpty -Because "a watcher with nothing to watch ends"
+        } finally {
+            Remove-Sandbox $sandbox
+        }
+    }
+
+    It "does not restart a child that was stopped on purpose, and clears the signal" {
+        # Stop-BATCRelayBot's forced path: signal written, bot did not
+        # answer, killed. -1 with the signal present is wanted.
+        $sandbox = New-WatcherSandbox
+        try {
+            $arguments = New-Stub -Sandbox $sandbox -Name 'sleep' -Body 'Start-Sleep -Seconds 60'
+            $watcher = Start-BotWatcher -BotPath $sandbox -Executable $script:powershell -Arguments $arguments -RestartDelaySeconds 1
+            $childPid = Wait-ForPid -PidFile (Join-Path $sandbox 'bot.pid')
+
+            $signal = Join-Path $sandbox 'stop.signal'
+            New-Item $signal -ItemType File | Out-Null
+            Stop-Process -Id $childPid -Force
+
+            $log = Join-Path $sandbox 'install.log'
+            Wait-ForFile -Path $log -Pattern 'exit code -1' | Should -Be $true
+            Start-Sleep -Seconds 2
+            (Get-Content $log -Raw) | Should -Not -Match 'restarted'
+            Test-Path $signal | Should -Be $false -Because "a leftover signal would stop the next bot within a second"
+            (Get-Process -Id $watcher.Id -ErrorAction SilentlyContinue) | Should -BeNullOrEmpty
+        } finally {
+            Remove-Sandbox $sandbox
+        }
+    }
+
+    It "does not restart when the signal arrives during the delay" {
+        # Stop-BATCRelayBot finding no bot but a live watcher writes the
+        # signal; the watcher has to be looking for it while it waits.
+        $sandbox = New-WatcherSandbox
+        try {
+            $arguments = New-Stub -Sandbox $sandbox -Name 'fail' -Body 'exit 1'
+            $watcher = Start-BotWatcher -BotPath $sandbox -Executable $script:powershell -Arguments $arguments -RestartDelaySeconds 4
+            $log = Join-Path $sandbox 'install.log'
+            Wait-ForFile -Path $log -Pattern 'exit code 1\b' | Should -Be $true
+
+            $signal = Join-Path $sandbox 'stop.signal'
+            New-Item $signal -ItemType File | Out-Null
+
+            $deadline = (Get-Date).AddSeconds(8)
+            while ((Get-Process -Id $watcher.Id -ErrorAction SilentlyContinue) -and (Get-Date) -lt $deadline) { Start-Sleep -Milliseconds 200 }
+            (Get-Process -Id $watcher.Id -ErrorAction SilentlyContinue) | Should -BeNullOrEmpty -Because "the signal ends the wait"
+            (Get-Content $log -Raw) | Should -Not -Match 'restarted'
+            (Get-Content $log -Raw) | Should -Match 'stop.signal'
+            Test-Path $signal | Should -Be $false
+        } finally {
+            Remove-Sandbox $sandbox
+        }
+    }
+
+    It "gives up after three restarts in an hour, and says so" {
+        $sandbox = New-WatcherSandbox
+        try {
+            $arguments = New-Stub -Sandbox $sandbox -Name 'fail' -Body 'exit 1'
+            $watcher = Start-BotWatcher -BotPath $sandbox -Executable $script:powershell -Arguments $arguments -RestartDelaySeconds 1
+            $log = Join-Path $sandbox 'install.log'
+
+            Wait-ForFile -Path $log -Pattern '\[ERROR\].*(giving up|not restarting)' -Seconds 30 | Should -Be $true
+            $lines = Get-Content $log
+            @($lines | Where-Object { $_ -match 'restarted' }).Count | Should -Be 3
+            @($lines | Where-Object { $_ -match 'exit code 1\b' }).Count | Should -Be 4
+
+            Start-Sleep -Milliseconds 500
+            (Get-Process -Id $watcher.Id -ErrorAction SilentlyContinue) | Should -BeNullOrEmpty
+        } finally {
+            Remove-Sandbox $sandbox
+        }
+    }
+}
+
+Describe "Start, Stop and Status around a restarting watcher" {
+
+    BeforeAll {
+        function New-BotSandbox {
+            $path = New-WatcherSandbox
+            @{
+                python_path              = $script:powershell
+                voicemeeter_path         = ""
+                voicemeeter_process_name = ""
+                batc_path                = ""
+                batc_process_name        = ""
+            } | ConvertTo-Json | Set-Content (Join-Path $path 'config.json')
+            $path
+        }
+    }
+
+    It "Start-BATCRelayBot refuses while a watcher is about to start a bot" {
+        $sandbox = New-BotSandbox
+        try {
+            InModuleScope BATCRelayBot -Parameters @{ Path = $sandbox } {
+                param($Path)
+                Mock Find-BotProcess { @() }
+                Mock Find-BotWatcher { @(77) }
+                Mock Start-BotWatcher { throw "a second watcher was started" }
+
+                $out = ((Start-BATCRelayBot -BotPath $Path 6>&1) | ForEach-Object { "$_" }) -join "`n"
+
+                Should -Invoke Start-BotWatcher -Times 0
+                $out | Should -Match 'watcher'
+                $out | Should -Match '77'
+                $out | Should -Match 'Stop-BATCRelayBot'
+            }
+        } finally {
+            Remove-Item $sandbox -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It "Start-BATCRelayBot clears a stale stop.signal before the bot can read it" {
+        $sandbox = New-BotSandbox
+        $signal = Join-Path $sandbox 'stop.signal'
+        New-Item $signal -ItemType File | Out-Null
+        try {
+            InModuleScope BATCRelayBot -Parameters @{ Path = $sandbox } {
+                param($Path)
+                Mock Find-BotProcess { @() }
+                Mock Find-BotWatcher { @() }
+                Mock Start-BotWatcher {
+                    Test-Path (Join-Path $Path 'stop.signal') | Should -Be $false -Because "the bot checks for it every second"
+                    "1234" | Set-Content (Join-Path $Path 'bot.pid')
+                    [pscustomobject]@{ Id = 77 }
+                }
+                Mock Test-BotPidAlive { $true }
+
+                Start-BATCRelayBot -BotPath $Path 6>$null
+                Should -Invoke Start-BotWatcher -Times 1
+            }
+        } finally {
+            Remove-Item $sandbox -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It "Stop-BATCRelayBot ends a watcher that is between two bots" {
+        # Find-BotProcess sees no child during the delay; before this, Stop
+        # said "No running bot found" and the watcher restarted the bot
+        # anyway.
+        $sandbox = New-WatcherSandbox
+        try {
+            $arguments = New-Stub -Sandbox $sandbox -Name 'fail' -Body 'exit 1'
+            $watcher = Start-BotWatcher -BotPath $sandbox -Executable $script:powershell -Arguments $arguments -RestartDelaySeconds 6
+            Wait-ForFile -Path (Join-Path $sandbox 'install.log') -Pattern 'exit code 1\b' | Should -Be $true
+
+            $out = ((Stop-BATCRelayBot -BotPath $sandbox 6>&1) | ForEach-Object { "$_" }) -join "`n"
+
+            $out | Should -Match 'restart'
+            (Get-Process -Id $watcher.Id -ErrorAction SilentlyContinue) | Should -BeNullOrEmpty
+            Test-Path (Join-Path $sandbox 'stop.signal') | Should -Be $false
+            (Get-Content (Join-Path $sandbox 'install.log') -Raw) | Should -Not -Match 'restarted'
+        } finally {
+            Remove-Sandbox $sandbox
+        }
+    }
+
+    It "Get-BATCRelayBotStatus says restarting, not 'not running'" {
+        $sandbox = New-WatcherSandbox
+        try {
+            InModuleScope BATCRelayBot -Parameters @{ Path = $sandbox } {
+                param($Path)
+                Mock Find-BotProcess { @() }
+                Mock Find-BotWatcher { @(77) }
+
+                $out = ((Get-BATCRelayBotStatus -BotPath $Path 6>&1) | ForEach-Object { "$_" }) -join "`n"
+                $status = Get-BATCRelayBotStatus -BotPath $Path -PassThru 6>$null
+
+                $out | Should -Match 'RESTARTING'
+                $out | Should -Not -Match 'NOT RUNNING'
+                $status.IsRunning | Should -Be $false
+                $status.IsRestarting | Should -Be $true
+                $status.WatcherId | Should -Be 77
+            }
+        } finally {
+            Remove-Item $sandbox -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It "Stop-BotProcess leaves the signal for the watcher when it has to terminate" {
+        $sandbox = New-WatcherSandbox
+        try {
+            InModuleScope BATCRelayBot -Parameters @{ Path = $sandbox } {
+                param($Path)
+                Mock Find-BotProcess { @(4242) }
+                Mock Find-BotWatcher { @(77) }
+                Mock Stop-Process { }
+
+                $result = Stop-BotProcess -BotPath $Path -TimeoutSeconds 1
+
+                $result.Method | Should -Be 'forced'
+                Test-Path (Join-Path $Path 'stop.signal') | Should -Be $true -Because "-1 with the signal present is how the watcher knows the kill was wanted"
+            }
+        } finally {
+            Remove-Item $sandbox -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It "Stop-BotProcess removes the signal when no watcher will" {
+        # A bot started by hand has no watcher; a leftover signal would stop
+        # the next one within a second.
+        $sandbox = New-WatcherSandbox
+        try {
+            InModuleScope BATCRelayBot -Parameters @{ Path = $sandbox } {
+                param($Path)
+                Mock Find-BotProcess { @(4242) }
+                Mock Find-BotWatcher { @() }
+                Mock Stop-Process { }
+
+                Stop-BotProcess -BotPath $Path -TimeoutSeconds 1 | Out-Null
+
+                Test-Path (Join-Path $Path 'stop.signal') | Should -Be $false
+            }
+        } finally {
+            Remove-Item $sandbox -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It "Stop-BotProcess ends the watcher first when it cannot write the signal" {
+        # Without a signal, -1 looks unwanted and the watcher would bring the
+        # bot back. A directory that refuses the file is the only such case.
+        $sandbox = New-WatcherSandbox
+        try {
+            InModuleScope BATCRelayBot -Parameters @{ Path = $sandbox } {
+                param($Path)
+                Mock Find-BotProcess { @(4242) }
+                Mock New-Item { throw "cannot write here" } -ParameterFilter { $ItemType -eq 'File' }
+                Mock Stop-BotWatcher { @(77) }
+                Mock Stop-Process { }
+
+                $result = Stop-BotProcess -BotPath $Path -TimeoutSeconds 1
+
+                $result.Method | Should -Be 'forced'
+                Should -Invoke Stop-BotWatcher -Times 1
+            }
+        } finally {
+            Remove-Item $sandbox -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+}
+
 Describe "The exit-code table" {
 
     # Get-ExitCodeMeaning is the authority; docs/TROUBLESHOOTING.md mirrors it

@@ -36,6 +36,15 @@ see the commit that made it.
   write nothing for hours, so a bot that had died looked the same in the log
   as one crossing an empty sector. A gap of more than ten minutes between
   heartbeats now means the process was gone.
+- The bot comes back when it dies. The watcher restarts it ten seconds after
+  any exit that was not asked for - a Python error, a native crash, a kill
+  from Task Manager - and writes a line to `install.log` for each restart.
+  Three restarts within an hour and it stops trying, with an ERROR line, so
+  a crash loop stays visible. `Stop-BATCRelayBot` and `!BATCshutdown` end
+  the bot for good, also while a restart is pending.
+  `Get-BATCRelayBotStatus` says RESTARTING in that moment instead of NOT
+  RUNNING, and `Start-BATCRelayBot` waits for a pending restart rather than
+  starting a second bot beside it.
 - `logs\bot_error.log` opens with a session header - module version, Python,
   discord.py, and a summary of `config.json` with the token named as set and
   the server id redacted - and records gateway connects, disconnects and

@@ -151,11 +151,24 @@ function Start-BATCRelayBot {
         return
     }
 
+    # A watcher with no bot is in its restart delay and about to start one.
+    # Starting another here would end with two bots ten seconds later.
+    $watchers = @(Find-BotWatcher -BotPath $BotPath)
+    if ($watchers.Count -gt 0) {
+        Write-Host "The bot's watcher (PID $($watchers -join ', ')) is still running and about to restart the bot." -ForegroundColor Yellow
+        Write-Host "Wait a moment, or stop it first with Stop-BATCRelayBot." -ForegroundColor Yellow
+        return
+    }
+
     # Left over from a bot that is gone. Removing it keeps the next reader
     # from trusting it.
     if (Test-Path $pidFile) {
         Remove-Item $pidFile -Force -ErrorAction SilentlyContinue
     }
+
+    # A stop.signal nobody consumed - a forced stop with no watcher to read
+    # it - would stop the new bot within a second of coming up.
+    Remove-Item (Join-Path $BotPath "stop.signal") -Force -ErrorAction SilentlyContinue
 
     # The watcher starts the bot, not this function: it is the process that
     # is still there when the bot dies, and the only one that can write down
