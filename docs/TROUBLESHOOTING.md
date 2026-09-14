@@ -16,7 +16,7 @@ updated: 2026-09-14
 | Installation | `%LOCALAPPDATA%\BATCRelayBot\install.log` |
 | Bot output | `%LOCALAPPDATA%\BATCRelayBot\logs\bot_output.log` |
 | Bot errors | `%LOCALAPPDATA%\BATCRelayBot\logs\bot_error.log` |
-| Uninstall | `%APPDATA%\BATCRelayBot-Uninstall\` |
+| Uninstall | `%LOCALAPPDATA%\BATCRelayBot\uninstall.log` — the one file the uninstaller leaves behind |
 
 `install.log` records every step from the first one, so a failed setup always
 leaves a trace even if the window closed. Since 1.6.3 it also records every
