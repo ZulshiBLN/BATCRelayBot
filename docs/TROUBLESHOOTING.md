@@ -3,7 +3,7 @@ title: Troubleshooting
 description: Symptoms, their usual causes, and how to fix them.
 document_type: reference
 audience: users
-applies_to: BATCRelayBot 1.6.2
+applies_to: BATCRelayBot 1.6.3
 updated: 2026-09-14
 ---
 

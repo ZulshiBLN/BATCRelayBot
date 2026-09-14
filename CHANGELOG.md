@@ -3,8 +3,8 @@ title: Changelog
 description: Release history for the BATCRelayBot PowerShell module and Discord bot.
 document_type: history
 audience: users
-applies_to: BATCRelayBot 1.6.2
-updated: 2026-09-13
+applies_to: BATCRelayBot 1.6.3
+updated: 2026-09-14
 ---
 
 # Changelog
@@ -16,6 +16,16 @@ Entries describe what changed for users. For the reasoning behind a change,
 see the commit that made it.
 
 ## [Unreleased]
+
+## [1.6.3] - 2026-09-14
+
+A bot that says when it died and why, heals its voice connection, and comes
+back when it is killed.
+
+**This one changes the bot file**, so the upgrade is both steps:
+`Update-Module BATCRelayBot`, then in a new window `Install-BATCRelayBot`
+and Enter. Skip the second and the old bot keeps running under the new
+module - without the watcher, the heartbeat or the reconnect.
 
 ### Added
 
