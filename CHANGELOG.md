@@ -61,7 +61,9 @@ see the commit that made it.
   "playing", and the watchdog saw nothing to do. Seen on 2026-09-14 after a
   DNS blip - seven minutes of silence until someone typed a command. The
   watchdog now reconnects a client that is registered but not connected, on
-  its next ten-second tick, and starts the stream again.
+  its next ten-second tick, and starts the stream again. After a handshake
+  that fails it waits five seconds before the next, so Discord's late
+  answer to the abandoned one cannot throw the new connection out.
 - `!BATCjoin` and the watchdog no longer start two voice handshakes at once,
   which tore each other down for two minutes on 2026-09-14; and the stream
   is no longer started on a client whose handshake is still in flight.

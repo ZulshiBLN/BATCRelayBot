@@ -671,6 +671,15 @@ _voice_lock = asyncio.Lock()
 # 30 s as well; named here because the watchdog stands still meanwhile.
 VOICE_CONNECT_TIMEOUT = 30.0
 
+# After a handshake fails, the next one waits this long. On 2026-09-14 at
+# 16:42:00 the tick after a timed-out handshake started the next join 9 ms
+# later, and Discord's late "leave" for the abandoned attempt threw the
+# fresh client straight out again - thirty seconds lost. discord.py names
+# the race in voice_state.py:539; a few seconds is enough for the leave to
+# land first.
+VOICE_RETRY_COOLDOWN = 5.0
+_voice_retry_after = 0.0
+
 
 async def connect_and_stream():
     async with _voice_lock:
@@ -925,10 +934,14 @@ async def watchdog():
     # do, and the one after that is ten seconds away anyway.
     if _voice_lock.locked():
         return
+    global _voice_retry_after
+    if time.monotonic() < _voice_retry_after:
+        return
     try:
         await connect_and_stream()
     except Exception:
-        log.exception("Error in watchdog cycle")
+        _voice_retry_after = time.monotonic() + VOICE_RETRY_COOLDOWN
+        log.exception("Error in watchdog cycle - next attempt in %.0fs", VOICE_RETRY_COOLDOWN)
 
 
 @tasks.loop(seconds=1)

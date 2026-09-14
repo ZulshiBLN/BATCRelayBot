@@ -1441,6 +1441,32 @@ class TestVoiceReconnect:
 
         connect.assert_not_called()
 
+    # Criterion 5, live on 2026-09-14 16:42:00: the tick after a timed-out
+    # handshake started the next join 9 ms later, and Discord's late "leave"
+    # for the abandoned attempt threw the fresh client straight out again -
+    # thirty seconds lost. discord.py names this race in voice_state.py:539.
+    @pytest.mark.asyncio
+    async def test_waits_after_a_failed_handshake_before_the_next(self, monkeypatch):
+        monkeypatch.setattr(bot, "relay_paused", False)
+        monkeypatch.setattr(bot, "beat_heart", Mock())
+        monkeypatch.setattr(bot, "_voice_retry_after", 0.0)
+        clock = {"now": 1000.0}
+        monkeypatch.setattr(bot.time, "monotonic", lambda: clock["now"])
+
+        failing = AsyncMock(side_effect=RuntimeError("Timed out connecting to voice"))
+        with patch.object(bot, "connect_and_stream", new=failing):
+            await bot.watchdog()
+        failing.assert_awaited_once()
+
+        with patch.object(bot, "connect_and_stream", new=AsyncMock()) as connect:
+            clock["now"] += bot.VOICE_RETRY_COOLDOWN - 1
+            await bot.watchdog()
+            connect.assert_not_called()
+
+            clock["now"] += 1
+            await bot.watchdog()
+            connect.assert_awaited_once()
+
     @pytest.mark.asyncio
     async def test_connect_and_stream_holds_the_lock(self, monkeypatch):
         """The command path and the watchdog share it, or the skip means nothing."""
